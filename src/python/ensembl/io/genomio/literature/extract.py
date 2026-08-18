@@ -1,3 +1,19 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Rule-based extraction of ploidy, chromosome number, cultivar/strain and sex from parsed text."""
+
 import re
 from typing import Optional
 
@@ -6,20 +22,21 @@ from typing import Optional
 # ============================================================
 
 SECTION_WEIGHTS = {
-    "title":                2.5,  # paper title — most authoritative for ploidy
-    "abstract":             2.0,
-    "introduction":         1.5,
-    "background":           1.5,
-    "results":              1.2,
-    "discussion":           1.0,
-    "methods":              0.8,
-    "materials":            0.8,
-    "conclusions":          0.7,
-    "supplementary":        0.3,
-    "acknowledgements":     0.1,
+    "title": 2.5,  # paper title — most authoritative for ploidy
+    "abstract": 2.0,
+    "introduction": 1.5,
+    "background": 1.5,
+    "results": 1.2,
+    "discussion": 1.0,
+    "methods": 0.8,
+    "materials": 0.8,
+    "conclusions": 0.7,
+    "supplementary": 0.3,
+    "acknowledgements": 0.1,
     "author contributions": 0.0,  # noise — skip entirely
-    "data availability":    0.0,  # noise — skip entirely
+    "data availability": 0.0,  # noise — skip entirely
 }
+
 
 def get_section_weight(section_name: str) -> float:
     s = section_name.lower()
@@ -58,9 +75,16 @@ PRIORITY_SECTIONS = ["abstract", "introduction", "background"]
 
 # ---- level: ploidy word -> integer ----
 _WORD_LEVEL = {
-    "monoploid": 1, "diploid": 2, "triploid": 3, "tetraploid": 4,
-    "pentaploid": 5, "hexaploid": 6, "heptaploid": 7, "octoploid": 8,
-    "decaploid": 10, "dodecaploid": 12,
+    "monoploid": 1,
+    "diploid": 2,
+    "triploid": 3,
+    "tetraploid": 4,
+    "pentaploid": 5,
+    "hexaploid": 6,
+    "heptaploid": 7,
+    "octoploid": 8,
+    "decaploid": 10,
+    "dodecaploid": 12,
 }
 _LEVEL_LABEL = {v: k for k, v in _WORD_LEVEL.items()}
 
@@ -91,31 +115,36 @@ _ANCESTOR_CONTEXT_RE = re.compile(
 
 # ---- mechanism (Element 2): (name, pattern, specificity_rank) ----
 _MECH_PATTERNS = [
-    ("amphidiploid",            re.compile(r"amphidiploid", re.IGNORECASE),                  3),
+    ("amphidiploid", re.compile(r"amphidiploid", re.IGNORECASE), 3),
     ("segmental_allopolyploid", re.compile(r"segmental[\s_\-]+allo\w*ploid", re.IGNORECASE), 3),
-    ("allopolyploid",           re.compile(r"\ballo[\-\s]?\w*ploid", re.IGNORECASE),         1),
-    ("autopolyploid",           re.compile(r"\bauto[\-\s]?\w*ploid", re.IGNORECASE),         1),
+    ("allopolyploid", re.compile(r"\ballo[\-\s]?\w*ploid", re.IGNORECASE), 1),
+    ("autopolyploid", re.compile(r"\bauto[\-\s]?\w*ploid", re.IGNORECASE), 1),
 ]
 
 # ---- irregular (Element 3) ----
 _IRREGULAR_PATTERNS = [
-    ("aneuploid",     re.compile(r"aneuploid", re.IGNORECASE)),
-    ("mixoploid",     re.compile(r"mixoploid", re.IGNORECASE)),
+    ("aneuploid", re.compile(r"aneuploid", re.IGNORECASE)),
+    ("mixoploid", re.compile(r"mixoploid", re.IGNORECASE)),
     ("endopolyploid", re.compile(r"endopolyploid|endoreduplicat", re.IGNORECASE)),
 ]
 
 # ---- derivation (Element 4) ----
 _DERIVATION_PATTERNS = [
-    ("doubled_haploid",   re.compile(r"double[d]?[\s\-]+haploid", re.IGNORECASE)),
-    ("dihaploid",         re.compile(r"dihaploid", re.IGNORECASE)),
-    ("induced_polyploid", re.compile(
-        r"induced[\s\-]+polyploid|colchicine[\s\-]+(?:doubl|induc|treat)|"
-        r"artificial(?:ly)?[\s\-]+induced[\s\-]+polyploid", re.IGNORECASE)),
+    ("doubled_haploid", re.compile(r"double[d]?[\s\-]+haploid", re.IGNORECASE)),
+    ("dihaploid", re.compile(r"dihaploid", re.IGNORECASE)),
+    (
+        "induced_polyploid",
+        re.compile(
+            r"induced[\s\-]+polyploid|colchicine[\s\-]+(?:doubl|induc|treat)|"
+            r"artificial(?:ly)?[\s\-]+induced[\s\-]+polyploid",
+            re.IGNORECASE,
+        ),
+    ),
 ]
 
 # Evidence weighting
 _COMPOUND_BOOST = 6.0
-_FORMULA_BOOST  = 10.0
+_FORMULA_BOOST = 10.0
 
 
 def find_level_mentions(text: str, window: int = 50) -> list:
@@ -131,24 +160,36 @@ def find_level_mentions(text: str, window: int = 50) -> list:
         x = int(m.group(1))
         if not (1 <= x <= 20):
             continue
-        ctx = text[max(0, m.start() - window): m.end() + window]
-        mentions.append({
-            "level": x, "prefix": None, "is_compound": True,
-            "is_ancestor": False, "is_formula": True, "context": ctx,
-        })
+        ctx = text[max(0, m.start() - window) : m.end() + window]
+        mentions.append(
+            {
+                "level": x,
+                "prefix": None,
+                "is_compound": True,
+                "is_ancestor": False,
+                "is_formula": True,
+                "context": ctx,
+            }
+        )
 
     # ploidy words
     for m in _LEVEL_RE.finditer(text):
         prefix = (m.group(1) or "").lower()
-        base   = m.group(2).lower()
-        level  = _WORD_LEVEL[base]
-        ctx    = text[max(0, m.start() - window): m.end() + window]
+        base = m.group(2).lower()
+        level = _WORD_LEVEL[base]
+        ctx = text[max(0, m.start() - window) : m.end() + window]
         is_compound = prefix in ("allo", "auto")
         is_ancestor = (not is_compound) and bool(_ANCESTOR_CONTEXT_RE.search(ctx))
-        mentions.append({
-            "level": level, "prefix": prefix, "is_compound": is_compound,
-            "is_ancestor": is_ancestor, "is_formula": False, "context": ctx,
-        })
+        mentions.append(
+            {
+                "level": level,
+                "prefix": prefix,
+                "is_compound": is_compound,
+                "is_ancestor": is_ancestor,
+                "is_formula": False,
+                "context": ctx,
+            }
+        )
 
     return mentions
 
@@ -159,6 +200,7 @@ def find_level_mentions(text: str, window: int = 50) -> list:
 # from a tetraploid progenitor" still describes the organism).
 _MECH_ANCESTOR_RE = re.compile(r"ancestor|ancestral|progenitor|\brelativ|\bdonor", re.IGNORECASE)
 
+
 def detect_mechanism(text: str, window: int = 22) -> Optional[str]:
     """Return the most specific organism-level polyploidy mechanism, or None."""
     best, best_rank = None, -1
@@ -166,7 +208,7 @@ def detect_mechanism(text: str, window: int = 22) -> Optional[str]:
         m = rx.search(text)
         if not m:
             continue
-        ctx = text[max(0, m.start() - window): m.end() + window]
+        ctx = text[max(0, m.start() - window) : m.end() + window]
         if _MECH_ANCESTOR_RE.search(ctx):
             continue  # the term itself qualifies an ancestor, not the organism
         if rank > best_rank:
@@ -174,7 +216,7 @@ def detect_mechanism(text: str, window: int = 22) -> Optional[str]:
     return best
 
 
-def detect_irregular(text: str):
+def detect_irregular(text: str) -> str | bool:
     for name, rx in _IRREGULAR_PATTERNS:
         if rx.search(text):
             return name
@@ -195,12 +237,12 @@ def resolve_ploidy_fields(segments: list) -> dict:
     Returns the schema dict (level / mechanism / irregular / derivation + meta).
     Used by both extract.py (sections) and search.py (retrieved chunks).
     """
-    level_counts = {}
-    best_ev      = {}
-    mech_votes   = {}
-    irregular    = False
-    derivation   = None
-    n_org        = 0
+    level_counts: dict = {}
+    best_ev: dict = {}
+    mech_votes: dict = {}
+    irregular: str | bool = False
+    derivation = None
+    n_org = 0
 
     for text, weight, is_priority in segments:
         if not text or weight == 0.0:
@@ -223,8 +265,10 @@ def resolve_ploidy_fields(segments: list) -> dict:
             cur = best_ev.get(lvl)
             if cur is None or rank_new > cur["_rank"]:
                 best_ev[lvl] = {
-                    "context": men["context"], "is_priority": is_priority,
-                    "is_formula": men["is_formula"], "_rank": rank_new,
+                    "context": men["context"],
+                    "is_priority": is_priority,
+                    "is_formula": men["is_formula"],
+                    "_rank": rank_new,
                 }
 
         m = detect_mechanism(text)
@@ -237,7 +281,7 @@ def resolve_ploidy_fields(segments: list) -> dict:
 
     # ----- choose level -----
     if level_counts:
-        level = max(level_counts, key=level_counts.get)
+        level = max(level_counts, key=lambda k: level_counts[k])
         total = sum(level_counts.values())
         base_conf = level_counts[level] / total
         ev = best_ev.get(level, {})
@@ -254,17 +298,16 @@ def resolve_ploidy_fields(segments: list) -> dict:
     # ----- choose mechanism -----
     mechanism = None
     if mech_votes:
-        spec = {"amphidiploid": 3, "segmental_allopolyploid": 3,
-                "allopolyploid": 1, "autopolyploid": 1}
+        spec = {"amphidiploid": 3, "segmental_allopolyploid": 3, "allopolyploid": 1, "autopolyploid": 1}
         mechanism = max(mech_votes, key=lambda k: (spec.get(k, 0), mech_votes[k]))
         if confidence == 0.0:
             confidence = 0.5  # polyploid confirmed but level not stated
 
     # ----- schema validation / normalisation -----
     if level == 1:
-        mechanism = None                 # monoploid MUST have null mechanism
+        mechanism = None  # monoploid MUST have null mechanism
     elif level is not None and level < 3:
-        mechanism = None                 # diploid SHOULD have null mechanism
+        mechanism = None  # diploid SHOULD have null mechanism
 
     if level is not None or mechanism is not None:
         status, source = "found_in_paper", "paper"
@@ -272,18 +315,18 @@ def resolve_ploidy_fields(segments: list) -> dict:
         status, source = "not_stated_in_paper", None
 
     return {
-        "level":           level,
-        "mechanism":       mechanism,
-        "irregular":       irregular,
-        "derivation":      derivation,
-        "tuple":           [level, mechanism, irregular, derivation],
-        "level_label":     _LEVEL_LABEL.get(level) if level is not None else None,
-        "status":          status,
-        "source":          source,
-        "confidence":      confidence,
-        "method":          method,
-        "evidence":        evidence,
-        "evidence_count":  n_org,
+        "level": level,
+        "mechanism": mechanism,
+        "irregular": irregular,
+        "derivation": derivation,
+        "tuple": [level, mechanism, irregular, derivation],
+        "level_label": _LEVEL_LABEL.get(level) if level is not None else None,
+        "status": status,
+        "source": source,
+        "confidence": confidence,
+        "method": method,
+        "evidence": evidence,
+        "evidence_count": n_org,
         "weighted_counts": {k: round(v, 2) for k, v in level_counts.items()},
     }
 
@@ -309,12 +352,12 @@ def extract_ploidy(weighted_sections: dict) -> dict:
 # ============================================================
 
 KNOWN_PLOIDY = {
-    "3702":  2,   # Arabidopsis thaliana
-    "4081":  2,   # Solanum lycopersicum (tomato)
-    "4577":  2,   # Zea mays
-    "39947": 2,   # Oryza sativa Japonica
-    "3818":  4,   # Arachis hypogaea (peanut)
-    "4565":  6,   # Triticum aestivum (bread wheat)
+    "3702": 2,  # Arabidopsis thaliana
+    "4081": 2,  # Solanum lycopersicum (tomato)
+    "4577": 2,  # Zea mays
+    "39947": 2,  # Oryza sativa Japonica
+    "3818": 4,  # Arachis hypogaea (peanut)
+    "4565": 6,  # Triticum aestivum (bread wheat)
 }
 
 
@@ -323,18 +366,17 @@ KNOWN_PLOIDY = {
 # ============================================================
 
 CHROMOSOME_PATTERNS = [
-    r"2n\s*=\s*(\d+)",            # 2n = 48
-    r"2n\s*=\s*\d+x\s*=\s*(\d+)", # 2n = 4x = 48
-    r"n\s*=\s*(\d+)",             # n = 24 (haploid)
-    r"(\d+)\s+chromosome",        # 48 chromosomes
+    r"2n\s*=\s*(\d+)",  # 2n = 48
+    r"2n\s*=\s*\d+x\s*=\s*(\d+)",  # 2n = 4x = 48
+    r"n\s*=\s*(\d+)",  # n = 24 (haploid)
+    r"(\d+)\s+chromosome",  # 48 chromosomes
     r"chromosome\s+number\s+(?:of\s+)?(\d+)",
 ]
 
+
 def extract_chromosome_number(weighted_sections: dict) -> dict:
     priority_order = sorted(
-        weighted_sections.items(),
-        key=lambda x: x[1][1],  # sort by weight descending
-        reverse=True
+        weighted_sections.items(), key=lambda x: x[1][1], reverse=True  # sort by weight descending
     )
 
     for sec_name, (text, weight) in priority_order:
@@ -345,12 +387,12 @@ def extract_chromosome_number(weighted_sections: dict) -> dict:
             if match:
                 number = match.group(1)
                 ctx_start = max(0, match.start() - 50)
-                ctx_end   = min(len(text), match.end() + 50)
+                ctx_end = min(len(text), match.end() + 50)
                 return {
-                    "value":    number,
+                    "value": number,
                     "evidence": text[ctx_start:ctx_end],
-                    "section":  sec_name,
-                    "source":   "text_extraction",
+                    "section": sec_name,
+                    "source": "text_extraction",
                 }
 
     return {"value": None, "evidence": "", "source": "text_extraction"}
@@ -370,14 +412,47 @@ CULTIVAR_PATTERNS = [
 ]
 
 CULTIVAR_STOPWORDS = {
-    "the", "and", "for", "this", "that", "with", "from",
-    "table", "figure", "supplementary", "data", "note",
-    "results", "methods", "background", "abstract",
-    "asm", "bam", "fasta", "fastq", "csv", "tsv", "json", "xml",
-    "hifiasm", "busco", "samtools", "orthofinder", "blast", "minimap",
-    "viridiplantae", "embryophyta", "rosaceae", "eudicots",
-    "haplome", "haplotype", "genbank", "refseq", "bioproject",
+    "the",
+    "and",
+    "for",
+    "this",
+    "that",
+    "with",
+    "from",
+    "table",
+    "figure",
+    "supplementary",
+    "data",
+    "note",
+    "results",
+    "methods",
+    "background",
+    "abstract",
+    "asm",
+    "bam",
+    "fasta",
+    "fastq",
+    "csv",
+    "tsv",
+    "json",
+    "xml",
+    "hifiasm",
+    "busco",
+    "samtools",
+    "orthofinder",
+    "blast",
+    "minimap",
+    "viridiplantae",
+    "embryophyta",
+    "rosaceae",
+    "eudicots",
+    "haplome",
+    "haplotype",
+    "genbank",
+    "refseq",
+    "bioproject",
 }
+
 
 def _looks_like_name(s: str) -> bool:
     if not (2 < len(s) <= 30):
@@ -410,6 +485,7 @@ SEX_PATTERNS = [
     r"(maternal|paternal)\s+",
 ]
 
+
 def extract_sex(weighted_sections: dict) -> dict:
     for sec_name, (text, weight) in weighted_sections.items():
         if weight == 0.0:
@@ -418,9 +494,9 @@ def extract_sex(weighted_sections: dict) -> dict:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 return {
-                    "value":    match.group(1).lower(),
-                    "section":  sec_name,
-                    "evidence": text[max(0, match.start()-30):match.end()+30],
+                    "value": match.group(1).lower(),
+                    "section": sec_name,
+                    "evidence": text[max(0, match.start() - 30) : match.end() + 30],
                 }
     return {"value": "unknown", "evidence": ""}
 
@@ -428,6 +504,7 @@ def extract_sex(weighted_sections: dict) -> dict:
 # ============================================================
 # STEP 5 — Extract species name from text
 # ============================================================
+
 
 def extract_species(sections: dict, weighted_sections: dict) -> Optional[str]:
     pattern1 = r"([A-Z][a-z]+\s+[a-z]+)(?:\s+(?:Borkh\.|L\.|var\.))"
@@ -463,7 +540,8 @@ def extract_species(sections: dict, weighted_sections: dict) -> Optional[str]:
 #           output: all extracted metadata fields
 # ============================================================
 
-def extract_metadata(parsed: dict, assembly: dict, paper_title: str = None) -> dict:
+
+def extract_metadata(parsed: dict, assembly: dict, paper_title: Optional[str] = None) -> dict:
     sections = dict(parsed.get("sections", {}))
 
     # Paper title is the most authoritative source for ploidy and is often
@@ -471,31 +549,25 @@ def extract_metadata(parsed: dict, assembly: dict, paper_title: str = None) -> d
     if paper_title:
         sections["Title"] = paper_title
 
-    weighted_sections = {
-        sec: (text, get_section_weight(sec))
-        for sec, text in sections.items()
-    }
+    weighted_sections = {sec: (text, get_section_weight(sec)) for sec, text in sections.items()}
 
-    filtered_text = " ".join(
-        text for sec, text in sections.items()
-        if get_section_weight(sec) > 0
-    )
+    filtered_text = " ".join(text for sec, text in sections.items() if get_section_weight(sec) > 0)
 
     print("  [extract] Running rule-based extraction ...")
 
     # ── Fields from NCBI ──────────────────────────────────────
-    ncbi_accession    = assembly.get("assembly_accession")
-    ncbi_name         = assembly.get("assembly_name")
-    ncbi_taxon        = assembly.get("taxon_id")
-    ncbi_species      = assembly.get("scientific_name")
-    ncbi_chrom        = assembly.get("chromosome_number")
+    ncbi_accession = assembly.get("assembly_accession")
+    ncbi_name = assembly.get("assembly_name")
+    ncbi_taxon = assembly.get("taxon_id")
+    ncbi_species = assembly.get("scientific_name")
+    ncbi_chrom = assembly.get("chromosome_number")
     ncbi_chrom_source = assembly.get("chromosome_source")
 
     if ncbi_species:
         species = {"value": ncbi_species, "source": "ncbi"}
     else:
         species = {
-            "value":  extract_species(sections, weighted_sections),
+            "value": extract_species(sections, weighted_sections),
             "source": "text_extraction",
         }
 
@@ -506,56 +578,64 @@ def extract_metadata(parsed: dict, assembly: dict, paper_title: str = None) -> d
         chromosome_number = extract_chromosome_number(weighted_sections)
 
     # ── Text-only fields ──────────────────────────────────────
-    ploidy    = extract_ploidy(weighted_sections)
+    ploidy = extract_ploidy(weighted_sections)
     cultivars = extract_cultivars(filtered_text)
-    sex       = extract_sex(weighted_sections)
+    sex = extract_sex(weighted_sections)
 
     # ── Ploidy reference fallback (paper is silent on ploidy) ────────────
     #     Mentor: a reference value is acceptable IF it is clearly sourced and
     #     kept separate from paper-derived values. Prefer GoaT (taxon-based,
     #     attached by fetch.enrich_*), fall back to the small built-in table.
     if ploidy["level"] is None:
-        ref_level  = assembly.get("reference_ploidy")
+        ref_level = assembly.get("reference_ploidy")
         ref_source = "GoaT" if ref_level is not None else None
         if ref_level is None and str(ncbi_taxon) in KNOWN_PLOIDY:
             ref_level, ref_source = KNOWN_PLOIDY[str(ncbi_taxon)], "reference_db"
         if ref_level is not None:
-            print(f"  [extract] ploidy not stated in paper → reference: "
-                  f"{ref_level} (taxon {ncbi_taxon}, source {ref_source})")
+            print(
+                f"  [extract] ploidy not stated in paper → reference: "
+                f"{ref_level} (taxon {ncbi_taxon}, source {ref_source})"
+            )
             ploidy = {
-                "level":           ref_level,
-                "mechanism":       None,
-                "irregular":       False,
-                "derivation":      None,
-                "tuple":           [ref_level, None, False, None],
-                "level_label":     _LEVEL_LABEL.get(ref_level),
-                "status":          "from_reference",
-                "source":          ref_source,
-                "confidence":      0.6,
-                "method":          "reference_taxon",
-                "evidence":        f"(reference {ref_source}: taxon {ncbi_taxon} documented as level {ref_level})",
-                "evidence_count":  0,
+                "level": ref_level,
+                "mechanism": None,
+                "irregular": False,
+                "derivation": None,
+                "tuple": [ref_level, None, False, None],
+                "level_label": _LEVEL_LABEL.get(ref_level),
+                "status": "from_reference",
+                "source": ref_source,
+                "confidence": 0.6,
+                "method": "reference_taxon",
+                "evidence": f"(reference {ref_source}: taxon {ncbi_taxon} documented as level {ref_level})",
+                "evidence_count": 0,
                 "weighted_counts": {},
             }
         else:
-            print(f"  [extract] ploidy not stated in paper and no reference available "
-                  f"→ status: not_stated_in_paper")
+            print(
+                f"  [extract] ploidy not stated in paper and no reference available "
+                f"→ status: not_stated_in_paper"
+            )
 
     print(f"  [extract] Done.")
     print(f"            species           = {species['value']} (source: {species['source']})")
-    print(f"            ploidy            = {ploidy['tuple']} "
-          f"(level={ploidy['level']}, confidence: {ploidy['confidence']}, method: {ploidy['method']})")
-    print(f"            chromosome_number = {chromosome_number['value']} (source: {chromosome_number['source']})")
+    print(
+        f"            ploidy            = {ploidy['tuple']} "
+        f"(level={ploidy['level']}, confidence: {ploidy['confidence']}, method: {ploidy['method']})"
+    )
+    print(
+        f"            chromosome_number = {chromosome_number['value']} (source: {chromosome_number['source']})"
+    )
     print(f"            cultivars         = {cultivars}")
     print(f"            sex               = {sex['value']}")
 
     return {
         "assembly_accession": ncbi_accession,
-        "assembly_name":      ncbi_name,
-        "taxon_id":           ncbi_taxon,
-        "species":            species,
-        "ploidy":             ploidy,
-        "chromosome_number":  chromosome_number,
-        "cultivars":          cultivars,
-        "sex":                sex,
+        "assembly_name": ncbi_name,
+        "taxon_id": ncbi_taxon,
+        "species": species,
+        "ploidy": ploidy,
+        "chromosome_number": chromosome_number,
+        "cultivars": cultivars,
+        "sex": sex,
     }

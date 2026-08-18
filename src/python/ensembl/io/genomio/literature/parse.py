@@ -1,14 +1,30 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Parse publication text (full-text XML, abstract, supplementary) into weighted sections and chunks."""
+
 import re
 from xml.etree import ElementTree as ET
 
 _TEX_BLOCK = re.compile(r"\\documentclass.*?\\end\{document\}", re.DOTALL)
-_TEX_CMD   = re.compile(r"\\[a-zA-Z]+\s*(\[[^\]]*\])?(\{[^}]*\})?")
-_HTML_TAG  = re.compile(r"<[^>]+>")
+_TEX_CMD = re.compile(r"\\[a-zA-Z]+\s*(\[[^\]]*\])?(\{[^}]*\})?")
+_HTML_TAG = re.compile(r"<[^>]+>")
 # Match ALL whitespace incl. Unicode (thin space U+2009, nbsp U+00A0, …). Genome
 # papers often typeset chromosome formulas as "2n = 4x = 30"
 # with thin spaces; normalising them to plain spaces lets the extractor's regex
 # read the formula.
-_WS        = re.compile(r"\s+")
+_WS = re.compile(r"\s+")
 
 
 def clean_text(text: str) -> str:
@@ -27,7 +43,7 @@ def detect_text_type(text: str) -> str:
     return "abstract"
 
 
-def _serialize_table(table_wrap) -> str:
+def _serialize_table(table_wrap: ET.Element) -> str:
     table = table_wrap.find(".//table")
     if table is None:
         return ""
@@ -38,20 +54,14 @@ def _serialize_table(table_wrap) -> str:
     if header_row is None:
         header_row = table.find(".//tr")
     if header_row is not None:
-        headers = [
-            clean_text("".join(c.itertext()))
-            for c in list(header_row) if c.tag in ("th", "td")
-        ]
+        headers = [clean_text("".join(c.itertext())) for c in list(header_row) if c.tag in ("th", "td")]
 
     tbody = table.find(".//tbody")
     row_elems = tbody.findall(".//tr") if tbody is not None else table.findall(".//tr")
 
     rows = []
     for tr in row_elems:
-        cells = [
-            clean_text("".join(c.itertext()))
-            for c in list(tr) if c.tag in ("th", "td")
-        ]
+        cells = [clean_text("".join(c.itertext())) for c in list(tr) if c.tag in ("th", "td")]
         if not any(cells):
             continue
         if headers and len(headers) == len(cells):
@@ -64,8 +74,8 @@ def _serialize_table(table_wrap) -> str:
     return " ; ".join(rows[:40])
 
 
-def parse_xml_tables(root) -> dict[str, str]:
-    tables = {}
+def parse_xml_tables(root: ET.Element) -> dict[str, str]:
+    tables: dict[str, str] = {}
     for i, tw in enumerate(root.iter("table-wrap"), 1):
         label_elem = tw.find("label")
         label = label_elem.text.strip() if (label_elem is not None and label_elem.text) else ""
@@ -170,36 +180,40 @@ def split_into_chunks(sections: dict[str, str], chunk_size: int = 300) -> list[d
                 current_chunk += sent + " "
             else:
                 if current_chunk.strip():
-                    chunks.append({
-                        "section":     sec_title,
-                        "text":        current_chunk.strip(),
-                        "chunk_index": chunk_index,
-                    })
+                    chunks.append(
+                        {
+                            "section": sec_title,
+                            "text": current_chunk.strip(),
+                            "chunk_index": chunk_index,
+                        }
+                    )
                     chunk_index += 1
                 current_chunk = sent + " "
 
         if current_chunk.strip():
-            chunks.append({
-                "section":     sec_title,
-                "text":        current_chunk.strip(),
-                "chunk_index": chunk_index,
-            })
+            chunks.append(
+                {
+                    "section": sec_title,
+                    "text": current_chunk.strip(),
+                    "chunk_index": chunk_index,
+                }
+            )
 
     return chunks
 
 
 def parse_paper(text_data: dict) -> dict:
     source = text_data.get("source", "none")
-    text   = text_data.get("text")
+    text = text_data.get("text")
 
     if not text:
         print("  [parse] No text available — returning empty result")
         return {
-            "source":     source,
-            "sections":   {},
-            "chunks":     [],
+            "source": source,
+            "sections": {},
+            "chunks": [],
             "n_sections": 0,
-            "n_chunks":   0,
+            "n_chunks": 0,
         }
 
     text_type = detect_text_type(text)
@@ -211,8 +225,7 @@ def parse_paper(text_data: dict) -> dict:
         # the XML parser yields nothing. Treat it as an abstract instead.
         if not sections:
             sections = parse_abstract(text)
-            print(f"  [parse] XML yielded 0 sections → fell back to abstract "
-                  f"({len(sections)} section)")
+            print(f"  [parse] XML yielded 0 sections → fell back to abstract " f"({len(sections)} section)")
     else:
         sections = parse_abstract(text)
         print(f"  [parse] Plain abstract wrapped as single section")
@@ -228,9 +241,9 @@ def parse_paper(text_data: dict) -> dict:
     print(f"  [parse] {len(chunks)} chunks ready for extract.py and search.py")
 
     return {
-        "source":     source,
-        "sections":   sections,
-        "chunks":     chunks,
+        "source": source,
+        "sections": sections,
+        "chunks": chunks,
         "n_sections": len(sections),
-        "n_chunks":   len(chunks),
+        "n_chunks": len(chunks),
     }

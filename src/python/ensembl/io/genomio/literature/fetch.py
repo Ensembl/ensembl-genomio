@@ -1,20 +1,35 @@
-# src/assembly_metadata/fetch.py
-import time
-import requests
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Retrieve an assembly's publication and supplementary text from NCBI, BioProject and Europe PMC."""
 
+import re as _re
+import time
+from xml.etree import ElementTree as _ET
+
+import requests
 
 # ============================================================
 # STEP 1 — Get assembly info from NCBI
 # ============================================================
 
+
 def _fetch_assembly_report(accession: str) -> list:
     """Query NCBI Datasets for one accession's dataset report; return the raw
     reports list (empty on any failure). Isolated so callers can retry with a
     different accession form (e.g. version-less) without duplicating HTTP logic."""
-    url = (
-        f"https://api.ncbi.nlm.nih.gov/datasets/v2/genome/accession"
-        f"/{accession}/dataset_report"
-    )
+    url = f"https://api.ncbi.nlm.nih.gov/datasets/v2/genome/accession" f"/{accession}/dataset_report"
     try:
         response = requests.get(url, timeout=30)
         response.raise_for_status()
@@ -41,40 +56,32 @@ def fetch_assembly_metadata(accession: str) -> dict:
         print(f"  [NCBI] No report found for {accession}")
         return {
             "assembly_accession": accession,
-            "chromosome_number":  None,
-            "chromosome_source":  None,
+            "chromosome_number": None,
+            "chromosome_source": None,
         }
 
-    report         = reports[0]
+    report = reports[0]
     resolved_accession = report.get("accession") or resolved_accession
-    assembly_info  = report.get("assembly_info", {})
-    organism       = report.get("organism", {})
+    assembly_info = report.get("assembly_info", {})
+    organism = report.get("organism", {})
     assembly_stats = report.get("assembly_stats", {})
 
-    chromosome_number = (
-        assembly_stats.get("total_number_of_chromosomes")
-        or assembly_info.get("chromosome_count")
+    chromosome_number = assembly_stats.get("total_number_of_chromosomes") or assembly_info.get(
+        "chromosome_count"
     )
 
-    raw_pmid = (
-        assembly_info.get("linked_pmid")
-        or assembly_info.get("biosample", {}).get("linked_pmid")
-    )
-    linked_pmids = (
-        raw_pmid if isinstance(raw_pmid, list)
-        else [raw_pmid] if raw_pmid
-        else []
-    )
+    raw_pmid = assembly_info.get("linked_pmid") or assembly_info.get("biosample", {}).get("linked_pmid")
+    linked_pmids = raw_pmid if isinstance(raw_pmid, list) else [raw_pmid] if raw_pmid else []
 
     return {
         "assembly_accession": resolved_accession,
-        "assembly_name":      assembly_info.get("assembly_name"),
-        "taxon_id":           str(organism.get("tax_id", "")),
-        "scientific_name":    organism.get("organism_name"),
-        "common_name":        organism.get("common_name"),   # NEW — mentor: search by common name too
-        "linked_pmids":       linked_pmids,
-        "chromosome_number":  chromosome_number,
-        "chromosome_source":  "ncbi" if chromosome_number else None,
+        "assembly_name": assembly_info.get("assembly_name"),
+        "taxon_id": str(organism.get("tax_id", "")),
+        "scientific_name": organism.get("organism_name"),
+        "common_name": organism.get("common_name"),  # NEW — mentor: search by common name too
+        "linked_pmids": linked_pmids,
+        "chromosome_number": chromosome_number,
+        "chromosome_source": "ncbi" if chromosome_number else None,
     }
 
 
@@ -84,9 +91,6 @@ def fetch_assembly_metadata(accession: str) -> dict:
 #     NCBI datasets returns no common_name -> name search degrades)
 #   - reference ploidy / chromosome number from GoaT (taxon-based, sourced)
 # ============================================================
-
-import re as _re
-from xml.etree import ElementTree as _ET
 
 
 def fetch_taxonomy_common_name(taxon_id: str) -> str | None:
@@ -122,28 +126,34 @@ def fetch_goat_reference(taxon_id: str) -> dict:
     Arabidopsis, GoaT's ploidy_inferred is 4 via the tribe, which is wrong).
     Any unexpected shape -> returns Nones so the pipeline falls back safely.
     """
-    out = {"reference_ploidy": None, "reference_chromosome": None}
+    out: dict[str, int | None] = {"reference_ploidy": None, "reference_chromosome": None}
     if not taxon_id:
         return out
     url = "https://goat.genomehubs.org/api/v2/record"
     try:
-        r = requests.get(url, params={
-            "recordId": str(taxon_id), "result": "taxon", "taxonomy": "ncbi",
-        }, timeout=30)
+        r = requests.get(
+            url,
+            params={
+                "recordId": str(taxon_id),
+                "result": "taxon",
+                "taxonomy": "ncbi",
+            },
+            timeout=30,
+        )
         r.raise_for_status()
         recs = r.json().get("records", [])
         if not recs:
             return out
         attrs = (recs[0].get("record", {}) or {}).get("attributes", {}) or {}
 
-        def _direct_int(*keys):
+        def _direct_int(*keys: str) -> int | None:
             # try each attribute key in order; accept only directly-measured values
             for key in keys:
                 a = attrs.get(key)
                 if not isinstance(a, dict):
                     continue
                 if a.get("aggregation_source") != "direct":
-                    continue   # skip inferred (ancestor/descendant) values
+                    continue  # skip inferred (ancestor/descendant) values
                 for vk in ("value", "median", "mode", "max", "min"):
                     v = a.get(vk)
                     if v is None:
@@ -153,7 +163,7 @@ def fetch_goat_reference(taxon_id: str) -> dict:
                         return int(m.group())
             return None
 
-        out["reference_ploidy"]     = _direct_int("ploidy", "ploidy_inferred")
+        out["reference_ploidy"] = _direct_int("ploidy", "ploidy_inferred")
         out["reference_chromosome"] = _direct_int("chromosome_number", "haploid_chromosome_count")
     except (requests.RequestException, ValueError, KeyError, TypeError):
         pass
@@ -174,7 +184,7 @@ def enrich_assembly_metadata(assembly: dict) -> dict:
             print(f"      common_name filled from NCBI Taxonomy: {cn}")
 
     goat = fetch_goat_reference(taxon_id)
-    assembly["reference_ploidy"]     = goat.get("reference_ploidy")
+    assembly["reference_ploidy"] = goat.get("reference_ploidy")
     assembly["reference_chromosome"] = goat.get("reference_chromosome")
     if goat.get("reference_ploidy") is not None:
         print(f"      GoaT reference ploidy (taxon {taxon_id}): {goat['reference_ploidy']}")
@@ -195,27 +205,57 @@ def enrich_assembly_metadata(assembly: dict) -> dict:
 # ============================================================
 
 ORGANELLE_KEYWORDS = [
-    "chloroplast", "mitochondria", "plastid",
-    "organelle", "cpdna", "mtdna", "plastome",
+    "chloroplast",
+    "mitochondria",
+    "plastid",
+    "organelle",
+    "cpdna",
+    "mtdna",
+    "plastome",
 ]
 GENOME_KEYWORDS = [
-    "genome assembly", "genome sequence", "reference genome",
-    "chromosome-level", "chromosome-scale", "de novo assembly",
-    "whole genome", "whole-genome", "genome of",
+    "genome assembly",
+    "genome sequence",
+    "reference genome",
+    "chromosome-level",
+    "chromosome-scale",
+    "de novo assembly",
+    "whole genome",
+    "whole-genome",
+    "genome of",
 ]
 # Phrases that mark the target organism as a *habitat/host*, not the subject
 # of the paper — e.g. "Draft genome of Bacillus ... isolated from cotton". Such
 # papers mention the target's name only as the source and otherwise score high
 # on name + genome keywords, so they need a hard penalty (see scorer).
 HOST_CONTEXT_KEYWORDS = [
-    "isolated from", "associated with", "endophyt", "rhizosphere",
-    "phyllosphere", "symbiont", "symbiotic bacteri", "pathogen of",
-    "microbiome", "microbiota", "gut of", "gut microb",
+    "isolated from",
+    "associated with",
+    "endophyt",
+    "rhizosphere",
+    "phyllosphere",
+    "symbiont",
+    "symbiotic bacteri",
+    "pathogen of",
+    "microbiome",
+    "microbiota",
+    "gut of",
+    "gut microb",
 ]
 PLOIDY_HINTS = [
-    "diploid", "triploid", "tetraploid", "pentaploid", "hexaploid",
-    "octoploid", "polyploid", "allopolyploid", "autopolyploid",
-    "amphidiploid", "ploidy", "2n=", "2n =",
+    "diploid",
+    "triploid",
+    "tetraploid",
+    "pentaploid",
+    "hexaploid",
+    "octoploid",
+    "polyploid",
+    "allopolyploid",
+    "autopolyploid",
+    "amphidiploid",
+    "ploidy",
+    "2n=",
+    "2n =",
 ]
 
 # A candidate scoring >= STRONG_SCORE is treated as a confident genome paper,
@@ -228,13 +268,13 @@ def score_paper_candidate(paper: dict, identifiers: dict) -> float:
 
     Used both to rank pooled candidates and to decide Mode-B escalation.
     """
-    title    = (paper.get("title") or "").lower()
+    title = (paper.get("title") or "").lower()
     abstract = (paper.get("abstractText") or "").lower()
-    text     = f"{title} {abstract}"
+    text = f"{title} {abstract}"
 
-    sci    = (identifiers.get("scientific_name") or "").lower()
+    sci = (identifiers.get("scientific_name") or "").lower()
     common = (identifiers.get("common_name") or "").lower()
-    genus  = sci.split()[0] if sci else ""
+    genus = sci.split()[0] if sci else ""
 
     score = 0.0
 
@@ -262,7 +302,10 @@ def score_paper_candidate(paper: dict, identifiers: dict) -> float:
     if any(k in text for k in PLOIDY_HINTS):
         score += 1.0
 
-    # full text availability
+    # Full-text availability: a PMCID means the article's full text is open access
+    # in Europe PMC, so the pipeline can read the whole body (where ploidy,
+    # chromosome and cultivar statements usually sit) rather than only the
+    # abstract. Papers with retrievable full text are therefore preferred.
     if paper.get("pmcid") or paper.get("pmCid"):
         score += 2.0
 
@@ -300,39 +343,41 @@ def score_paper_candidate(paper: dict, identifiers: dict) -> float:
 def _dedupe_and_rank(candidates: list, identifiers: dict) -> list:
     """Drop duplicate papers across sources, attach relevance_score, sort desc."""
     seen = set()
-    out  = []
-    for p in candidates:
+    rank = []
+    for paper in candidates:
         key = (
-            (p.get("pmid") or "").strip()
-            or (p.get("pmcid") or p.get("pmCid") or "").strip()
-            or (p.get("doi") or "").strip()
-            or (p.get("title", "")[:80].lower())
+            (paper.get("pmid") or "").strip()
+            or (paper.get("pmcid") or paper.get("pmCid") or "").strip()
+            or (paper.get("doi") or "").strip()
+            or (paper.get("title", "")[:80].lower())
         )
         if not key or key in seen:
             continue
         seen.add(key)
-        p["relevance_score"] = round(score_paper_candidate(p, identifiers), 2)
-        out.append(p)
-    out.sort(key=lambda x: x["relevance_score"], reverse=True)
-    return out
+        paper["relevance_score"] = round(score_paper_candidate(paper, identifiers), 2)
+        rank.append(paper)
+    rank.sort(key=lambda x: x["relevance_score"], reverse=True)
+    return rank
 
 
 def search_europe_pmc(query: str, max_results: int = 5, retries: int = 3) -> list:
+    """Search Europe PMC for `query` and return up to `max_results` paper records,
+    retrying transient request failures up to `retries` times."""
     url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
     params = {
-        "query":      query,
-        "format":     "json",
-        "pageSize":   max_results,
+        "query": query,
+        "format": "json",
+        "pageSize": max_results,
         "resultType": "core",
     }
     for attempt in range(retries):
         try:
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, timeout=30)  # type: ignore[arg-type]
             response.raise_for_status()
             return response.json().get("resultList", {}).get("result", [])
         except requests.RequestException as e:
             if attempt < retries - 1:
-                wait = 2 ** attempt
+                wait = 2**attempt
                 print(f"  [EuropePMC] Attempt {attempt+1} failed, retrying in {wait}s ...")
                 time.sleep(wait)
             else:
@@ -344,8 +389,8 @@ def search_europe_pmc(query: str, max_results: int = 5, retries: int = 3) -> lis
 def search_by_pmid(pmid: str) -> dict | None:
     url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
     params = {
-        "query":      f"EXT_ID:{pmid} AND SRC:MED",
-        "format":     "json",
+        "query": f"EXT_ID:{pmid} AND SRC:MED",
+        "format": "json",
         "resultType": "core",
     }
     try:
@@ -358,13 +403,13 @@ def search_by_pmid(pmid: str) -> dict | None:
 
 
 def search_europe_pmc_by_name(
-    taxon_id:        str,
+    taxon_id: str,
     scientific_name: str,
-    common_name:     str = "",
-    max_results:     int = 5,
+    common_name: str = "",
+    max_results: int = 5,
 ) -> list:
     tokens = scientific_name.split() if scientific_name else []
-    genus  = tokens[0] if tokens else ""
+    genus = tokens[0] if tokens else ""
     # Binomial = genus + species epithet. For a subspecies / variety / hybrid
     # (e.g. "Oryza meyeriana var. indandamanica") the full trinomial rarely
     # appears in a paper, but the binomial ("Oryza meyeriana") usually does.
@@ -408,16 +453,15 @@ def search_europe_pmc_by_name(
         # Keep only results that actually mention the genus — guards against
         # false positives from an ambiguous common name.
         relevant = [
-            r for r in results
-            if genus.lower() in (
-                r.get("title", "") + r.get("abstractText", "")
-            ).lower()
+            r for r in results if genus.lower() in (r.get("title", "") + r.get("abstractText", "")).lower()
         ]
 
         if relevant:
             print(f"  [EuropePMC] Query: {query}")
-            print(f"              Found {len(results)} results, "
-                  f"{len(relevant)} relevant to {scientific_name}")
+            print(
+                f"              Found {len(results)} results, "
+                f"{len(relevant)} relevant to {scientific_name}"
+            )
             return relevant[:max_results]
 
     print(f"  [EuropePMC] No relevant papers found for {scientific_name}")
@@ -454,12 +498,9 @@ def has_usable_fulltext(papers: list[dict]) -> bool:
         pmcid = p.get("pmcid") or p.get("pmCid") or ""
         if not pmcid:
             continue
-        title    = p.get("title", "").lower()
+        title = p.get("title", "").lower()
         abstract = (p.get("abstractText", "") or "").lower()
-        is_organelle = any(
-            kw in title or kw in abstract
-            for kw in ORGANELLE_KEYWORDS
-        )
+        is_organelle = any(kw in title or kw in abstract for kw in ORGANELLE_KEYWORDS)
         if not is_organelle:
             return True
     return False
@@ -469,9 +510,9 @@ def fetch_linked_pubmed_for_assembly(accession: str, max_results: int = 5) -> li
     # Step 1: convert GCA accession to NCBI assembly ID
     search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     try:
-        response     = requests.get(search_url, params={
-            "db": "assembly", "term": accession, "retmode": "json"
-        }, timeout=30)
+        response = requests.get(
+            search_url, params={"db": "assembly", "term": accession, "retmode": "json"}, timeout=30
+        )
         response.raise_for_status()
         assembly_ids = response.json().get("esearchresult", {}).get("idlist", [])
     except requests.RequestException as e:
@@ -488,14 +529,15 @@ def fetch_linked_pubmed_for_assembly(accession: str, max_results: int = 5) -> li
     # Step 2: find linked pubmed articles via elink
     elink_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi"
     try:
-        response   = requests.get(elink_url, params={
-            "dbfrom": "assembly", "db": "pubmed",
-            "id": assembly_id, "retmode": "json"
-        }, timeout=30)
+        response = requests.get(
+            elink_url,
+            params={"dbfrom": "assembly", "db": "pubmed", "id": assembly_id, "retmode": "json"},
+            timeout=30,
+        )
         response.raise_for_status()
-        data       = response.json()
-        linksets   = data.get("linksets", [{}])[0]
-        pmids      = []
+        data = response.json()
+        linksets = data.get("linksets", [{}])[0]
+        pmids = []
         for ldb in linksets.get("linksetdbs", []):
             if ldb.get("dbto") == "pubmed":
                 pmids = ldb.get("links", [])
@@ -528,11 +570,18 @@ def fetch_bioproject_reference_papers(accession: str, max_results: int = 5) -> l
     common name / provenance). Pure-Entrez chain; defensive on every step."""
     eutils = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
-    def _elink(dbfrom, db, uid):
+    def _elink(dbfrom: str, db: str, uid: str) -> list:
         try:
-            r = requests.get(f"{eutils}/elink.fcgi", params={
-                "dbfrom": dbfrom, "db": db, "id": uid, "retmode": "json",
-            }, timeout=30)
+            r = requests.get(
+                f"{eutils}/elink.fcgi",
+                params={
+                    "dbfrom": dbfrom,
+                    "db": db,
+                    "id": uid,
+                    "retmode": "json",
+                },
+                timeout=30,
+            )
             r.raise_for_status()
             ls = r.json().get("linksets", [{}])[0]
             for ldb in ls.get("linksetdbs", []):
@@ -544,8 +593,11 @@ def fetch_bioproject_reference_papers(accession: str, max_results: int = 5) -> l
 
     # Step 1: accession -> assembly UID
     try:
-        r = requests.get(f"{eutils}/esearch.fcgi", params={
-            "db": "assembly", "term": accession, "retmode": "json"}, timeout=30)
+        r = requests.get(
+            f"{eutils}/esearch.fcgi",
+            params={"db": "assembly", "term": accession, "retmode": "json"},
+            timeout=30,
+        )
         r.raise_for_status()
         asm_ids = r.json().get("esearchresult", {}).get("idlist", [])
     except (requests.RequestException, ValueError):
@@ -576,7 +628,7 @@ def fetch_bioproject_reference_papers(accession: str, max_results: int = 5) -> l
     for pmid in pmids[:max_results]:
         paper = search_by_pmid(str(pmid))
         if paper:
-            paper["retrieval_source"]  = "bioproject"
+            paper["retrieval_source"] = "bioproject"
             paper["is_reference_paper"] = True
             papers.append(paper)
             print(f"  [BioProject] {pmid}: {paper.get('title', '')[:60]}...")
@@ -592,12 +644,16 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
     # Step 1: search for PMC IDs
     search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     try:
-        response = requests.get(search_url, params={
-            "db":      "pmc",
-            "term":    f'"{scientific_name}" AND "genome assembly" AND "open access"[filter]',
-            "retmax":  max_results * 2,
-            "retmode": "json",
-        }, timeout=30)
+        response = requests.get(
+            search_url,
+            params={  # type: ignore[arg-type]
+                "db": "pmc",
+                "term": f'"{scientific_name}" AND "genome assembly" AND "open access"[filter]',
+                "retmax": max_results * 2,
+                "retmode": "json",
+            },
+            timeout=30,
+        )
         response.raise_for_status()
         pmc_ids = response.json().get("esearchresult", {}).get("idlist", [])
     except requests.RequestException as e:
@@ -611,9 +667,11 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
     # Step 2: fetch summaries
     summary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
     try:
-        response  = requests.get(summary_url, params={
-            "db": "pmc", "id": ",".join(pmc_ids[:max_results]), "retmode": "json"
-        }, timeout=30)
+        response = requests.get(
+            summary_url,
+            params={"db": "pmc", "id": ",".join(pmc_ids[:max_results]), "retmode": "json"},
+            timeout=30,
+        )
         response.raise_for_status()
         summaries = response.json().get("result", {})
     except requests.RequestException as e:
@@ -627,14 +685,16 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
         if not summary:
             continue
         pmcid = f"PMC{pmc_id}"
-        papers.append({
-            "title":        summary.get("title", ""),
-            "pmcid":        pmcid,
-            "pmid":         summary.get("pmid", ""),
-            "doi":          summary.get("doi", ""),
-            "abstractText": "",
-            "source":       "ncbi_entrez",
-        })
+        papers.append(
+            {
+                "title": summary.get("title", ""),
+                "pmcid": pmcid,
+                "pmid": summary.get("pmid", ""),
+                "doi": summary.get("doi", ""),
+                "abstractText": "",
+                "source": "ncbi_entrez",
+            }
+        )
         print(f"  [NCBI Entrez] {pmcid}: {summary.get('title', '')[:60]}...")
 
     return papers
@@ -645,33 +705,39 @@ def search_semantic_scholar(scientific_name: str, max_results: int = 5) -> list:
 
     url = "https://api.semanticscholar.org/graph/v1/paper/search"
     try:
-        response   = requests.get(url, params={
-            "query":  f"{scientific_name} genome assembly ploidy",
-            "fields": "title,abstract,externalIds,openAccessPdf",
-            "limit":  max_results * 2,
-        }, timeout=30)
+        response = requests.get(
+            url,
+            params={  # type: ignore[arg-type]
+                "query": f"{scientific_name} genome assembly ploidy",
+                "fields": "title,abstract,externalIds,openAccessPdf",
+                "limit": max_results * 2,
+            },
+            timeout=30,
+        )
         response.raise_for_status()
         papers_raw = response.json().get("data", [])
     except requests.RequestException as e:
         print(f"  [Semantic Scholar] Search failed: {e}")
         return []
 
-    genus  = scientific_name.split()[0].lower()
+    genus = scientific_name.split()[0].lower()
     papers = []
     for p in papers_raw:
-        title    = p.get("title", "")
+        title = p.get("title", "")
         abstract = p.get("abstract", "") or ""
         if genus not in (title + abstract).lower():
             continue
         ext_ids = p.get("externalIds", {})
-        papers.append({
-            "title":        title,
-            "pmcid":        f"PMC{ext_ids['PubMedCentral']}" if "PubMedCentral" in ext_ids else "",
-            "pmid":         str(ext_ids.get("PubMed", "")),
-            "doi":          ext_ids.get("DOI", ""),
-            "abstractText": abstract,
-            "source":       "semantic_scholar",
-        })
+        papers.append(
+            {
+                "title": title,
+                "pmcid": f"PMC{ext_ids['PubMedCentral']}" if "PubMedCentral" in ext_ids else "",
+                "pmid": str(ext_ids.get("PubMed", "")),
+                "doi": ext_ids.get("DOI", ""),
+                "abstractText": abstract,
+                "source": "semantic_scholar",
+            }
+        )
         print(f"  [Semantic Scholar] {title[:60]}...")
         if len(papers) >= max_results:
             break
@@ -684,16 +750,17 @@ def search_semantic_scholar(scientific_name: str, max_results: int = 5) -> list:
 # STEP 3 — Validate DOI / PMID / PMCID
 # ============================================================
 
+
 def validate_paper_ids(paper: dict) -> dict:
     pmcid = paper.get("pmcid")
-    pmid  = paper.get("pmid")
-    doi   = paper.get("doi")
+    pmid = paper.get("pmid")
+    doi = paper.get("doi")
 
     pmcid_valid = False
     if pmcid:
         try:
             url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
-            r   = requests.head(url, timeout=10)
+            r = requests.head(url, timeout=10)
             pmcid_valid = r.status_code == 200
         except requests.RequestException:
             pmcid_valid = False
@@ -701,30 +768,27 @@ def validate_paper_ids(paper: dict) -> dict:
     pmid_valid = False
     if pmid:
         try:
-            result     = search_by_pmid(pmid)
+            result = search_by_pmid(pmid)
             pmid_valid = result is not None
         except requests.RequestException:
             pmid_valid = False
 
     return {
-        "pmcid":          pmcid,
-        "pmid":           pmid,
-        "doi":            doi,
-        "pmcid_valid":    pmcid_valid,
-        "pmid_valid":     pmid_valid,
-        "doi_present":    bool(doi),
-        "has_fulltext":   pmcid_valid,
-        "best_available": (
-            "fulltext" if pmcid_valid else
-            "abstract" if pmid_valid else
-            "none"
-        ),
+        "pmcid": pmcid,
+        "pmid": pmid,
+        "doi": doi,
+        "pmcid_valid": pmcid_valid,
+        "pmid_valid": pmid_valid,
+        "doi_present": bool(doi),
+        "has_fulltext": pmcid_valid,
+        "best_available": ("fulltext" if pmcid_valid else "abstract" if pmid_valid else "none"),
     }
 
 
 # ============================================================
 # STEP 4 — Download full text or abstract
 # ============================================================
+
 
 def get_fulltext_by_pmcid(pmcid: str) -> str | None:
     url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
@@ -740,6 +804,7 @@ def get_fulltext_by_pmcid(pmcid: str) -> str | None:
 def _strip_markup(s: str) -> str:
     try:
         from bs4 import BeautifulSoup
+
         return BeautifulSoup(s, "html.parser").get_text(" ")
     except Exception:
         return _re.sub(r"<[^>]+>", " ", s)
@@ -751,6 +816,7 @@ def _xlsx_shared_strings(raw: bytes) -> str:
     words) that carry the ploidy signal; numeric cell values are not needed for
     that. Returns '' if the file is not a readable xlsx."""
     import io, zipfile
+
     try:
         inner = zipfile.ZipFile(io.BytesIO(raw))
         if "xl/sharedStrings.xml" not in inner.namelist():
@@ -767,6 +833,7 @@ def _docx_text(raw: bytes) -> str:
     are very commonly distributed as .docx, so this materially widens coverage.
     Returns '' if the file is not a readable docx."""
     import io, zipfile
+
     try:
         inner = zipfile.ZipFile(io.BytesIO(raw))
         if "word/document.xml" not in inner.namelist():
@@ -819,7 +886,7 @@ def get_supplementary_text_by_pmcid(pmcid: str, max_chars: int = 40000) -> str |
         elif lower.endswith(".docx"):
             text = _docx_text(raw)
         else:
-            continue   # pdf / legacy .doc / images: not readable dependency-free
+            continue  # pdf / legacy .doc / images: not readable dependency-free
         text = _re.sub(r"[ \t\r\n\f\v]+", " ", text).strip()
         if text:
             snippet = text[: max_chars - total]
@@ -841,7 +908,7 @@ def get_abstract_by_pmid(pmid: str) -> str | None:
 
 def get_best_available_text(paper: dict) -> dict:
     pmcid = paper.get("pmcid")
-    pmid  = paper.get("pmid")
+    pmid = paper.get("pmid")
 
     if pmcid:
         fulltext = get_fulltext_by_pmcid(pmcid)
@@ -870,32 +937,35 @@ def get_best_available_text(paper: dict) -> dict:
 #           output: assembly metadata + linked papers with full text
 # ============================================================
 
+
 def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
     print(f"\n[1/4] Fetching assembly metadata for {accession} ...")
-    assembly        = fetch_assembly_metadata(accession)
-    assembly        = enrich_assembly_metadata(assembly)   # common_name + GoaT reference via taxon_id
+    assembly = fetch_assembly_metadata(accession)
+    assembly = enrich_assembly_metadata(assembly)  # common_name + GoaT reference via taxon_id
     # fetch_assembly_metadata may have resolved a stale version to the latest;
     # use that for all downstream accession-based lookups (elink, BioProject).
-    accession       = assembly.get("assembly_accession", accession) or accession
+    accession = assembly.get("assembly_accession", accession) or accession
     scientific_name = assembly.get("scientific_name", "") or ""
-    common_name     = assembly.get("common_name", "") or ""
-    taxon_id        = assembly.get("taxon_id", "") or ""
+    common_name = assembly.get("common_name", "") or ""
+    taxon_id = assembly.get("taxon_id", "") or ""
 
     # Mentor's "key metadata fields" — used as multiple retrieval identifiers
     identifiers = {
-        "accession":       accession,
-        "assembly_name":   assembly.get("assembly_name"),
+        "accession": accession,
+        "assembly_name": assembly.get("assembly_name"),
         "scientific_name": scientific_name,
-        "common_name":     common_name,
-        "taxon_id":        taxon_id,
+        "common_name": common_name,
+        "taxon_id": taxon_id,
     }
 
     print(f"      taxon_id          = {taxon_id}")
     print(f"      scientific_name   = {scientific_name}")
     print(f"      common_name       = {common_name or '(none)'}")
     print(f"      assembly_name     = {assembly.get('assembly_name')}")
-    print(f"      chromosome_number = {assembly.get('chromosome_number')} "
-          f"(source: {assembly.get('chromosome_source') or 'not found -> will try text extraction'})")
+    print(
+        f"      chromosome_number = {assembly.get('chromosome_number')} "
+        f"(source: {assembly.get('chromosome_source') or 'not found -> will try text extraction'})"
+    )
 
     # Guard: no scientific name / taxon -> name-based search would degenerate
     # into an empty query and return unrelated papers. Skip retrieval entirely.
@@ -905,7 +975,7 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
 
     candidates = []
 
-    def strongest(cands):
+    def strongest(cands: list) -> float:
         return max((score_paper_candidate(p, identifiers) for p in cands), default=0.0)
 
     # Priority 1: directly linked PMIDs from the NCBI assembly record
@@ -937,11 +1007,12 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
     # ---- Mode B escalation: if the accession-linked candidates contain no
     #      STRONG genome paper, search by scientific + common name and merge.
     if strongest(candidates) < STRONG_SCORE:
-        print(f"\n[2/4] No strong genome paper from accession links "
-              f"(best score {strongest(candidates):.1f}) "
-              f"-> multi-identifier name search ...")
-        for p in search_europe_pmc_by_name(taxon_id, scientific_name, common_name,
-                                            max_results=max_results):
+        print(
+            f"\n[2/4] No strong genome paper from accession links "
+            f"(best score {strongest(candidates):.1f}) "
+            f"-> multi-identifier name search ..."
+        )
+        for p in search_europe_pmc_by_name(taxon_id, scientific_name, common_name, max_results=max_results):
             p.setdefault("retrieval_source", "europepmc_name")
             candidates.append(p)
 
@@ -991,8 +1062,10 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
                 p["_fulltext_name_confirmed"] = True
                 p.pop("_needs_fulltext_confirm", None)
                 confirmed.append(p)
-                print(f"      [fulltext-confirm] {scientific_name} found in {pmcid}: "
-                      f"{p.get('title', '')[:55]}...")
+                print(
+                    f"      [fulltext-confirm] {scientific_name} found in {pmcid}: "
+                    f"{p.get('title', '')[:55]}..."
+                )
             # else: species not actually in the body -> drop spurious match
     candidates = confirmed
 
@@ -1000,28 +1073,34 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
     papers_found = _dedupe_and_rank(candidates, identifiers)
     if papers_found:
         top = papers_found[0]
-        print(f"\n      {len(papers_found)} unique candidate(s) ranked; "
-              f"top score {top['relevance_score']} ({top.get('retrieval_source')})")
+        print(
+            f"\n      {len(papers_found)} unique candidate(s) ranked; "
+            f"top score {top['relevance_score']} ({top.get('retrieval_source')})"
+        )
 
     print(f"\n[3/4] Validating IDs and fetching text ...")
     enriched_papers = []
     for paper in papers_found:
         validation = validate_paper_ids(paper)
-        text_data  = get_best_available_text(paper)
-        enriched_papers.append({
-            "title":            paper.get("title", ""),
-            "pmcid":            paper.get("pmcid"),
-            "pmid":             paper.get("pmid"),
-            "doi":              paper.get("doi"),
-            "retrieval_source": paper.get("retrieval_source"),
-            "relevance_score":  paper.get("relevance_score"),
-            "is_reference_paper": bool(paper.get("is_reference_paper")),
-            "validation":       validation,
-            "text_data":        text_data,
-        })
-        print(f"      [{validation['best_available']:>10}]  "
-              f"(score {paper.get('relevance_score')}, {paper.get('retrieval_source')})  "
-              f"{paper.get('title', '')[:52]}...")
+        text_data = get_best_available_text(paper)
+        enriched_papers.append(
+            {
+                "title": paper.get("title", ""),
+                "pmcid": paper.get("pmcid"),
+                "pmid": paper.get("pmid"),
+                "doi": paper.get("doi"),
+                "retrieval_source": paper.get("retrieval_source"),
+                "relevance_score": paper.get("relevance_score"),
+                "is_reference_paper": bool(paper.get("is_reference_paper")),
+                "validation": validation,
+                "text_data": text_data,
+            }
+        )
+        print(
+            f"      [{validation['best_available']:>10}]  "
+            f"(score {paper.get('relevance_score')}, {paper.get('retrieval_source')})  "
+            f"{paper.get('title', '')[:52]}..."
+        )
 
     # Canonical reference paper (best BioProject-linked candidate), attached
     # regardless of whether it ends up carrying ploidy (mentor item 3).
@@ -1029,21 +1108,23 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
     for paper in papers_found:
         if paper.get("is_reference_paper"):
             reference_paper = {
-                "title":            paper.get("title", ""),
-                "pmcid":            paper.get("pmcid"),
-                "pmid":             paper.get("pmid"),
-                "doi":              paper.get("doi"),
+                "title": paper.get("title", ""),
+                "pmcid": paper.get("pmcid"),
+                "pmid": paper.get("pmid"),
+                "doi": paper.get("doi"),
                 "retrieval_source": "bioproject",
-                "relevance_score":  paper.get("relevance_score"),
+                "relevance_score": paper.get("relevance_score"),
             }
             break
 
     print(f"\n[4/4] Done. {len(enriched_papers)} paper(s) ready for extraction.")
-    print(f"      chromosome_number will be "
-          f"{'used from NCBI' if assembly.get('chromosome_number') else 'extracted from text in extract.py'}")
+    print(
+        f"      chromosome_number will be "
+        f"{'used from NCBI' if assembly.get('chromosome_number') else 'extracted from text in extract.py'}"
+    )
 
     return {
-        "assembly":        assembly,
-        "papers":          enriched_papers,
+        "assembly": assembly,
+        "papers": enriched_papers,
         "reference_paper": reference_paper,
     }

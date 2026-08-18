@@ -1,27 +1,49 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Optional local Gemma-3 LLM layer for grounded ploidy, sex and strain/cultivar extraction."""
+
+import json
 import os
 import re
-import json
+
 import requests
 
 # ---- controlled vocabulary (shared with extract.py) ----
 try:
     from .extract import _LEVEL_LABEL
 except Exception:
-    _LEVEL_LABEL = {1: "monoploid", 2: "diploid", 3: "triploid", 4: "tetraploid",
-                    5: "pentaploid", 6: "hexaploid", 8: "octoploid"}
+    _LEVEL_LABEL = {
+        1: "monoploid",
+        2: "diploid",
+        3: "triploid",
+        4: "tetraploid",
+        5: "pentaploid",
+        6: "hexaploid",
+        8: "octoploid",
+    }
 
-VALID_MECHANISMS = {"autopolyploid", "allopolyploid",
-                    "amphidiploid", "segmental_allopolyploid"}
+VALID_MECHANISMS = {"autopolyploid", "allopolyploid", "amphidiploid", "segmental_allopolyploid"}
 
 # ---- config ----
 _DEFAULT_MODEL = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "models", "google_gemma-3-4b-it-Q4_K_M.gguf"
+    os.path.dirname(os.path.abspath(__file__)), "models", "google_gemma-3-4b-it-Q4_K_M.gguf"
 )
-BASE_URL  = os.environ.get("GEMMA_BASE_URL", "http://localhost:8000/v1")
-MODEL     = os.environ.get("GEMMA_MODEL", _DEFAULT_MODEL)
-TIMEOUT   = int(os.environ.get("GEMMA_TIMEOUT", "300"))
-MAX_CHARS = 6000   # cap passage text sent to the model
+BASE_URL = os.environ.get("GEMMA_BASE_URL", "http://localhost:8000/v1")
+MODEL = os.environ.get("GEMMA_MODEL", _DEFAULT_MODEL)
+TIMEOUT = int(os.environ.get("GEMMA_TIMEOUT", "300"))
+MAX_CHARS = 6000  # cap passage text sent to the model
 N_THREADS = int(os.environ.get("GEMMA_N_THREADS", "32"))  # one NUMA node
 
 # ---- GGUF backend (llama-cpp-python, quantized, fastest CPU option) ----
@@ -32,7 +54,7 @@ _HF_MODEL_DIR = os.environ.get(
     "GEMMA_HF_MODEL_DIR",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "gemma-3-4b-it"),
 )
-_direct_model     = None
+_direct_model = None
 _direct_tokenizer = None
 
 
@@ -62,11 +84,12 @@ def is_enabled() -> bool:
     return _gguf_available() or _weights_available() or _server_is_up()
 
 
-def _load_gguf_backend():
+def _load_gguf_backend() -> None:
     global _gguf_model
     if _gguf_model is not None:
         return
     from llama_cpp import Llama
+
     print(f"  [gemma-gguf] loading {os.path.basename(MODEL)} (first call, may take ~10s) ...")
     _gguf_model = Llama(
         model_path=MODEL,
@@ -85,6 +108,7 @@ def _call_gguf(species: str, passages: list, accession: str | None = None) -> di
         print(f"  [gemma-gguf] load failed ({e}); will try next backend")
         return None
     messages = _build_messages(species, passages, accession=accession)
+    assert _gguf_model is not None  # populated by the loader above
     try:
         resp = _gguf_model.create_chat_completion(
             messages=messages,
@@ -92,14 +116,14 @@ def _call_gguf(species: str, passages: list, accession: str | None = None) -> di
             max_tokens=600,
             response_format={"type": "json_object"},
         )
-        content = resp["choices"][0]["message"]["content"]
+        content = resp["choices"][0]["message"]["content"]  # type: ignore[index]
     except Exception as e:
         print(f"  [gemma-gguf] inference failed ({e})")
         return None
-    return _parse_json(content)
+    return _parse_json(content)  # type: ignore[arg-type]
 
 
-def _load_direct_backend():
+def _load_direct_backend() -> None:
     global _direct_model, _direct_tokenizer
     if _direct_model is not None:
         return
@@ -110,9 +134,7 @@ def _load_direct_backend():
     import torch
     from transformers import AutoTokenizer, AutoModelForCausalLM
 
-    _direct_model = AutoModelForCausalLM.from_pretrained(
-        _HF_MODEL_DIR, torch_dtype=torch.float32
-    ).eval()
+    _direct_model = AutoModelForCausalLM.from_pretrained(_HF_MODEL_DIR, torch_dtype=torch.float32).eval()
     _direct_tokenizer = AutoTokenizer.from_pretrained(_HF_MODEL_DIR)
     print("  [gemma-direct] model ready")
 
@@ -127,15 +149,19 @@ def _call_direct(species: str, passages: list, accession: str | None = None) -> 
     import torch
 
     messages = _build_messages(species, passages, accession=accession)
+    assert _direct_model is not None and _direct_tokenizer is not None  # populated by the loader above
     encoded = _direct_tokenizer.apply_chat_template(
-        messages, add_generation_prompt=True, return_tensors="pt", tokenize=True,
+        messages,
+        add_generation_prompt=True,
+        return_tensors="pt",
+        tokenize=True,
     )
     if hasattr(encoded, "input_ids"):
-        input_ids      = encoded.input_ids
-        attention_mask = encoded.attention_mask
+        input_ids = encoded.input_ids
+        attention_mask = encoded.attention_mask  # type: ignore[union-attr]
     else:
-        input_ids      = encoded
-        attention_mask = torch.ones_like(input_ids)
+        input_ids = encoded
+        attention_mask = torch.ones_like(input_ids)  # type: ignore[arg-type]
 
     eos_ids = [_direct_tokenizer.eos_token_id]
     eot = _direct_tokenizer.convert_tokens_to_ids("<end_of_turn>")
@@ -156,33 +182,40 @@ def _call_direct(species: str, passages: list, accession: str | None = None) -> 
         print(f"  [gemma-direct] generate failed ({e})")
         return None
 
-    new_ids = output[0][input_ids.shape[1]:]
+    new_ids = output[0][input_ids.shape[1] :]
     text = _direct_tokenizer.decode(new_ids, skip_special_tokens=True)
-    return _parse_json(text)
+    return _parse_json(text)  # type: ignore[arg-type]
 
 
 # JSON schema used for vLLM guided decoding (forces well-formed output).
 _PLOIDY_SCHEMA = {
     "type": "object",
     "properties": {
-        "reasoning":          {"type": "string"},
-        "target_organism":    {"type": ["string", "null"]},
-        "ploidy_level":       {"type": ["integer", "null"]},
-        "ploidy_category":    {"type": ["string", "null"]},
-        "mechanism":          {"type": ["string", "null"]},
+        "reasoning": {"type": "string"},
+        "target_organism": {"type": ["string", "null"]},
+        "ploidy_level": {"type": ["integer", "null"]},
+        "ploidy_category": {"type": ["string", "null"]},
+        "mechanism": {"type": ["string", "null"]},
         "chromosome_formula": {"type": ["string", "null"]},
-        "evidence_quotes":    {"type": "array", "items": {"type": ["string", "null"]}},
-        "evidence_type":      {"type": "string"},
-        "stated_explicitly":  {"type": "boolean"},
-        "confidence":         {"type": "string"},
-        "ambiguity_note":     {"type": ["string", "null"]},
-        "sex":                {"type": ["string", "null"]},
-        "strain_cultivar":    {"type": ["string", "null"]},
+        "evidence_quotes": {"type": "array", "items": {"type": ["string", "null"]}},
+        "evidence_type": {"type": "string"},
+        "stated_explicitly": {"type": "boolean"},
+        "confidence": {"type": "string"},
+        "ambiguity_note": {"type": ["string", "null"]},
+        "sex": {"type": ["string", "null"]},
+        "strain_cultivar": {"type": ["string", "null"]},
     },
     "required": [
-        "reasoning", "ploidy_level", "ploidy_category", "mechanism",
-        "evidence_quotes", "evidence_type", "stated_explicitly",
-        "confidence", "sex", "strain_cultivar",
+        "reasoning",
+        "ploidy_level",
+        "ploidy_category",
+        "mechanism",
+        "evidence_quotes",
+        "evidence_type",
+        "stated_explicitly",
+        "confidence",
+        "sex",
+        "strain_cultivar",
     ],
 }
 
@@ -390,7 +423,7 @@ def _build_user_prompt(species: str, passages: list, accession: str | None = Non
 def _build_messages(species: str, passages: list, accession: str | None = None) -> list:
     msgs = [{"role": "system", "content": _SYSTEM}]
     for ex in _FEWSHOT:
-        msgs.append({"role": "user",      "content": _user_block(ex["target"], ex["passage"])})
+        msgs.append({"role": "user", "content": _user_block(str(ex["target"]), str(ex["passage"]))})
         msgs.append({"role": "assistant", "content": json.dumps(ex["output"], ensure_ascii=False)})
     msgs.append({"role": "user", "content": _build_user_prompt(species, passages, accession=accession)})
     return msgs
@@ -454,27 +487,26 @@ def _is_grounded(quote: str, passages: list) -> bool:
 def _validate(obj: dict, passages: list) -> dict | None:
     if not isinstance(obj, dict):
         return None
-    level         = obj.get("ploidy_level")
-    mechanism     = obj.get("mechanism")
-    explicit      = bool(obj.get("stated_explicitly"))
-    conf_str      = str(obj.get("confidence") or "").lower().strip()
+    level = obj.get("ploidy_level")
+    mechanism = obj.get("mechanism")
+    explicit = bool(obj.get("stated_explicitly"))
+    conf_str = str(obj.get("confidence") or "").lower().strip()
     chrom_formula = obj.get("chromosome_formula")
     evidence_type = obj.get("evidence_type")
-    ambiguity     = obj.get("ambiguity_note")
+    ambiguity = obj.get("ambiguity_note")
 
     # Handle evidence_quotes (list) with backward compat for legacy evidence_quote (str)
     raw_quotes = obj.get("evidence_quotes") or obj.get("evidence_quote") or []
     if isinstance(raw_quotes, str):
         raw_quotes = [raw_quotes] if raw_quotes else []
     quotes = [q.strip() for q in raw_quotes if q and isinstance(q, str)]
-    quote  = quotes[0] if quotes else ""   # primary quote for grounding / mechanism scan
+    quote = quotes[0] if quotes else ""  # primary quote for grounding / mechanism scan
 
     # Sex normalization
-    _SEX_VALID = {"male", "female", "hermaphrodite", "monoecious",
-                  "dioecious", "not_applicable", "unknown"}
-    _SEX_MAP   = {"hermaphroditic": "hermaphrodite"}
+    _SEX_VALID = {"male", "female", "hermaphrodite", "monoecious", "dioecious", "not_applicable", "unknown"}
+    _SEX_MAP = {"hermaphroditic": "hermaphrodite"}
     sex_raw = str(obj.get("sex") or "").lower().strip()
-    sex     = _SEX_MAP.get(sex_raw, sex_raw if sex_raw in _SEX_VALID else "unknown")
+    sex = _SEX_MAP.get(sex_raw, sex_raw if sex_raw in _SEX_VALID else "unknown")
 
     # Strain / cultivar
     strain_cultivar = obj.get("strain_cultivar")
@@ -485,14 +517,19 @@ def _validate(obj: dict, passages: list) -> dict | None:
 
     # normalise level: accept integer, numeric string, or ploidy word form
     _WORD_LEVEL = {
-        "haploid": 1, "monoploid": 1,
+        "haploid": 1,
+        "monoploid": 1,
         "diploid": 2,
         "triploid": 3,
         "tetraploid": 4,
         "pentaploid": 5,
-        "hexaploid": 6, "allohexaploid": 6, "autohexaploid": 6,
+        "hexaploid": 6,
+        "allohexaploid": 6,
+        "autohexaploid": 6,
         "heptaploid": 7,
-        "octoploid": 8, "octaploid": 8, "allooctoploid": 8,
+        "octoploid": 8,
+        "octaploid": 8,
+        "allooctoploid": 8,
         "decaploid": 10,
         "dodecaploid": 12,
     }
@@ -515,18 +552,18 @@ def _validate(obj: dict, passages: list) -> dict | None:
     # The model sometimes puts the full ploidy word or even a sentence — scan for
     # keywords so we still extract signal even when instructions are partially ignored.
     _MECH_KEYWORDS = [
-        ("segmental allopolyploid",    "segmental_allopolyploid"),
-        ("segmental_allopolyploid",    "segmental_allopolyploid"),
-        ("amphidiploid",               "amphidiploid"),
-        ("amphitetraploid",            "amphidiploid"),
-        ("allotetraploid",             "allopolyploid"),
-        ("allohexaploid",              "allopolyploid"),
-        ("allooctoploid",              "allopolyploid"),
-        ("allopolyploid",              "allopolyploid"),
-        ("allopolyploidization",       "allopolyploid"),
-        ("autotetraploid",             "autopolyploid"),
-        ("autohexaploid",              "autopolyploid"),
-        ("autopolyploid",              "autopolyploid"),
+        ("segmental allopolyploid", "segmental_allopolyploid"),
+        ("segmental_allopolyploid", "segmental_allopolyploid"),
+        ("amphidiploid", "amphidiploid"),
+        ("amphitetraploid", "amphidiploid"),
+        ("allotetraploid", "allopolyploid"),
+        ("allohexaploid", "allopolyploid"),
+        ("allooctoploid", "allopolyploid"),
+        ("allopolyploid", "allopolyploid"),
+        ("allopolyploidization", "allopolyploid"),
+        ("autotetraploid", "autopolyploid"),
+        ("autohexaploid", "autopolyploid"),
+        ("autopolyploid", "autopolyploid"),
     ]
     # Guard: model occasionally returns mechanism as a list (e.g. ["allopolyploid"])
     if isinstance(mechanism, list):
@@ -562,10 +599,10 @@ def _validate(obj: dict, passages: list) -> dict | None:
     elif level is not None and level < 3:
         mechanism = None
     if mechanism == "amphidiploid" and level is not None and level % 2 != 0:
-        mechanism = None     # amphidiploid implies an even level
+        mechanism = None  # amphidiploid implies an even level
 
     # Return None only if nothing useful: no ploidy AND no sex AND no strain
-    has_sex    = sex and sex not in ("unknown", "not_applicable")
+    has_sex = sex and sex not in ("unknown", "not_applicable")
     has_strain = strain_cultivar is not None
     if level is None and mechanism is None and not has_sex and not has_strain:
         return None
@@ -573,39 +610,38 @@ def _validate(obj: dict, passages: list) -> dict | None:
     # Map model's confidence string to a float.
     # Inferred results get an 88% multiplier — they're valuable but less certain.
     _CONF_MAP = {"high": 0.78, "medium": 0.62, "low": 0.45}
-    base_conf  = _CONF_MAP.get(conf_str, 0.55)
-    suggested  = not explicit
+    base_conf = _CONF_MAP.get(conf_str, 0.55)
+    suggested = not explicit
     confidence = round(base_conf * (1.0 if explicit else 0.88), 2)
-    source     = "gemma_suggested" if suggested else "gemma_confirmed"
-    method     = "gemma_suggested" if suggested else "gemma"
+    source = "gemma_suggested" if suggested else "gemma_confirmed"
+    method = "gemma_suggested" if suggested else "gemma"
 
     if suggested and level is not None:
         print(f"  [gemma] suggested (inferred): level={level} mech={mechanism} conf={conf_str}")
 
     return {
-        "level":              level,
-        "mechanism":          mechanism,
-        "irregular":          False,
-        "derivation":         None,
-        "tuple":              [level, mechanism, False, None],
-        "level_label":        _LEVEL_LABEL.get(level) if level is not None else None,
-        "status":             "found_in_paper",
-        "source":             source,
-        "confidence":         confidence,
-        "method":             method,
-        "suggested":          suggested,
-        "evidence":           quote.strip()[:300],
-        "evidence_quotes":    [q[:300] for q in quotes],
-        "evidence_type":      evidence_type,
+        "level": level,
+        "mechanism": mechanism,
+        "irregular": False,
+        "derivation": None,
+        "tuple": [level, mechanism, False, None],
+        "level_label": _LEVEL_LABEL.get(level) if level is not None else None,
+        "status": "found_in_paper",
+        "source": source,
+        "confidence": confidence,
+        "method": method,
+        "suggested": suggested,
+        "evidence": quote.strip()[:300],
+        "evidence_quotes": [q[:300] for q in quotes],
+        "evidence_type": evidence_type,
         "chromosome_formula": chrom_formula,
-        "ambiguity_note":     ambiguity,
-        "sex":                sex,
-        "strain_cultivar":    strain_cultivar,
+        "ambiguity_note": ambiguity,
+        "sex": sex,
+        "strain_cultivar": strain_cultivar,
     }
 
 
-def run_gemma_ploidy(species: str, evidence_passages: list,
-                     accession: str | None = None) -> dict | None:
+def run_gemma_ploidy(species: str, evidence_passages: list, accession: str | None = None) -> dict | None:
     if not is_enabled():
         return None
     if not evidence_passages:
@@ -631,16 +667,16 @@ def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
     if not gemma:
         return ensemble
 
-    out      = dict(ensemble)
-    e_lvl    = ensemble.get("level")
-    g_lvl    = gemma.get("level")
+    out = dict(ensemble)
+    e_lvl = ensemble.get("level")
+    g_lvl = gemma.get("level")
     suggested = gemma.get("suggested", False)
 
     # Annotation that is always attached when Gemma has something to say
     gemma_note = {
-        "level":     g_lvl,
+        "level": g_lvl,
         "mechanism": gemma.get("mechanism"),
-        "evidence":  gemma.get("evidence"),
+        "evidence": gemma.get("evidence"),
         "suggested": suggested,
     }
 
@@ -669,24 +705,28 @@ def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
         if e_lvl is not None and g_lvl is not None and e_lvl == g_lvl:
             # All three sources agree → highest confidence
             out["confidence"] = min(round(ensemble.get("confidence", 0.5) + 0.2, 2), 0.98)
-            out["method"]     = "consensus_3way"
+            out["method"] = "consensus_3way"
             if not out.get("mechanism") and gemma.get("mechanism"):
                 out["mechanism"] = gemma["mechanism"]
-                out["tuple"]     = [out["level"], out["mechanism"],
-                                    out.get("irregular", False), out.get("derivation")]
+                out["tuple"] = [
+                    out["level"],
+                    out["mechanism"],
+                    out.get("irregular", False),
+                    out.get("derivation"),
+                ]
             out["gemma"] = gemma_note
 
         elif e_lvl is None and g_lvl is not None:
             # Rule/vector found nothing; Gemma found an explicit statement
             out = dict(gemma)
-            out["method"]     = "gemma_only"
+            out["method"] = "gemma_only"
             out["confidence"] = round(gemma.get("confidence", 0.7) * 0.9, 2)
 
         elif e_lvl is not None and g_lvl is not None and e_lvl != g_lvl:
             # Explicit conflict — flag for manual review
-            out["method"]     = f"conflict_rule_vector_vs_gemma ({e_lvl} vs {g_lvl})"
+            out["method"] = f"conflict_rule_vector_vs_gemma ({e_lvl} vs {g_lvl})"
             out["confidence"] = round(ensemble.get("confidence", 0.5) * 0.8, 2)
-            out["gemma"]      = gemma_note
+            out["gemma"] = gemma_note
 
     # ── Apply sex from Gemma if ensemble has unknown ────────────────────────
     g_sex = gemma.get("sex")
@@ -698,7 +738,7 @@ def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
     g_cultivar = gemma.get("strain_cultivar")
     if g_cultivar:
         cultivars = out.get("cultivars") or {}
-        confirmed   = cultivars.get("confirmed", []) or []
+        confirmed = cultivars.get("confirmed", []) or []
         unconfirmed = cultivars.get("unconfirmed", []) or []
         if g_cultivar not in confirmed and g_cultivar not in unconfirmed:
             out.setdefault("cultivars", {}).setdefault("unconfirmed", []).append(g_cultivar)
