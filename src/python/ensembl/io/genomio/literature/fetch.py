@@ -76,7 +76,7 @@ def fetch_assembly_metadata(accession: str) -> dict:
     return {
         "assembly_accession": resolved_accession,
         "assembly_name": assembly_info.get("assembly_name"),
-        "taxon_id": str(organism.get("tax_id", "")),
+        "taxon_id": str(organism.get("tax_id") or ""),
         "scientific_name": organism.get("organism_name"),
         "common_name": organism.get("common_name"),  # NEW — mentor: search by common name too
         "linked_pmids": linked_pmids,
@@ -94,8 +94,7 @@ def fetch_assembly_metadata(accession: str) -> dict:
 
 
 def fetch_taxonomy_common_name(taxon_id: str) -> str | None:
-    if not taxon_id:
-        return None
+    # Caller (enrich_assembly_metadata) guards on taxon_id before calling this.
     url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     try:
         r = requests.get(url, params={"db": "taxonomy", "id": str(taxon_id)}, timeout=30)
@@ -105,12 +104,12 @@ def fetch_taxonomy_common_name(taxon_id: str) -> str | None:
         if taxon is None:
             return None
         # GenbankCommonName preferred, else the first CommonName
-        gcn = taxon.find(".//OtherNames/GenbankCommonName")
-        if gcn is not None and gcn.text:
-            return gcn.text.strip()
-        cn = taxon.find(".//OtherNames/CommonName")
-        if cn is not None and cn.text:
-            return cn.text.strip()
+        genbank_cname = taxon.find(".//OtherNames/GenbankCommonName")
+        if genbank_cname is not None and genbank_cname.text:
+            return genbank_cname.text.strip()
+        common_name = taxon.find(".//OtherNames/CommonName")
+        if common_name is not None and common_name.text:
+            return common_name.text.strip()
     except (requests.RequestException, _ET.ParseError):
         pass
     return None
@@ -127,8 +126,7 @@ def fetch_goat_reference(taxon_id: str) -> dict:
     Any unexpected shape -> returns Nones so the pipeline falls back safely.
     """
     out: dict[str, int | None] = {"reference_ploidy": None, "reference_chromosome": None}
-    if not taxon_id:
-        return out
+    # Caller (enrich_assembly_metadata) guards on taxon_id before calling this.
     url = "https://goat.genomehubs.org/api/v2/record"
     try:
         r = requests.get(
@@ -149,18 +147,18 @@ def fetch_goat_reference(taxon_id: str) -> dict:
         def _direct_int(*keys: str) -> int | None:
             # try each attribute key in order; accept only directly-measured values
             for key in keys:
-                a = attrs.get(key)
-                if not isinstance(a, dict):
+                attr = attrs.get(key)
+                if not isinstance(attr, dict):
                     continue
-                if a.get("aggregation_source") != "direct":
+                if attr.get("aggregation_source") != "direct":
                     continue  # skip inferred (ancestor/descendant) values
-                for vk in ("value", "median", "mode", "max", "min"):
-                    v = a.get(vk)
-                    if v is None:
+                for value_key in ("value", "median", "mode", "max", "min"):
+                    value = attr.get(value_key)
+                    if value is None:
                         continue
-                    m = _re.search(r"\d+", str(v))
-                    if m:
-                        return int(m.group())
+                    match = _re.search(r"\d+", str(value))
+                    if match:
+                        return int(match.group())
             return None
 
         out["reference_ploidy"] = _direct_int("ploidy", "ploidy_inferred")
@@ -177,11 +175,11 @@ def enrich_assembly_metadata(assembly: dict) -> dict:
         return assembly
 
     if not assembly.get("common_name"):
-        cn = fetch_taxonomy_common_name(taxon_id)
-        if cn:
-            assembly["common_name"] = cn
+        common_name = fetch_taxonomy_common_name(taxon_id)
+        if common_name:
+            assembly["common_name"] = common_name
             assembly["common_name_source"] = "ncbi_taxonomy"
-            print(f"      common_name filled from NCBI Taxonomy: {cn}")
+            print(f"      common_name filled from NCBI Taxonomy: {common_name}")
 
     goat = fetch_goat_reference(taxon_id)
     assembly["reference_ploidy"] = goat.get("reference_ploidy")
