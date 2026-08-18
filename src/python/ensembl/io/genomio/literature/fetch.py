@@ -14,11 +14,43 @@
 # limitations under the License.
 """Retrieve an assembly's publication and supplementary text from NCBI, BioProject and Europe PMC."""
 
+import io
 import re as _re
 import time
+import zipfile
 from xml.etree import ElementTree as _ET
 
 import requests
+
+# NCBI E-utilities base URL, shared by the Entrez helpers below.
+NCBI_EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+
+
+def entrez_get(endpoint: str, params: dict) -> requests.Response:
+    """Call an NCBI E-utilities endpoint (e.g. "esearch.fcgi") and return the raw
+    response. Raises on HTTP error; callers wrap it in their own try/except."""
+    response = requests.get(f"{NCBI_EUTILS}/{endpoint}", params=params, timeout=30)  # type: ignore[arg-type]
+    response.raise_for_status()
+    return response
+
+
+def entrez_json(endpoint: str, params: dict) -> dict:
+    """Call an NCBI E-utilities endpoint and return the parsed JSON response."""
+    return entrez_get(endpoint, params).json()
+
+
+def _entrez_elink(dbfrom: str, db: str, uid: str) -> list:
+    """Return NCBI elink links from `dbfrom` to `db` for one UID ([] on any failure)."""
+    try:
+        data = entrez_json("elink.fcgi", {"dbfrom": dbfrom, "db": db, "id": uid, "retmode": "json"})
+        linksets = data.get("linksets", [{}])[0]
+        for ldb in linksets.get("linksetdbs", []):
+            if ldb.get("dbto") == db:
+                return ldb.get("links", [])
+    except (requests.RequestException, ValueError, KeyError, IndexError):
+        pass
+    return []
+
 
 # ============================================================
 # STEP 1 — Get assembly info from NCBI
@@ -95,10 +127,8 @@ def fetch_assembly_metadata(accession: str) -> dict:
 
 def fetch_taxonomy_common_name(taxon_id: str) -> str | None:
     # Caller (enrich_assembly_metadata) guards on taxon_id before calling this.
-    url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     try:
-        r = requests.get(url, params={"db": "taxonomy", "id": str(taxon_id)}, timeout=30)
-        r.raise_for_status()
+        r = entrez_get("efetch.fcgi", {"db": "taxonomy", "id": str(taxon_id)})
         root = _ET.fromstring(r.text)
         taxon = root.find("Taxon")
         if taxon is None:
@@ -490,8 +520,8 @@ def search_europe_pmc_fulltext(scientific_name: str, max_results: int = 5) -> li
 
 
 def has_usable_fulltext(papers: list[dict]) -> bool:
-    # Returns True only if at least one paper has a PMCID
-    # and is NOT an organelle genome paper
+    """Return True if at least one paper has a PMCID (open-access full text) and
+    is not an organelle (chloroplast/mitochondrion) genome paper."""
     for p in papers:
         pmcid = p.get("pmcid") or p.get("pmCid") or ""
         if not pmcid:
@@ -505,15 +535,13 @@ def has_usable_fulltext(papers: list[dict]) -> bool:
 
 
 def fetch_linked_pubmed_for_assembly(accession: str, max_results: int = 5) -> list:
-    # Step 1: convert GCA accession to NCBI assembly ID
-    search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+    """Follow the NCBI assembly -> PubMed elink to retrieve linked publications.
+    Returns Europe PMC paper records ([] if no assembly UID or no links found)."""
+    # Step 1: convert GCA accession to NCBI assembly UID
     try:
-        response = requests.get(
-            search_url, params={"db": "assembly", "term": accession, "retmode": "json"}, timeout=30
-        )
-        response.raise_for_status()
-        assembly_ids = response.json().get("esearchresult", {}).get("idlist", [])
-    except requests.RequestException as e:
+        data = entrez_json("esearch.fcgi", {"db": "assembly", "term": accession, "retmode": "json"})
+        assembly_ids = data.get("esearchresult", {}).get("idlist", [])
+    except (requests.RequestException, ValueError) as e:
         print(f"  [NCBI Entrez elink] Assembly search failed: {e}")
         return []
 
@@ -524,25 +552,8 @@ def fetch_linked_pubmed_for_assembly(accession: str, max_results: int = 5) -> li
     assembly_id = assembly_ids[0]
     print(f"  [NCBI Entrez elink] Assembly ID: {assembly_id}")
 
-    # Step 2: find linked pubmed articles via elink
-    elink_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi"
-    try:
-        response = requests.get(
-            elink_url,
-            params={"dbfrom": "assembly", "db": "pubmed", "id": assembly_id, "retmode": "json"},
-            timeout=30,
-        )
-        response.raise_for_status()
-        data = response.json()
-        linksets = data.get("linksets", [{}])[0]
-        pmids = []
-        for ldb in linksets.get("linksetdbs", []):
-            if ldb.get("dbto") == "pubmed":
-                pmids = ldb.get("links", [])
-                break
-    except requests.RequestException as e:
-        print(f"  [NCBI Entrez elink] elink failed: {e}")
-        return []
+    # Step 2: find linked PubMed articles via elink
+    pmids = _entrez_elink("assembly", "pubmed", assembly_id)
 
     if not pmids:
         print(f"  [NCBI Entrez elink] No linked publications found")
@@ -566,45 +577,17 @@ def fetch_bioproject_reference_papers(accession: str, max_results: int = 5) -> l
     canonical *reference* paper for the assembly. These are attached even when
     they carry no ploidy information (a BioProject paper still anchors species /
     common name / provenance). Pure-Entrez chain; defensive on every step."""
-    eutils = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-
-    def _elink(dbfrom: str, db: str, uid: str) -> list:
-        try:
-            r = requests.get(
-                f"{eutils}/elink.fcgi",
-                params={
-                    "dbfrom": dbfrom,
-                    "db": db,
-                    "id": uid,
-                    "retmode": "json",
-                },
-                timeout=30,
-            )
-            r.raise_for_status()
-            ls = r.json().get("linksets", [{}])[0]
-            for ldb in ls.get("linksetdbs", []):
-                if ldb.get("dbto") == db:
-                    return ldb.get("links", [])
-        except (requests.RequestException, ValueError, KeyError, IndexError):
-            pass
-        return []
-
     # Step 1: accession -> assembly UID
     try:
-        r = requests.get(
-            f"{eutils}/esearch.fcgi",
-            params={"db": "assembly", "term": accession, "retmode": "json"},
-            timeout=30,
-        )
-        r.raise_for_status()
-        asm_ids = r.json().get("esearchresult", {}).get("idlist", [])
+        data = entrez_json("esearch.fcgi", {"db": "assembly", "term": accession, "retmode": "json"})
+        asm_ids = data.get("esearchresult", {}).get("idlist", [])
     except (requests.RequestException, ValueError):
         asm_ids = []
     if not asm_ids:
         return []
 
     # Step 2: assembly UID -> BioProject UID(s)
-    bioproject_ids = _elink("assembly", "bioproject", asm_ids[0])
+    bioproject_ids = _entrez_elink("assembly", "bioproject", asm_ids[0])
     if not bioproject_ids:
         print("  [BioProject] No linked BioProject found")
         return []
@@ -613,7 +596,7 @@ def fetch_bioproject_reference_papers(accession: str, max_results: int = 5) -> l
     # Step 3: BioProject UID(s) -> reference PMIDs
     pmids = []
     for bp in bioproject_ids[:3]:
-        for pmid in _elink("bioproject", "pubmed", bp):
+        for pmid in _entrez_elink("bioproject", "pubmed", bp):
             if pmid not in pmids:
                 pmids.append(pmid)
     if not pmids:
@@ -640,21 +623,18 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
     print(f"  [NCBI Entrez] Searching PubMed Central for {scientific_name} ...")
 
     # Step 1: search for PMC IDs
-    search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     try:
-        response = requests.get(
-            search_url,
-            params={  # type: ignore[arg-type]
+        data = entrez_json(
+            "esearch.fcgi",
+            {
                 "db": "pmc",
                 "term": f'"{scientific_name}" AND "genome assembly" AND "open access"[filter]',
                 "retmax": max_results * 2,
                 "retmode": "json",
             },
-            timeout=30,
         )
-        response.raise_for_status()
-        pmc_ids = response.json().get("esearchresult", {}).get("idlist", [])
-    except requests.RequestException as e:
+        pmc_ids = data.get("esearchresult", {}).get("idlist", [])
+    except (requests.RequestException, ValueError) as e:
         print(f"  [NCBI Entrez] Search failed: {e}")
         return []
 
@@ -663,16 +643,13 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
         return []
 
     # Step 2: fetch summaries
-    summary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
     try:
-        response = requests.get(
-            summary_url,
-            params={"db": "pmc", "id": ",".join(pmc_ids[:max_results]), "retmode": "json"},
-            timeout=30,
+        data = entrez_json(
+            "esummary.fcgi",
+            {"db": "pmc", "id": ",".join(pmc_ids[:max_results]), "retmode": "json"},
         )
-        response.raise_for_status()
-        summaries = response.json().get("result", {})
-    except requests.RequestException as e:
+        summaries = data.get("result", {})
+    except (requests.RequestException, ValueError) as e:
         print(f"  [NCBI Entrez] Summary fetch failed: {e}")
         return []
 
@@ -750,6 +727,8 @@ def search_semantic_scholar(scientific_name: str, max_results: int = 5) -> list:
 
 
 def validate_paper_ids(paper: dict) -> dict:
+    """Check a paper's PMCID / PMID against Europe PMC and report which text tier
+    (full text, abstract, or none) is actually retrievable for it."""
     pmcid = paper.get("pmcid")
     pmid = paper.get("pmid")
     doi = paper.get("doi")
@@ -808,20 +787,24 @@ def _strip_markup(s: str) -> str:
         return _re.sub(r"<[^>]+>", " ", s)
 
 
+def _read_zip(raw: bytes, member: str) -> str:
+    """Read one member from an in-memory zip (xlsx/docx are zip archives) and
+    return its decoded text, or '' if the archive or the member is unreadable."""
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(raw))
+        if member not in archive.namelist():
+            return ""
+        return archive.read(member).decode("utf-8", errors="ignore")
+    except Exception:
+        return ""
+
+
 def _xlsx_shared_strings(raw: bytes) -> str:
     """Extract shared-string text from an .xlsx (itself a zip) without openpyxl.
     This catches column headers / row labels ('2n', 'chromosome number', ploidy
     words) that carry the ploidy signal; numeric cell values are not needed for
     that. Returns '' if the file is not a readable xlsx."""
-    import io, zipfile
-
-    try:
-        inner = zipfile.ZipFile(io.BytesIO(raw))
-        if "xl/sharedStrings.xml" not in inner.namelist():
-            return ""
-        xml = inner.read("xl/sharedStrings.xml").decode("utf-8", errors="ignore")
-    except Exception:
-        return ""
+    xml = _read_zip(raw, "xl/sharedStrings.xml")
     return " ".join(_re.findall(r"<t[^>]*>([^<]+)</t>", xml))
 
 
@@ -830,15 +813,7 @@ def _docx_text(raw: bytes) -> str:
     read word/document.xml and pull the <w:t> text runs. Supplementary tables
     are very commonly distributed as .docx, so this materially widens coverage.
     Returns '' if the file is not a readable docx."""
-    import io, zipfile
-
-    try:
-        inner = zipfile.ZipFile(io.BytesIO(raw))
-        if "word/document.xml" not in inner.namelist():
-            return ""
-        xml = inner.read("word/document.xml").decode("utf-8", errors="ignore")
-    except Exception:
-        return ""
+    xml = _read_zip(raw, "word/document.xml")
     return " ".join(_re.findall(r"<w:t[^>]*>([^<]*)</w:t>", xml))
 
 
@@ -851,8 +826,6 @@ def get_supplementary_text_by_pmcid(pmcid: str, max_chars: int = 40000) -> str |
     extractor can see. Binary formats we cannot read dependency-free (pdf, docx,
     images) are skipped. Returns one concatenated string, or None if nothing
     usable was found."""
-    import io, zipfile
-
     url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/supplementaryFiles"
     try:
         resp = requests.get(url, timeout=60)
