@@ -16,6 +16,7 @@
 
 import argparse
 import json
+import logging
 
 from .fetch import fetch_papers_for_assembly
 from .parse import parse_paper
@@ -244,6 +245,10 @@ def run_batch(accessions: list[str], max_results: int = 5) -> list[dict]:
 
 
 def main(argv: list[str] | None = None) -> None:
+    # Surface fetch.py's logging output on the console (bare format matches the
+    # previous print-based progress); the library itself stays log-config-free.
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
     parser = argparse.ArgumentParser(description="Extract genomic metadata from an assembly accession.")
     parser.add_argument(
         "--accession",

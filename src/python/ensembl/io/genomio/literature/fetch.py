@@ -15,12 +15,15 @@
 """Retrieve an assembly's publication and supplementary text from NCBI, BioProject and Europe PMC."""
 
 import io
+import logging
 import re as _re
 import time
 import zipfile
 from xml.etree import ElementTree as _ET
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 # NCBI E-utilities base URL, shared by the Entrez helpers below.
 NCBI_EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
@@ -67,7 +70,7 @@ def _fetch_assembly_report(accession: str) -> list:
         response.raise_for_status()
         return response.json().get("reports", [])
     except (requests.RequestException, ValueError) as e:
-        print(f"  [NCBI] Failed to fetch {accession}: {e}")
+        logger.warning(f"  [NCBI] Failed to fetch {accession}: {e}")
         return []
 
 
@@ -81,11 +84,11 @@ def fetch_assembly_metadata(accession: str) -> dict:
     resolved_accession = accession
     if not reports and "." in accession:
         base = accession.split(".")[0]
-        print(f"  [NCBI] No report for {accession}; retrying latest version ({base}) ...")
+        logger.info(f"  [NCBI] No report for {accession}; retrying latest version ({base}) ...")
         reports = _fetch_assembly_report(base)
 
     if not reports:
-        print(f"  [NCBI] No report found for {accession}")
+        logger.info(f"  [NCBI] No report found for {accession}")
         return {
             "assembly_accession": accession,
             "chromosome_number": None,
@@ -209,13 +212,13 @@ def enrich_assembly_metadata(assembly: dict) -> dict:
         if common_name:
             assembly["common_name"] = common_name
             assembly["common_name_source"] = "ncbi_taxonomy"
-            print(f"      common_name filled from NCBI Taxonomy: {common_name}")
+            logger.info(f"      common_name filled from NCBI Taxonomy: {common_name}")
 
     goat = fetch_goat_reference(taxon_id)
     assembly["reference_ploidy"] = goat.get("reference_ploidy")
     assembly["reference_chromosome"] = goat.get("reference_chromosome")
     if goat.get("reference_ploidy") is not None:
-        print(f"      GoaT reference ploidy (taxon {taxon_id}): {goat['reference_ploidy']}")
+        logger.info(f"      GoaT reference ploidy (taxon {taxon_id}): {goat['reference_ploidy']}")
     return assembly
 
 
@@ -406,10 +409,10 @@ def search_europe_pmc(query: str, max_results: int = 5, retries: int = 3) -> lis
         except requests.RequestException as e:
             if attempt < retries - 1:
                 wait = 2**attempt
-                print(f"  [EuropePMC] Attempt {attempt+1} failed, retrying in {wait}s ...")
+                logger.warning(f"  [EuropePMC] Attempt {attempt+1} failed, retrying in {wait}s ...")
                 time.sleep(wait)
             else:
-                print(f"  [EuropePMC] All {retries} attempts failed: {e}")
+                logger.warning(f"  [EuropePMC] All {retries} attempts failed: {e}")
                 return []
     return []
 
@@ -485,14 +488,14 @@ def search_europe_pmc_by_name(
         ]
 
         if relevant:
-            print(f"  [EuropePMC] Query: {query}")
-            print(
+            logger.info(f"  [EuropePMC] Query: {query}")
+            logger.info(
                 f"              Found {len(results)} results, "
                 f"{len(relevant)} relevant to {scientific_name}"
             )
             return relevant[:max_results]
 
-    print(f"  [EuropePMC] No relevant papers found for {scientific_name}")
+    logger.info(f"  [EuropePMC] No relevant papers found for {scientific_name}")
     return []
 
 
@@ -515,7 +518,7 @@ def search_europe_pmc_fulltext(scientific_name: str, max_results: int = 5) -> li
         if len(out) >= max_results * 2:
             break
     if out:
-        print(f"  [EuropePMC] Full-text species search: {len(out)} open-access candidate(s)")
+        logger.info(f"  [EuropePMC] Full-text species search: {len(out)} open-access candidate(s)")
     return out
 
 
@@ -542,24 +545,24 @@ def fetch_linked_pubmed_for_assembly(accession: str, max_results: int = 5) -> li
         data = entrez_json("esearch.fcgi", {"db": "assembly", "term": accession, "retmode": "json"})
         assembly_ids = data.get("esearchresult", {}).get("idlist", [])
     except (requests.RequestException, ValueError) as e:
-        print(f"  [NCBI Entrez elink] Assembly search failed: {e}")
+        logger.warning(f"  [NCBI Entrez elink] Assembly search failed: {e}")
         return []
 
     if not assembly_ids:
-        print(f"  [NCBI Entrez elink] No assembly ID found for {accession}")
+        logger.info(f"  [NCBI Entrez elink] No assembly ID found for {accession}")
         return []
 
     assembly_id = assembly_ids[0]
-    print(f"  [NCBI Entrez elink] Assembly ID: {assembly_id}")
+    logger.info(f"  [NCBI Entrez elink] Assembly ID: {assembly_id}")
 
     # Step 2: find linked PubMed articles via elink
     pmids = _entrez_elink("assembly", "pubmed", assembly_id)
 
     if not pmids:
-        print(f"  [NCBI Entrez elink] No linked publications found")
+        logger.info(f"  [NCBI Entrez elink] No linked publications found")
         return []
 
-    print(f"  [NCBI Entrez elink] Found {len(pmids)} linked PMID(s): {pmids[:5]}")
+    logger.info(f"  [NCBI Entrez elink] Found {len(pmids)} linked PMID(s): {pmids[:5]}")
 
     # Step 3: fetch paper details from Europe PMC using PMIDs
     papers = []
@@ -567,7 +570,7 @@ def fetch_linked_pubmed_for_assembly(accession: str, max_results: int = 5) -> li
         paper = search_by_pmid(str(pmid))
         if paper:
             papers.append(paper)
-            print(f"  [NCBI Entrez elink] {pmid}: {paper.get('title', '')[:60]}...")
+            logger.info(f"  [NCBI Entrez elink] {pmid}: {paper.get('title', '')[:60]}...")
 
     return papers
 
@@ -589,9 +592,9 @@ def fetch_bioproject_reference_papers(accession: str, max_results: int = 5) -> l
     # Step 2: assembly UID -> BioProject UID(s)
     bioproject_ids = _entrez_elink("assembly", "bioproject", asm_ids[0])
     if not bioproject_ids:
-        print("  [BioProject] No linked BioProject found")
+        logger.info("  [BioProject] No linked BioProject found")
         return []
-    print(f"  [BioProject] Linked BioProject UID(s): {bioproject_ids[:5]}")
+    logger.info(f"  [BioProject] Linked BioProject UID(s): {bioproject_ids[:5]}")
 
     # Step 3: BioProject UID(s) -> reference PMIDs
     pmids = []
@@ -600,9 +603,9 @@ def fetch_bioproject_reference_papers(accession: str, max_results: int = 5) -> l
             if pmid not in pmids:
                 pmids.append(pmid)
     if not pmids:
-        print("  [BioProject] No reference publication linked to BioProject")
+        logger.info("  [BioProject] No reference publication linked to BioProject")
         return []
-    print(f"  [BioProject] Found {len(pmids)} reference PMID(s): {pmids[:5]}")
+    logger.info(f"  [BioProject] Found {len(pmids)} reference PMID(s): {pmids[:5]}")
 
     # Step 4: fetch paper details, tag as reference paper
     papers = []
@@ -612,7 +615,7 @@ def fetch_bioproject_reference_papers(accession: str, max_results: int = 5) -> l
             paper["retrieval_source"] = "bioproject"
             paper["is_reference_paper"] = True
             papers.append(paper)
-            print(f"  [BioProject] {pmid}: {paper.get('title', '')[:60]}...")
+            logger.info(f"  [BioProject] {pmid}: {paper.get('title', '')[:60]}...")
     return papers
 
 
@@ -620,7 +623,7 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
     """NCBI Entrez PMC search fallback: query PubMed Central for open-access
     genome-assembly papers by scientific name. Used when accession links and the
     Europe PMC name search fail to surface a strong genome paper."""
-    print(f"  [NCBI Entrez] Searching PubMed Central for {scientific_name} ...")
+    logger.info(f"  [NCBI Entrez] Searching PubMed Central for {scientific_name} ...")
 
     # Step 1: search for PMC IDs
     try:
@@ -635,11 +638,11 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
         )
         pmc_ids = data.get("esearchresult", {}).get("idlist", [])
     except (requests.RequestException, ValueError) as e:
-        print(f"  [NCBI Entrez] Search failed: {e}")
+        logger.warning(f"  [NCBI Entrez] Search failed: {e}")
         return []
 
     if not pmc_ids:
-        print(f"  [NCBI Entrez] No PMC IDs found")
+        logger.info(f"  [NCBI Entrez] No PMC IDs found")
         return []
 
     # Step 2: fetch summaries
@@ -650,7 +653,7 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
         )
         summaries = data.get("result", {})
     except (requests.RequestException, ValueError) as e:
-        print(f"  [NCBI Entrez] Summary fetch failed: {e}")
+        logger.warning(f"  [NCBI Entrez] Summary fetch failed: {e}")
         return []
 
     # Step 3: convert to Europe PMC format
@@ -670,13 +673,13 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
                 "source": "ncbi_entrez",
             }
         )
-        print(f"  [NCBI Entrez] {pmcid}: {summary.get('title', '')[:60]}...")
+        logger.info(f"  [NCBI Entrez] {pmcid}: {summary.get('title', '')[:60]}...")
 
     return papers
 
 
 def search_semantic_scholar(scientific_name: str, max_results: int = 5) -> list:
-    print(f"  [Semantic Scholar] Searching for {scientific_name} ...")
+    logger.info(f"  [Semantic Scholar] Searching for {scientific_name} ...")
 
     url = "https://api.semanticscholar.org/graph/v1/paper/search"
     try:
@@ -692,7 +695,7 @@ def search_semantic_scholar(scientific_name: str, max_results: int = 5) -> list:
         response.raise_for_status()
         papers_raw = response.json().get("data", [])
     except requests.RequestException as e:
-        print(f"  [Semantic Scholar] Search failed: {e}")
+        logger.warning(f"  [Semantic Scholar] Search failed: {e}")
         return []
 
     genus = scientific_name.split()[0].lower()
@@ -713,11 +716,11 @@ def search_semantic_scholar(scientific_name: str, max_results: int = 5) -> list:
                 "source": "semantic_scholar",
             }
         )
-        print(f"  [Semantic Scholar] {title[:60]}...")
+        logger.info(f"  [Semantic Scholar] {title[:60]}...")
         if len(papers) >= max_results:
             break
 
-    print(f"  [Semantic Scholar] Found {len(papers)} relevant paper(s)")
+    logger.info(f"  [Semantic Scholar] Found {len(papers)} relevant paper(s)")
     return papers
 
 
@@ -866,7 +869,7 @@ def get_supplementary_text_by_pmcid(pmcid: str, max_chars: int = 40000) -> str |
 
     if not parts:
         return None
-    print(f"  [supp] extracted text from {len(parts)} supplementary file(s) for {pmcid}")
+    logger.info(f"  [supp] extracted text from {len(parts)} supplementary file(s) for {pmcid}")
     return "\n\n".join(parts)
 
 
@@ -909,8 +912,175 @@ def get_best_available_text(paper: dict) -> dict:
 # ============================================================
 
 
+def _strongest_score(candidates: list, identifiers: dict) -> float:
+    """Highest relevance score among candidates (0.0 if the list is empty)."""
+    return max((score_paper_candidate(p, identifiers) for p in candidates), default=0.0)
+
+
+def _gather_paper_candidates(accession: str, assembly: dict, identifiers: dict, max_results: int) -> list:
+    """Run the Mode-B retrieval escalation and return the pooled candidate papers.
+
+    Sources are tried in priority order (directly linked PMIDs -> Entrez elink ->
+    BioProject reference -> multi-identifier name search -> full-text species
+    search -> Entrez PMC -> Semantic Scholar) and only escalated to the weaker
+    sources while no STRONG genome paper has surfaced. Each paper is tagged with
+    its `retrieval_source`."""
+    scientific_name = identifiers["scientific_name"]
+    common_name = identifiers["common_name"]
+    taxon_id = identifiers["taxon_id"]
+    candidates: list = []
+
+    # Priority 1: directly linked PMIDs from the NCBI assembly record
+    linked_pmids = assembly.get("linked_pmids", [])
+    if linked_pmids:
+        logger.info(f"\n[2/4] Fetching {len(linked_pmids)} directly linked paper(s) ...")
+        for pmid in linked_pmids:
+            paper = search_by_pmid(pmid)
+            if paper:
+                paper["retrieval_source"] = "linked_pmid"
+                candidates.append(paper)
+                logger.info(f"      Found: {paper.get('title', '')[:70]}...")
+
+    # Priority 2: NCBI Entrez elink (curated assembly -> pubmed)
+    if not candidates:
+        logger.info(f"\n[2/4] Trying NCBI Entrez elink for {accession} ...")
+        for p in fetch_linked_pubmed_for_assembly(accession, max_results=max_results):
+            p["retrieval_source"] = "elink"
+            candidates.append(p)
+
+    # Priority 2b: BioProject reference paper (assembly -> bioproject -> pubmed).
+    # Always pooled — the canonical reference paper should be attachable even
+    # when it carries no ploidy information (mentor item 3).
+    logger.info(f"\n[2/4] Looking up BioProject reference paper for {accession} ...")
+    for p in fetch_bioproject_reference_papers(accession, max_results=max_results):
+        candidates.append(p)
+
+    # ---- Mode B escalation: if the accession-linked candidates contain no
+    #      STRONG genome paper, search by scientific + common name and merge.
+    if _strongest_score(candidates, identifiers) < STRONG_SCORE:
+        logger.info(
+            f"\n[2/4] No strong genome paper from accession links "
+            f"(best score {_strongest_score(candidates, identifiers):.1f}) "
+            f"-> multi-identifier name search ..."
+        )
+        for p in search_europe_pmc_by_name(taxon_id, scientific_name, common_name, max_results=max_results):
+            p.setdefault("retrieval_source", "europepmc_name")
+            candidates.append(p)
+
+    # Priority 3c: full-text species search. When no clearly-strong genome paper
+    # has surfaced, the true source may be a multi-species / methods paper that
+    # names this species only in its body (e.g. an assembly reported alongside
+    # others). Search Europe PMC full text and pool the open-access hits; a
+    # confirmation pass below verifies each before it can rank.
+    if _strongest_score(candidates, identifiers) < STRONG_SCORE + 2.0:
+        for p in search_europe_pmc_fulltext(scientific_name, max_results=max_results):
+            p.setdefault("retrieval_source", "europepmc_fulltext")
+            candidates.append(p)
+
+    # Priority 4: NCBI Entrez PMC search — still no strong candidate
+    if _strongest_score(candidates, identifiers) < STRONG_SCORE:
+        logger.info(f"\n[2/4] Trying NCBI Entrez PMC search for {scientific_name} ...")
+        for p in search_ncbi_entrez(scientific_name, max_results=max_results):
+            p.setdefault("retrieval_source", "entrez")
+            candidates.append(p)
+
+    # Priority 5: Semantic Scholar — nothing found at all
+    if not candidates:
+        logger.info(f"\n[2/4] Trying Semantic Scholar for {scientific_name} ...")
+        for p in search_semantic_scholar(scientific_name, max_results=max_results):
+            p.setdefault("retrieval_source", "semantic_scholar")
+            candidates.append(p)
+
+    if not candidates:
+        logger.info(f"\n[2/4] All search sources exhausted. No papers found.")
+
+    return candidates
+
+
+def _confirm_fulltext_candidates(candidates: list, scientific_name: str) -> list:
+    """Verify full-text-only species matches and drop spurious ones.
+
+    Candidates tagged `_needs_fulltext_confirm` matched the species only in their
+    full text. Fetch the text and keep only those where the exact binomial really
+    appears (marking them so scoring can reward a genuine source); drop spurious
+    matches. Bounded to a few fetches so cost stays predictable."""
+    sci_lower = scientific_name.lower()
+    confirmed, ft_checks = [], 0
+    for p in candidates:
+        if not p.get("_needs_fulltext_confirm"):
+            confirmed.append(p)
+            continue
+        pmcid = p.get("pmcid") or p.get("pmCid")
+        if pmcid and ft_checks < 5:
+            ft_checks += 1
+            ft = get_fulltext_by_pmcid(pmcid)
+            if ft and sci_lower in ft.lower():
+                p["_fulltext_name_confirmed"] = True
+                p.pop("_needs_fulltext_confirm", None)
+                confirmed.append(p)
+                logger.info(
+                    f"      [fulltext-confirm] {scientific_name} found in {pmcid}: "
+                    f"{p.get('title', '')[:55]}..."
+                )
+            # else: species not actually in the body -> drop spurious match
+    return confirmed
+
+
+def _prepare_papers(papers_found: list) -> list:
+    """Validate IDs and attach the best available text for each ranked paper."""
+    logger.info(f"\n[3/4] Validating IDs and fetching text ...")
+    enriched_papers = []
+    for paper in papers_found:
+        validation = validate_paper_ids(paper)
+        text_data = get_best_available_text(paper)
+        enriched_papers.append(
+            {
+                "title": paper.get("title", ""),
+                "pmcid": paper.get("pmcid"),
+                "pmid": paper.get("pmid"),
+                "doi": paper.get("doi"),
+                "retrieval_source": paper.get("retrieval_source"),
+                "relevance_score": paper.get("relevance_score"),
+                "is_reference_paper": bool(paper.get("is_reference_paper")),
+                "validation": validation,
+                "text_data": text_data,
+            }
+        )
+        logger.info(
+            f"      [{validation['best_available']:>10}]  "
+            f"(score {paper.get('relevance_score')}, {paper.get('retrieval_source')})  "
+            f"{paper.get('title', '')[:52]}..."
+        )
+    return enriched_papers
+
+
+def _extract_reference_paper(papers_found: list) -> dict | None:
+    """Return the canonical BioProject-linked reference paper, if one is present.
+
+    Attached regardless of whether it ends up carrying ploidy (mentor item 3)."""
+    for paper in papers_found:
+        if paper.get("is_reference_paper"):
+            return {
+                "title": paper.get("title", ""),
+                "pmcid": paper.get("pmcid"),
+                "pmid": paper.get("pmid"),
+                "doi": paper.get("doi"),
+                "retrieval_source": "bioproject",
+                "relevance_score": paper.get("relevance_score"),
+            }
+    return None
+
+
 def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
-    print(f"\n[1/4] Fetching assembly metadata for {accession} ...")
+    """Retrieve assembly metadata and the ranked candidate papers for one accession.
+
+    Orchestrates the workflow stages and returns {assembly, papers, reference_paper}:
+      1. fetch + enrich assembly metadata (NCBI Datasets, Taxonomy, GoaT);
+      2. gather candidate papers (`_gather_paper_candidates`);
+      3. confirm full-text-only species matches (`_confirm_fulltext_candidates`);
+      4. de-duplicate and rank (`_dedupe_and_rank`);
+      5. validate IDs and fetch text (`_prepare_papers`)."""
+    logger.info(f"\n[1/4] Fetching assembly metadata for {accession} ...")
     assembly = fetch_assembly_metadata(accession)
     assembly = enrich_assembly_metadata(assembly)  # common_name + GoaT reference via taxon_id
     # fetch_assembly_metadata may have resolved a stale version to the latest;
@@ -929,11 +1099,11 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
         "taxon_id": taxon_id,
     }
 
-    print(f"      taxon_id          = {taxon_id}")
-    print(f"      scientific_name   = {scientific_name}")
-    print(f"      common_name       = {common_name or '(none)'}")
-    print(f"      assembly_name     = {assembly.get('assembly_name')}")
-    print(
+    logger.info(f"      taxon_id          = {taxon_id}")
+    logger.info(f"      scientific_name   = {scientific_name}")
+    logger.info(f"      common_name       = {common_name or '(none)'}")
+    logger.info(f"      assembly_name     = {assembly.get('assembly_name')}")
+    logger.info(
         f"      chromosome_number = {assembly.get('chromosome_number')} "
         f"(source: {assembly.get('chromosome_source') or 'not found -> will try text extraction'})"
     )
@@ -941,155 +1111,26 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
     # Guard: no scientific name / taxon -> name-based search would degenerate
     # into an empty query and return unrelated papers. Skip retrieval entirely.
     if not scientific_name and not taxon_id:
-        print("      No NCBI scientific_name / taxon_id — skipping paper retrieval.")
+        logger.info("      No NCBI scientific_name / taxon_id — skipping paper retrieval.")
         return {"assembly": assembly, "papers": []}
 
-    candidates = []
-
-    def strongest(cands: list) -> float:
-        return max((score_paper_candidate(p, identifiers) for p in cands), default=0.0)
-
-    # Priority 1: directly linked PMIDs from the NCBI assembly record
-    linked_pmids = assembly.get("linked_pmids", [])
-    if linked_pmids:
-        print(f"\n[2/4] Fetching {len(linked_pmids)} directly linked paper(s) ...")
-        for pmid in linked_pmids:
-            paper = search_by_pmid(pmid)
-            if paper:
-                paper["retrieval_source"] = "linked_pmid"
-                candidates.append(paper)
-                print(f"      Found: {paper.get('title', '')[:70]}...")
-
-    # Priority 2: NCBI Entrez elink (curated assembly -> pubmed)
-    if not candidates:
-        print(f"\n[2/4] Trying NCBI Entrez elink for {accession} ...")
-        for p in fetch_linked_pubmed_for_assembly(accession, max_results=max_results):
-            p["retrieval_source"] = "elink"
-            candidates.append(p)
-
-    # Priority 2b: BioProject reference paper (assembly -> bioproject -> pubmed).
-    # Always pooled — the canonical reference paper should be attachable even
-    # when it carries no ploidy information (mentor item 3).
-    print(f"\n[2/4] Looking up BioProject reference paper for {accession} ...")
-    bioproject_papers = fetch_bioproject_reference_papers(accession, max_results=max_results)
-    for p in bioproject_papers:
-        candidates.append(p)
-
-    # ---- Mode B escalation: if the accession-linked candidates contain no
-    #      STRONG genome paper, search by scientific + common name and merge.
-    if strongest(candidates) < STRONG_SCORE:
-        print(
-            f"\n[2/4] No strong genome paper from accession links "
-            f"(best score {strongest(candidates):.1f}) "
-            f"-> multi-identifier name search ..."
-        )
-        for p in search_europe_pmc_by_name(taxon_id, scientific_name, common_name, max_results=max_results):
-            p.setdefault("retrieval_source", "europepmc_name")
-            candidates.append(p)
-
-    # Priority 3c: full-text species search. When no clearly-strong genome paper
-    # has surfaced, the true source may be a multi-species / methods paper that
-    # names this species only in its body (e.g. an assembly reported alongside
-    # others). Search Europe PMC full text and pool the open-access hits; a
-    # confirmation pass below verifies each before it can rank.
-    if strongest(candidates) < STRONG_SCORE + 2.0:
-        for p in search_europe_pmc_fulltext(scientific_name, max_results=max_results):
-            p.setdefault("retrieval_source", "europepmc_fulltext")
-            candidates.append(p)
-
-    # Priority 4: NCBI Entrez PMC search — still no strong candidate
-    if strongest(candidates) < STRONG_SCORE:
-        print(f"\n[2/4] Trying NCBI Entrez PMC search for {scientific_name} ...")
-        for p in search_ncbi_entrez(scientific_name, max_results=max_results):
-            p.setdefault("retrieval_source", "entrez")
-            candidates.append(p)
-
-    # Priority 5: Semantic Scholar — nothing found at all
-    if not candidates:
-        print(f"\n[2/4] Trying Semantic Scholar for {scientific_name} ...")
-        for p in search_semantic_scholar(scientific_name, max_results=max_results):
-            p.setdefault("retrieval_source", "semantic_scholar")
-            candidates.append(p)
-
-    if not candidates:
-        print(f"\n[2/4] All search sources exhausted. No papers found.")
-
-    # ---- full-text confirmation pass ----
-    # Candidates tagged _needs_fulltext_confirm matched the species only in their
-    # full text. Fetch the text and keep only those where the exact binomial
-    # really appears (marking them so scoring can reward a genuine source); drop
-    # spurious matches. Bounded to a few fetches so cost stays predictable.
-    sci_lower = scientific_name.lower()
-    confirmed, ft_checks = [], 0
-    for p in candidates:
-        if not p.get("_needs_fulltext_confirm"):
-            confirmed.append(p)
-            continue
-        pmcid = p.get("pmcid") or p.get("pmCid")
-        if pmcid and ft_checks < 5:
-            ft_checks += 1
-            ft = get_fulltext_by_pmcid(pmcid)
-            if ft and sci_lower in ft.lower():
-                p["_fulltext_name_confirmed"] = True
-                p.pop("_needs_fulltext_confirm", None)
-                confirmed.append(p)
-                print(
-                    f"      [fulltext-confirm] {scientific_name} found in {pmcid}: "
-                    f"{p.get('title', '')[:55]}..."
-                )
-            # else: species not actually in the body -> drop spurious match
-    candidates = confirmed
+    candidates = _gather_paper_candidates(accession, assembly, identifiers, max_results)
+    candidates = _confirm_fulltext_candidates(candidates, scientific_name)
 
     # ---- de-duplicate across sources + rank best-first by relevance ----
     papers_found = _dedupe_and_rank(candidates, identifiers)
     if papers_found:
         top = papers_found[0]
-        print(
+        logger.info(
             f"\n      {len(papers_found)} unique candidate(s) ranked; "
             f"top score {top['relevance_score']} ({top.get('retrieval_source')})"
         )
 
-    print(f"\n[3/4] Validating IDs and fetching text ...")
-    enriched_papers = []
-    for paper in papers_found:
-        validation = validate_paper_ids(paper)
-        text_data = get_best_available_text(paper)
-        enriched_papers.append(
-            {
-                "title": paper.get("title", ""),
-                "pmcid": paper.get("pmcid"),
-                "pmid": paper.get("pmid"),
-                "doi": paper.get("doi"),
-                "retrieval_source": paper.get("retrieval_source"),
-                "relevance_score": paper.get("relevance_score"),
-                "is_reference_paper": bool(paper.get("is_reference_paper")),
-                "validation": validation,
-                "text_data": text_data,
-            }
-        )
-        print(
-            f"      [{validation['best_available']:>10}]  "
-            f"(score {paper.get('relevance_score')}, {paper.get('retrieval_source')})  "
-            f"{paper.get('title', '')[:52]}..."
-        )
+    enriched_papers = _prepare_papers(papers_found)
+    reference_paper = _extract_reference_paper(papers_found)
 
-    # Canonical reference paper (best BioProject-linked candidate), attached
-    # regardless of whether it ends up carrying ploidy (mentor item 3).
-    reference_paper = None
-    for paper in papers_found:
-        if paper.get("is_reference_paper"):
-            reference_paper = {
-                "title": paper.get("title", ""),
-                "pmcid": paper.get("pmcid"),
-                "pmid": paper.get("pmid"),
-                "doi": paper.get("doi"),
-                "retrieval_source": "bioproject",
-                "relevance_score": paper.get("relevance_score"),
-            }
-            break
-
-    print(f"\n[4/4] Done. {len(enriched_papers)} paper(s) ready for extraction.")
-    print(
+    logger.info(f"\n[4/4] Done. {len(enriched_papers)} paper(s) ready for extraction.")
+    logger.info(
         f"      chromosome_number will be "
         f"{'used from NCBI' if assembly.get('chromosome_number') else 'extracted from text in extract.py'}"
     )
