@@ -14,8 +14,11 @@
 # limitations under the License.
 """Parse publication text (full-text XML, abstract, supplementary) into weighted sections and chunks."""
 
+import logging
 import re
 from xml.etree import ElementTree as ET
+
+logger = logging.getLogger(__name__)
 
 _TEX_BLOCK = re.compile(r"\\documentclass.*?\\end\{document\}", re.DOTALL)
 _TEX_CMD = re.compile(r"\\[a-zA-Z]+\s*(\[[^\]]*\])?(\{[^}]*\})?")
@@ -28,6 +31,8 @@ _WS = re.compile(r"\s+")
 
 
 def clean_text(text: str) -> str:
+    """Strip LaTeX/HTML markup and collapse all whitespace (including Unicode thin
+    spaces / nbsp) to single spaces. Returns '' for empty input."""
     if not text:
         return ""
     text = _TEX_BLOCK.sub(" ", text)
@@ -37,13 +42,12 @@ def clean_text(text: str) -> str:
 
 
 def detect_text_type(text: str) -> str:
-    stripped = text.strip()
-    if stripped.startswith("<"):
-        return "xml"
-    return "abstract"
+    return "xml" if text.lstrip().startswith("<") else "abstract"
 
 
 def _serialize_table(table_wrap: ET.Element) -> str:
+    """Flatten a <table-wrap> element into a compact "header: value | ..." string
+    (first 40 rows) so chromosome / karyotype tables become searchable text."""
     table = table_wrap.find(".//table")
     if table is None:
         return ""
@@ -65,11 +69,11 @@ def _serialize_table(table_wrap: ET.Element) -> str:
         if not any(cells):
             continue
         if headers and len(headers) == len(cells):
-            pair = " | ".join(f"{h}: {v}" for h, v in zip(headers, cells) if v)
+            row_text = " | ".join(f"{header}: {value}" for header, value in zip(headers, cells) if value)
         else:
-            pair = " | ".join(v for v in cells if v)
-        if pair:
-            rows.append(pair)
+            row_text = " | ".join(value for value in cells if value)
+        if row_text:
+            rows.append(row_text)
 
     return " ; ".join(rows[:40])
 
@@ -77,8 +81,7 @@ def _serialize_table(table_wrap: ET.Element) -> str:
 def parse_xml_tables(root: ET.Element) -> dict[str, str]:
     tables: dict[str, str] = {}
     for i, tw in enumerate(root.iter("table-wrap"), 1):
-        label_elem = tw.find("label")
-        label = label_elem.text.strip() if (label_elem is not None and label_elem.text) else ""
+        label = clean_text(tw.findtext("label", ""))
 
         caption_texts = []
         for cap in tw.iter("caption"):
@@ -133,7 +136,7 @@ def parse_xml_sections(xml_text: str) -> dict[str, str]:
             sections[title] = body
 
     except ET.ParseError as e:
-        print(f"  [parse] XML parse error: {e}")
+        logger.warning(f"  [parse] XML parse error: {e}")
 
     return sections
 
@@ -147,10 +150,10 @@ def parse_abstract(abstract_text: str) -> dict[str, str]:
 
 
 def parse_supplementary(supp_text: str) -> dict[str, str]:
-    """Turn the concatenated supplementary blob from fetch.py into sections,
-    one per file. Each block starts with a '[Supplementary file: <name>]'
-    marker (see get_supplementary_text_by_pmcid). Section titles are prefixed
-    'Supplementary:' so downstream section weighting can recognise them."""
+    """Turn the concatenated supplementary blob produced by
+    fetch.get_supplementary_text_by_pmcid into sections, one per file. Each block
+    starts with a '[Supplementary file: <name>]' marker. Section titles are
+    prefixed 'Supplementary:' so downstream section weighting can recognise them."""
     if not supp_text:
         return {}
     sections = {}
@@ -169,6 +172,9 @@ def parse_supplementary(supp_text: str) -> dict[str, str]:
 
 
 def split_into_chunks(sections: dict[str, str], chunk_size: int = 300) -> list[dict]:
+    # chunk_size is in characters: ~300 keeps each chunk to a few sentences, which
+    # suits the sentence-transformer in search.py (short, focused passages embed
+    # and retrieve better than long ones) while staying well under its token limit.
     chunks = []
     for sec_title, text in sections.items():
         sentences = text.replace(". ", ".|").split("|")
@@ -203,11 +209,14 @@ def split_into_chunks(sections: dict[str, str], chunk_size: int = 300) -> list[d
 
 
 def parse_paper(text_data: dict) -> dict:
+    """Parse one paper's text_data (full-text XML, abstract, or supplementary blob)
+    into weighted sections and search chunks. Returns a dict with source, sections,
+    chunks, n_sections and n_chunks."""
     source = text_data.get("source", "none")
     text = text_data.get("text")
 
     if not text:
-        print("  [parse] No text available — returning empty result")
+        logger.info("  [parse] No text available — returning empty result")
         return {
             "source": source,
             "sections": {},
@@ -216,29 +225,30 @@ def parse_paper(text_data: dict) -> dict:
             "n_chunks": 0,
         }
 
-    text_type = detect_text_type(text)
-    if text_type == "xml":
+    if detect_text_type(text) == "xml":
         sections = parse_xml_sections(text)
-        print(f"  [parse] XML parsed → {len(sections)} sections")
+        logger.info(f"  [parse] XML parsed → {len(sections)} sections")
         # Fallback: an abstract snippet that merely *starts* with a tag
         # (e.g. "<title>Abstract</title> <p>...") is not a full PMC article, so
         # the XML parser yields nothing. Treat it as an abstract instead.
         if not sections:
             sections = parse_abstract(text)
-            print(f"  [parse] XML yielded 0 sections → fell back to abstract " f"({len(sections)} section)")
+            logger.info(
+                f"  [parse] XML yielded 0 sections → fell back to abstract " f"({len(sections)} section)"
+            )
     else:
         sections = parse_abstract(text)
-        print(f"  [parse] Plain abstract wrapped as single section")
+        logger.info(f"  [parse] Plain abstract wrapped as single section")
 
     # Fold in supplementary-file text (chromosome/karyotype tables often live
     # here, not in the article body). Attached by fetch.get_best_available_text.
     supp_sections = parse_supplementary(text_data.get("supplementary", ""))
     if supp_sections:
         sections.update(supp_sections)
-        print(f"  [parse] + {len(supp_sections)} supplementary section(s)")
+        logger.info(f"  [parse] + {len(supp_sections)} supplementary section(s)")
 
     chunks = split_into_chunks(sections)
-    print(f"  [parse] {len(chunks)} chunks ready for extract.py and search.py")
+    logger.info(f"  [parse] {len(chunks)} chunks ready for extract.py and search.py")
 
     return {
         "source": source,
