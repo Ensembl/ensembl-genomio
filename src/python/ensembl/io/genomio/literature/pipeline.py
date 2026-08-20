@@ -25,6 +25,8 @@ from .search import run_vector_search
 from . import gemma
 from .gemma import combine_with_gemma
 
+logger = logging.getLogger(__name__)
+
 # ============================================================
 # Paper quality filter
 # ============================================================
@@ -41,6 +43,8 @@ EXCLUDE_KEYWORDS = [
 
 
 def is_nuclear_genome_paper(paper: dict) -> bool:
+    """Return False if the paper is about an organelle (chloroplast / mitochondrion)
+    genome rather than the nuclear genome, based on title and abstract keywords."""
     title = paper.get("title", "").lower()
     text = paper.get("text_data", {}).get("text") or ""
     abstract = text[:500].lower()  # check first 500 chars only
@@ -49,6 +53,8 @@ def is_nuclear_genome_paper(paper: dict) -> bool:
 
 
 def select_best_paper(papers: list[dict]) -> dict | None:
+    """Pick the highest-relevance paper that has usable text, preferring full text
+    over abstract on ties; falls back to the top candidate, or None if empty."""
     # Candidates arrive pre-sorted by relevance_score (desc) from fetch.py.
     # We pick the highest-relevance paper that has usable text. relevance_score
     # already rewards genome/ploidy/name signals and heavily penalises organelle
@@ -58,7 +64,7 @@ def select_best_paper(papers: list[dict]) -> dict | None:
     ]
     if not usable:
         if papers:
-            print(f"  Selected (fallback, no usable text): {papers[0].get('title', '')[:70]}...")
+            logger.info(f"  Selected (fallback, no usable text): {papers[0].get('title', '')[:70]}...")
             return papers[0]
         return None
 
@@ -70,7 +76,7 @@ def select_best_paper(papers: list[dict]) -> dict | None:
         )
 
     best = max(usable, key=rank)
-    print(
+    logger.info(
         f"  Selected (score {best.get('relevance_score')}, "
         f"{best.get('retrieval_source')}, {best['text_data']['source']}): "
         f"{best.get('title', '')[:60]}..."
@@ -86,12 +92,15 @@ def select_best_paper(papers: list[dict]) -> dict | None:
 
 
 def run_pipeline(accession: str, max_results: int = 5) -> dict:
-    print("=" * 60)
-    print(f"Pipeline started for: {accession}")
-    print("=" * 60)
+    """Run the full extraction pipeline for one assembly accession: fetch papers,
+    select the best one, parse it, run rule-based extraction, then vector search
+    and ensemble (plus the optional Gemma layer). Returns the final metadata dict."""
+    logger.info("=" * 60)
+    logger.info(f"Pipeline started for: {accession}")
+    logger.info("=" * 60)
 
     # ── Step 1: fetch ─────────────────────────────────────────
-    print("\n[Step 1/4] Fetching assembly metadata and papers ...")
+    logger.info("\n[Step 1/4] Fetching assembly metadata and papers ...")
     fetched = fetch_papers_for_assembly(accession, max_results=max_results)
     assembly = fetched["assembly"]
     papers = fetched["papers"]
@@ -102,7 +111,7 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
     # text-based species extraction, so stop here with a clear failure mode
     # instead of degenerating into an empty-query search and garbage output.
     if not assembly.get("scientific_name") and not assembly.get("taxon_id"):
-        print(
+        logger.info(
             "  No NCBI assembly metadata (scientific_name / taxon_id missing). "
             "Likely a stale or suppressed accession — stopping."
         )
@@ -112,7 +121,7 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
         }
 
     if not papers:
-        print("  No relevant paper found. Returning assembly metadata only.")
+        logger.info("  No relevant paper found. Returning assembly metadata only.")
         return {
             "assembly_accession": assembly.get("assembly_accession"),
             "assembly_name": assembly.get("assembly_name"),
@@ -130,30 +139,30 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
         }
 
     # Select best paper — prefer nuclear genome + fulltext
-    print(f"\n  Selecting best paper from {len(papers)} candidate(s) ...")
+    logger.info(f"\n  Selecting best paper from {len(papers)} candidate(s) ...")
     best_paper = select_best_paper(papers)
 
     if best_paper is None:
-        print("  No usable paper found.")
+        logger.info("  No usable paper found.")
         return {
             "assembly_accession": assembly.get("assembly_accession"),
             "error": "no_usable_paper",
             "paper": {"note": "Not found relevant paper"},
         }
 
-    print(f"  Text source: {best_paper['text_data']['source']}")
-    print(
+    logger.info(f"  Text source: {best_paper['text_data']['source']}")
+    logger.info(
         f"  Validated:   "
         f"PMCID={best_paper['validation']['pmcid_valid']} "
         f"PMID={best_paper['validation']['pmid_valid']}"
     )
 
     # ── Step 2: parse ─────────────────────────────────────────
-    print("\n[Step 2/4] Parsing paper text into sections ...")
+    logger.info("\n[Step 2/4] Parsing paper text into sections ...")
     parsed = parse_paper(best_paper["text_data"])
 
     if parsed["n_sections"] == 0:
-        print("  No sections extracted. Check text source.")
+        logger.info("  No sections extracted. Check text source.")
         return {
             "assembly_accession": assembly.get("assembly_accession"),
             "assembly_name": assembly.get("assembly_name"),
@@ -161,14 +170,14 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
             "error": "no_sections_extracted",
         }
 
-    print(f"  Sections: {parsed['n_sections']}  Chunks: {parsed['n_chunks']}")
+    logger.info(f"  Sections: {parsed['n_sections']}  Chunks: {parsed['n_chunks']}")
 
     # ── Step 3: rule-based extraction ─────────────────────────
-    print("\n[Step 3/4] Running rule-based extraction ...")
+    logger.info("\n[Step 3/4] Running rule-based extraction ...")
     rule_result = extract_metadata(parsed, assembly, paper_title=best_paper.get("title"))
 
     # ── Step 4: vector search + ensemble ──────────────────────
-    print("\n[Step 4/4] Running vector search and ensemble ...")
+    logger.info("\n[Step 4/4] Running vector search and ensemble ...")
     final = run_vector_search(parsed, rule_result)
 
     # ── Step 4.5 (optional): Gemma hybrid layer ───────────────
@@ -182,7 +191,7 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
         )
         if g is not None:
             final["ploidy"] = combine_with_gemma(final["ploidy"], g)
-            print(
+            logger.info(
                 f"  [gemma] combined -> level={final['ploidy']['level']} "
                 f"(method: {final['ploidy']['method']})"
             )
@@ -212,17 +221,19 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
 
 
 def run_batch(accessions: list[str], max_results: int = 5) -> list[dict]:
+    """Run run_pipeline over a list of accessions, tagging each result with a
+    success/error status and continuing past failures. Returns the list of results."""
     results = []
     total = len(accessions)
 
     for i, accession in enumerate(accessions, 1):
-        print(f"\n{'=' * 60}")
-        print(f"Batch progress: {i}/{total}")
+        logger.info(f"\n{'=' * 60}")
+        logger.info(f"Batch progress: {i}/{total}")
         try:
             result = run_pipeline(accession, max_results=max_results)
             result["status"] = "success"
         except Exception as e:
-            print(f"  ERROR for {accession}: {e}")
+            logger.info(f"  ERROR for {accession}: {e}")
             result = {
                 "assembly_accession": accession,
                 "status": "error",
@@ -230,11 +241,11 @@ def run_batch(accessions: list[str], max_results: int = 5) -> list[dict]:
             }
         results.append(result)
 
-    print(f"\n{'=' * 60}")
-    print(f"Batch complete: {len(results)} accessions processed")
+    logger.info(f"\n{'=' * 60}")
+    logger.info(f"Batch complete: {len(results)} accessions processed")
     successful = sum(1 for r in results if r.get("status") == "success")
-    print(f"  Successful: {successful}/{total}")
-    print(f"  Failed:     {total - successful}/{total}")
+    logger.info(f"  Successful: {successful}/{total}")
+    logger.info(f"  Failed:     {total - successful}/{total}")
 
     return results
 
@@ -245,6 +256,8 @@ def run_batch(accessions: list[str], max_results: int = 5) -> list[dict]:
 
 
 def main(argv: list[str] | None = None) -> None:
+    """CLI entry point: parse arguments and run a single accession (--accession) or
+    a batch (--batch), optionally writing JSON results to --output."""
     # Surface fetch.py's logging output on the console (bare format matches the
     # previous print-based progress); the library itself stays log-config-free.
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -279,17 +292,17 @@ def main(argv: list[str] | None = None) -> None:
         if args.output:
             with open(args.output, "w") as f:
                 json.dump(result, f, indent=2, ensure_ascii=False)
-            print(f"\nResults saved to {args.output}")
+            logger.info(f"\nResults saved to {args.output}")
 
     elif args.batch:
         with open(args.batch) as f:
             accessions = [line.strip() for line in f if line.strip()]
-        print(f"Batch mode: {len(accessions)} accessions loaded from {args.batch}")
+        logger.info(f"Batch mode: {len(accessions)} accessions loaded from {args.batch}")
         results = run_batch(accessions, max_results=args.max_results)
         if args.output:
             with open(args.output, "w") as f:
                 json.dump(results, f, indent=2, ensure_ascii=False)
-            print(f"\nResults saved to {args.output}")
+            logger.info(f"\nResults saved to {args.output}")
         else:
             print(json.dumps(results, indent=2, ensure_ascii=False))
 
