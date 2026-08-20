@@ -14,8 +14,11 @@
 # limitations under the License.
 """Rule-based extraction of ploidy, chromosome number, cultivar/strain and sex from parsed text."""
 
+import logging
 import re
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # Section weights
@@ -39,9 +42,11 @@ SECTION_WEIGHTS = {
 
 
 def get_section_weight(section_name: str) -> float:
-    s = section_name.lower()
+    """Return the ploidy-evidence weight for a section by matching its name against
+    SECTION_WEIGHTS (0.0 = noise section to skip); defaults to 1.0 if unmatched."""
+    section_lower = section_name.lower()
     for key, weight in SECTION_WEIGHTS.items():
-        if key in s:
+        if key in section_lower:
             return weight
     return 1.0  # default
 
@@ -217,6 +222,8 @@ def detect_mechanism(text: str, window: int = 22) -> Optional[str]:
 
 
 def detect_irregular(text: str) -> str | bool:
+    """Return the ploidy-irregularity term (aneuploid / mixoploid / endopolyploid)
+    found in the text, or False if none is present."""
     for name, rx in _IRREGULAR_PATTERNS:
         if rx.search(text):
             return name
@@ -224,6 +231,8 @@ def detect_irregular(text: str) -> str | bool:
 
 
 def detect_derivation(text: str) -> Optional[str]:
+    """Return the biotechnological derivation of the line (doubled_haploid /
+    dihaploid / induced_polyploid) found in the text, or None."""
     for name, rx in _DERIVATION_PATTERNS:
         if rx.search(text):
             return name
@@ -332,6 +341,8 @@ def resolve_ploidy_fields(segments: list) -> dict:
 
 
 def extract_ploidy(weighted_sections: dict) -> dict:
+    """Extract the INSDC ploidy tuple from weighted sections by delegating to
+    resolve_ploidy_fields (marking abstract/introduction/background as priority)."""
     segments = [
         (text, weight, any(p in sec.lower() for p in PRIORITY_SECTIONS))
         for sec, (text, weight) in weighted_sections.items()
@@ -365,9 +376,12 @@ KNOWN_PLOIDY = {
 # STEP 2 — Extract chromosome number from text
 # ============================================================
 
+# Order matters: the compound "2n = Nx = M" form must be tried BEFORE the bare
+# "2n = N" form, otherwise "2n = 4x = 52" matches "2n = 4" and captures the ploidy
+# coefficient (4) instead of the chromosome count (52).
 CHROMOSOME_PATTERNS = [
+    r"2n\s*=\s*\d+x\s*=\s*(\d+)",  # 2n = 4x = 52  -> 52 (total count)
     r"2n\s*=\s*(\d+)",  # 2n = 48
-    r"2n\s*=\s*\d+x\s*=\s*(\d+)",  # 2n = 4x = 48
     r"n\s*=\s*(\d+)",  # n = 24 (haploid)
     r"(\d+)\s+chromosome",  # 48 chromosomes
     r"chromosome\s+number\s+(?:of\s+)?(\d+)",
@@ -375,6 +389,8 @@ CHROMOSOME_PATTERNS = [
 
 
 def extract_chromosome_number(weighted_sections: dict) -> dict:
+    """Extract a chromosome number from text, scanning sections highest-weight
+    first and returning the first CHROMOSOME_PATTERNS match with its context."""
     priority_order = sorted(
         weighted_sections.items(), key=lambda x: x[1][1], reverse=True  # sort by weight descending
     )
@@ -454,16 +470,18 @@ CULTIVAR_STOPWORDS = {
 }
 
 
-def _looks_like_name(s: str) -> bool:
-    if not (2 < len(s) <= 30):
+def _looks_like_name(name: str) -> bool:
+    if not (2 < len(name) <= 30):
         return False
-    toks = s.split()
-    if not (1 <= len(toks) <= 3):
+    tokens = name.split()
+    if not (1 <= len(tokens) <= 3):
         return False
-    return all(t[0].isupper() or t[0].isdigit() for t in toks)
+    return all(token[0].isupper() or token[0].isdigit() for token in tokens)
 
 
 def extract_cultivars(filtered_text: str) -> list:
+    """Extract candidate cultivar/strain/ecotype names via CULTIVAR_PATTERNS,
+    dropping stopwords and non-name-like tokens; returns a sorted unique list."""
     cultivars = set()
     for pattern in CULTIVAR_PATTERNS:
         for match in re.findall(pattern, filtered_text):
@@ -487,6 +505,8 @@ SEX_PATTERNS = [
 
 
 def extract_sex(weighted_sections: dict) -> dict:
+    """Extract the sequenced individual's sex via SEX_PATTERNS, scanning non-noise
+    sections; returns {"value": "unknown"} if not stated."""
     for sec_name, (text, weight) in weighted_sections.items():
         if weight == 0.0:
             continue
@@ -507,6 +527,9 @@ def extract_sex(weighted_sections: dict) -> dict:
 
 
 def extract_species(sections: dict, weighted_sections: dict) -> Optional[str]:
+    """Extract a binomial species name from text, preferring the abstract then
+    high-weight sections; returns "unknown" if no binomial is found. Used only as
+    a fallback when NCBI provides no scientific_name."""
     pattern1 = r"([A-Z][a-z]+\s+[a-z]+)(?:\s+(?:Borkh\.|L\.|var\.))"
     pattern2 = r"([A-Z][a-z]{2,15}\s+[a-z]{2,15})"
 
@@ -542,6 +565,10 @@ def extract_species(sections: dict, weighted_sections: dict) -> Optional[str]:
 
 
 def extract_metadata(parsed: dict, assembly: dict, paper_title: Optional[str] = None) -> dict:
+    """Run the full rule-based extraction for one paper: ploidy, chromosome number,
+    cultivars, sex and species. NCBI assembly fields take precedence; text is used
+    to fill gaps, and a clearly-sourced reference ploidy is a last resort when the
+    paper is silent. Returns the combined metadata dict."""
     sections = dict(parsed.get("sections", {}))
 
     # Paper title is the most authoritative source for ploidy and is often
@@ -553,7 +580,7 @@ def extract_metadata(parsed: dict, assembly: dict, paper_title: Optional[str] = 
 
     filtered_text = " ".join(text for sec, text in sections.items() if get_section_weight(sec) > 0)
 
-    print("  [extract] Running rule-based extraction ...")
+    logger.info("  [extract] Running rule-based extraction ...")
 
     # ── Fields from NCBI ──────────────────────────────────────
     ncbi_accession = assembly.get("assembly_accession")
@@ -574,7 +601,7 @@ def extract_metadata(parsed: dict, assembly: dict, paper_title: Optional[str] = 
     if ncbi_chrom:
         chromosome_number = {"value": str(ncbi_chrom), "source": ncbi_chrom_source}
     else:
-        print("  [extract] chromosome_number not in NCBI → extracting from text ...")
+        logger.info("  [extract] chromosome_number not in NCBI → extracting from text ...")
         chromosome_number = extract_chromosome_number(weighted_sections)
 
     # ── Text-only fields ──────────────────────────────────────
@@ -592,7 +619,7 @@ def extract_metadata(parsed: dict, assembly: dict, paper_title: Optional[str] = 
         if ref_level is None and str(ncbi_taxon) in KNOWN_PLOIDY:
             ref_level, ref_source = KNOWN_PLOIDY[str(ncbi_taxon)], "reference_db"
         if ref_level is not None:
-            print(
+            logger.info(
                 f"  [extract] ploidy not stated in paper → reference: "
                 f"{ref_level} (taxon {ncbi_taxon}, source {ref_source})"
             )
@@ -612,22 +639,22 @@ def extract_metadata(parsed: dict, assembly: dict, paper_title: Optional[str] = 
                 "weighted_counts": {},
             }
         else:
-            print(
+            logger.info(
                 f"  [extract] ploidy not stated in paper and no reference available "
                 f"→ status: not_stated_in_paper"
             )
 
-    print(f"  [extract] Done.")
-    print(f"            species           = {species['value']} (source: {species['source']})")
-    print(
+    logger.info(f"  [extract] Done.")
+    logger.info(f"            species           = {species['value']} (source: {species['source']})")
+    logger.info(
         f"            ploidy            = {ploidy['tuple']} "
         f"(level={ploidy['level']}, confidence: {ploidy['confidence']}, method: {ploidy['method']})"
     )
-    print(
+    logger.info(
         f"            chromosome_number = {chromosome_number['value']} (source: {chromosome_number['source']})"
     )
-    print(f"            cultivars         = {cultivars}")
-    print(f"            sex               = {sex['value']}")
+    logger.info(f"            cultivars         = {cultivars}")
+    logger.info(f"            sex               = {sex['value']}")
 
     return {
         "assembly_accession": ncbi_accession,
