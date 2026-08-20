@@ -15,10 +15,14 @@
 """Optional local Gemma-3 LLM layer for grounded ploidy, sex and strain/cultivar extraction."""
 
 import json
+import logging
 import os
 import re
+from pathlib import Path
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 # ---- controlled vocabulary (shared with extract.py) ----
 try:
@@ -36,10 +40,52 @@ except Exception:
 
 VALID_MECHANISMS = {"autopolyploid", "allopolyploid", "amphidiploid", "segmental_allopolyploid"}
 
+# Sex vocabulary used to normalise the model's `sex` field.
+_SEX_VALID = {"male", "female", "hermaphrodite", "monoecious", "dioecious", "not_applicable", "unknown"}
+_SEX_MAP = {"hermaphroditic": "hermaphrodite"}
+
+# Ploidy word (incl. allo-/auto- prefixed forms) -> integer level.
+_WORD_LEVEL = {
+    "haploid": 1,
+    "monoploid": 1,
+    "diploid": 2,
+    "triploid": 3,
+    "tetraploid": 4,
+    "pentaploid": 5,
+    "hexaploid": 6,
+    "allohexaploid": 6,
+    "autohexaploid": 6,
+    "heptaploid": 7,
+    "octoploid": 8,
+    "octaploid": 8,
+    "allooctoploid": 8,
+    "decaploid": 10,
+    "dodecaploid": 12,
+}
+
+# Mechanism keyword -> controlled term. Ordered most-specific first so a scan
+# stops at the strongest match (e.g. "segmental allopolyploid" before "allopolyploid").
+_MECH_KEYWORDS = [
+    ("segmental allopolyploid", "segmental_allopolyploid"),
+    ("segmental_allopolyploid", "segmental_allopolyploid"),
+    ("amphidiploid", "amphidiploid"),
+    ("amphitetraploid", "amphidiploid"),
+    ("allotetraploid", "allopolyploid"),
+    ("allohexaploid", "allopolyploid"),
+    ("allooctoploid", "allopolyploid"),
+    ("allopolyploid", "allopolyploid"),
+    ("allopolyploidization", "allopolyploid"),
+    ("autotetraploid", "autopolyploid"),
+    ("autohexaploid", "autopolyploid"),
+    ("autopolyploid", "autopolyploid"),
+]
+
+# Model confidence string -> base float (inferred results get an extra multiplier).
+_CONF_MAP = {"high": 0.78, "medium": 0.62, "low": 0.45}
+
 # ---- config ----
-_DEFAULT_MODEL = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "models", "google_gemma-3-4b-it-Q4_K_M.gguf"
-)
+_MODELS_DIR = Path(__file__).resolve().parent / "models"
+_DEFAULT_MODEL = str(_MODELS_DIR / "google_gemma-3-4b-it-Q4_K_M.gguf")
 BASE_URL = os.environ.get("GEMMA_BASE_URL", "http://localhost:8000/v1")
 MODEL = os.environ.get("GEMMA_MODEL", _DEFAULT_MODEL)
 TIMEOUT = int(os.environ.get("GEMMA_TIMEOUT", "300"))
@@ -50,20 +96,17 @@ N_THREADS = int(os.environ.get("GEMMA_N_THREADS", "32"))  # one NUMA node
 _gguf_model = None
 
 # ---- HuggingFace direct backend (float32 fallback, ~16GB RAM) ----
-_HF_MODEL_DIR = os.environ.get(
-    "GEMMA_HF_MODEL_DIR",
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "gemma-3-4b-it"),
-)
+_HF_MODEL_DIR = os.environ.get("GEMMA_HF_MODEL_DIR", str(_MODELS_DIR / "gemma-3-4b-it"))
 _direct_model = None
 _direct_tokenizer = None
 
 
 def _gguf_available() -> bool:
-    return MODEL.endswith(".gguf") and os.path.isfile(MODEL)
+    return MODEL.endswith(".gguf") and Path(MODEL).is_file()
 
 
 def _weights_available() -> bool:
-    return os.path.isfile(os.path.join(_HF_MODEL_DIR, "config.json"))
+    return (Path(_HF_MODEL_DIR) / "config.json").is_file()
 
 
 def _server_is_up() -> bool:
@@ -75,6 +118,9 @@ def _server_is_up() -> bool:
 
 
 def is_enabled() -> bool:
+    """Return whether the optional Gemma layer should run. `GEMMA_ENABLED=1`/`0`
+    forces it on/off; otherwise it auto-enables when a GGUF file, local HF weights,
+    or a running inference server is detected."""
     env = os.environ.get("GEMMA_ENABLED")
     if env == "1":
         return True
@@ -90,7 +136,7 @@ def _load_gguf_backend() -> None:
         return
     from llama_cpp import Llama
 
-    print(f"  [gemma-gguf] loading {os.path.basename(MODEL)} (first call, may take ~10s) ...")
+    logger.info(f"  [gemma-gguf] loading {Path(MODEL).name} (first call, may take ~10s) ...")
     _gguf_model = Llama(
         model_path=MODEL,
         n_ctx=4096,
@@ -98,14 +144,14 @@ def _load_gguf_backend() -> None:
         chat_format="gemma",
         verbose=False,
     )
-    print("  [gemma-gguf] model ready")
+    logger.info("  [gemma-gguf] model ready")
 
 
 def _call_gguf(species: str, passages: list, accession: str | None = None) -> dict | None:
     try:
         _load_gguf_backend()
     except Exception as e:
-        print(f"  [gemma-gguf] load failed ({e}); will try next backend")
+        logger.warning(f"  [gemma-gguf] load failed ({e}); will try next backend")
         return None
     messages = _build_messages(species, passages, accession=accession)
     assert _gguf_model is not None  # populated by the loader above
@@ -118,7 +164,7 @@ def _call_gguf(species: str, passages: list, accession: str | None = None) -> di
         )
         content = resp["choices"][0]["message"]["content"]  # type: ignore[index]
     except Exception as e:
-        print(f"  [gemma-gguf] inference failed ({e})")
+        logger.warning(f"  [gemma-gguf] inference failed ({e})")
         return None
     return _parse_json(content)  # type: ignore[arg-type]
 
@@ -128,22 +174,22 @@ def _load_direct_backend() -> None:
     if _direct_model is not None:
         return
 
-    model_name = os.path.basename(_HF_MODEL_DIR)
-    print(f"  [gemma-direct] loading {model_name} (first call, may take a minute) ...")
+    model_name = Path(_HF_MODEL_DIR).name
+    logger.info(f"  [gemma-direct] loading {model_name} (first call, may take a minute) ...")
 
     import torch
     from transformers import AutoTokenizer, AutoModelForCausalLM
 
     _direct_model = AutoModelForCausalLM.from_pretrained(_HF_MODEL_DIR, torch_dtype=torch.float32).eval()
     _direct_tokenizer = AutoTokenizer.from_pretrained(_HF_MODEL_DIR)
-    print("  [gemma-direct] model ready")
+    logger.info("  [gemma-direct] model ready")
 
 
 def _call_direct(species: str, passages: list, accession: str | None = None) -> dict | None:
     try:
         _load_direct_backend()
     except Exception as e:
-        print(f"  [gemma-direct] load failed ({e}); will try HTTP server")
+        logger.warning(f"  [gemma-direct] load failed ({e}); will try HTTP server")
         return None
 
     import torch
@@ -179,7 +225,7 @@ def _call_direct(species: str, passages: list, accession: str | None = None) -> 
                 eos_token_id=eos_ids,
             )
     except Exception as e:
-        print(f"  [gemma-direct] generate failed ({e})")
+        logger.warning(f"  [gemma-direct] generate failed ({e})")
         return None
 
     new_ids = output[0][input_ids.shape[1] :]
@@ -393,10 +439,12 @@ _FEWSHOT = [
 
 
 def _user_block(target: str, passages_str: str, accession: str | None = None) -> str:
-    t = (target or "").strip() or "(not specified — use the organism whose genome this paper presents)"
+    target_clean = (
+        target or ""
+    ).strip() or "(not specified — use the organism whose genome this paper presents)"
     acc_line = f"Assembly accession: {accession}\n" if accession else ""
     return (
-        f"Target organism: {t}\n"
+        f"Target organism: {target_clean}\n"
         f"{acc_line}\n"
         f"Passages:\n<passages>\n{passages_str.strip()}\n</passages>\n\n"
         "Return the single JSON object."
@@ -406,14 +454,14 @@ def _user_block(target: str, passages_str: str, accession: str | None = None) ->
 def _build_user_prompt(species: str, passages: list, accession: str | None = None) -> str:
     blocks = []
     total = 0
-    for i, p in enumerate(passages, 1):
-        t = (p.get("text") or "").strip()
-        if not t:
+    for i, passage in enumerate(passages, 1):
+        text = (passage.get("text") or "").strip()
+        if not text:
             continue
-        if total + len(t) > MAX_CHARS:
-            t = t[: max(0, MAX_CHARS - total)]
-        blocks.append(f"[Passage {i} | section: {p.get('section', '?')}]\n{t}")
-        total += len(t)
+        if total + len(text) > MAX_CHARS:
+            text = text[: max(0, MAX_CHARS - total)]
+        blocks.append(f"[Passage {i} | section: {passage.get('section', '?')}]\n{text}")
+        total += len(text)
         if total >= MAX_CHARS:
             break
     joined = "\n\n".join(blocks) if blocks else "(no passages)"
@@ -445,7 +493,7 @@ def _call_vllm(species: str, passages: list, accession: str | None = None) -> di
         r.raise_for_status()
         content = r.json()["choices"][0]["message"]["content"]
     except (requests.RequestException, KeyError, ValueError, IndexError) as e:
-        print(f"  [gemma] call failed ({e}); skipping Gemma layer")
+        logger.warning(f"  [gemma] call failed ({e}); skipping Gemma layer")
         return None
     return _parse_json(content)
 
@@ -453,35 +501,35 @@ def _call_vllm(species: str, passages: list, accession: str | None = None) -> di
 def _parse_json(text: str) -> dict | None:
     if not text:
         return None
-    t = text.strip()
-    t = re.sub(r"^```(?:json)?|```$", "", t, flags=re.MULTILINE).strip()
+    cleaned = text.strip()
+    cleaned = re.sub(r"^```(?:json)?|```$", "", cleaned, flags=re.MULTILINE).strip()
     # grab the first {...} block if the model added prose
-    m = re.search(r"\{.*\}", t, flags=re.DOTALL)
-    if m:
-        t = m.group()
+    match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
+    if match:
+        cleaned = match.group()
     try:
-        return json.loads(t)
+        return json.loads(cleaned)
     except json.JSONDecodeError:
         return None
 
 
-def _norm(s: str) -> str:
-    return re.sub(r"\s+", " ", (s or "").lower()).strip()
+def _norm(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").lower()).strip()
 
 
 def _is_grounded(quote: str, passages: list) -> bool:
-    q = _norm(quote)
-    if len(q) < 12:
+    quote_norm = _norm(quote)
+    if len(quote_norm) < 12:
         return False
-    corpus = _norm(" ".join(p.get("text", "") for p in passages))
-    if q in corpus:
+    corpus = _norm(" ".join(passage.get("text", "") for passage in passages))
+    if quote_norm in corpus:
         return True
     # Fuzzy fallback: ≥65% of content words (len>5) must appear in the corpus.
     # Using len>5 avoids short function words ("with", "from") skewing the score.
-    words = [w for w in q.split() if len(w) > 5]
+    words = [word for word in quote_norm.split() if len(word) > 5]
     if not words:
         return False
-    return sum(1 for w in words if w in corpus) / len(words) >= 0.65
+    return sum(1 for word in words if word in corpus) / len(words) >= 0.65
 
 
 def _validate(obj: dict, passages: list) -> dict | None:
@@ -502,9 +550,7 @@ def _validate(obj: dict, passages: list) -> dict | None:
     quotes = [q.strip() for q in raw_quotes if q and isinstance(q, str)]
     quote = quotes[0] if quotes else ""  # primary quote for grounding / mechanism scan
 
-    # Sex normalization
-    _SEX_VALID = {"male", "female", "hermaphrodite", "monoecious", "dioecious", "not_applicable", "unknown"}
-    _SEX_MAP = {"hermaphroditic": "hermaphrodite"}
+    # Sex normalization (vocabulary defined at module level)
     sex_raw = str(obj.get("sex") or "").lower().strip()
     sex = _SEX_MAP.get(sex_raw, sex_raw if sex_raw in _SEX_VALID else "unknown")
 
@@ -516,30 +562,14 @@ def _validate(obj: dict, passages: list) -> dict | None:
         strain_cultivar = None
 
     # normalise level: accept integer, numeric string, or ploidy word form
-    _WORD_LEVEL = {
-        "haploid": 1,
-        "monoploid": 1,
-        "diploid": 2,
-        "triploid": 3,
-        "tetraploid": 4,
-        "pentaploid": 5,
-        "hexaploid": 6,
-        "allohexaploid": 6,
-        "autohexaploid": 6,
-        "heptaploid": 7,
-        "octoploid": 8,
-        "octaploid": 8,
-        "allooctoploid": 8,
-        "decaploid": 10,
-        "dodecaploid": 12,
-    }
+    # (_WORD_LEVEL defined at module level)
     if isinstance(level, str):
-        lv = level.lower().strip()
-        if lv in _WORD_LEVEL:
-            level = _WORD_LEVEL[lv]
+        level_word = level.lower().strip()
+        if level_word in _WORD_LEVEL:
+            level = _WORD_LEVEL[level_word]
         else:
-            m = re.search(r"\d+", lv)
-            level = int(m.group()) if m else None
+            match = re.search(r"\d+", level_word)
+            level = int(match.group()) if match else None
     if not isinstance(level, int):
         level = None
     # Reject implausibly large values — the model sometimes extracts the 2n
@@ -548,30 +578,16 @@ def _validate(obj: dict, passages: list) -> dict | None:
     if isinstance(level, int) and level > 20:
         level = None
 
-    # Normalise mechanism to controlled vocabulary.
+    # Normalise mechanism to controlled vocabulary (_MECH_KEYWORDS at module level).
     # The model sometimes puts the full ploidy word or even a sentence — scan for
     # keywords so we still extract signal even when instructions are partially ignored.
-    _MECH_KEYWORDS = [
-        ("segmental allopolyploid", "segmental_allopolyploid"),
-        ("segmental_allopolyploid", "segmental_allopolyploid"),
-        ("amphidiploid", "amphidiploid"),
-        ("amphitetraploid", "amphidiploid"),
-        ("allotetraploid", "allopolyploid"),
-        ("allohexaploid", "allopolyploid"),
-        ("allooctoploid", "allopolyploid"),
-        ("allopolyploid", "allopolyploid"),
-        ("allopolyploidization", "allopolyploid"),
-        ("autotetraploid", "autopolyploid"),
-        ("autohexaploid", "autopolyploid"),
-        ("autopolyploid", "autopolyploid"),
-    ]
     # Guard: model occasionally returns mechanism as a list (e.g. ["allopolyploid"])
     if isinstance(mechanism, list):
         mechanism = mechanism[0] if mechanism else None
     if isinstance(mechanism, str):
-        m_lower = mechanism.lower().strip()
+        mech_lower = mechanism.lower().strip()
         for keyword, controlled in _MECH_KEYWORDS:
-            if keyword in m_lower:
+            if keyword in mech_lower:
                 mechanism = controlled
                 break
         else:
@@ -590,7 +606,7 @@ def _validate(obj: dict, passages: list) -> dict | None:
     # Grounding gate: at least one evidence_quote must be traceable to passages.
     grounded = any(_is_grounded(q, passages) for q in quotes) if quotes else False
     if (level is not None or mechanism is not None) and not grounded:
-        print("  [gemma] value rejected (evidence_quotes not grounded in passages)")
+        logger.info("  [gemma] value rejected (evidence_quotes not grounded in passages)")
         level, mechanism = None, None
 
     # schema normalisation (mirror resolve_ploidy_fields)
@@ -607,9 +623,8 @@ def _validate(obj: dict, passages: list) -> dict | None:
     if level is None and mechanism is None and not has_sex and not has_strain:
         return None
 
-    # Map model's confidence string to a float.
+    # Map model's confidence string to a float (_CONF_MAP at module level).
     # Inferred results get an 88% multiplier — they're valuable but less certain.
-    _CONF_MAP = {"high": 0.78, "medium": 0.62, "low": 0.45}
     base_conf = _CONF_MAP.get(conf_str, 0.55)
     suggested = not explicit
     confidence = round(base_conf * (1.0 if explicit else 0.88), 2)
@@ -617,7 +632,7 @@ def _validate(obj: dict, passages: list) -> dict | None:
     method = "gemma_suggested" if suggested else "gemma"
 
     if suggested and level is not None:
-        print(f"  [gemma] suggested (inferred): level={level} mech={mechanism} conf={conf_str}")
+        logger.info(f"  [gemma] suggested (inferred): level={level} mech={mechanism} conf={conf_str}")
 
     return {
         "level": level,
@@ -641,12 +656,18 @@ def _validate(obj: dict, passages: list) -> dict | None:
     }
 
 
-def run_gemma_ploidy(species: str, evidence_passages: list, accession: str | None = None) -> dict | None:
+def run_gemma_ploidy(
+    species: str, evidence_passages: list[dict], accession: str | None = None
+) -> dict | None:
+    """Run grounded ploidy/sex/strain extraction for `species` over the given
+    evidence passages, returning a validated result dict (or None if the Gemma
+    layer is disabled, there are no passages, or every backend fails). Backends
+    are tried in order: HTTP server, in-process GGUF, then HF float32."""
     if not is_enabled():
         return None
     if not evidence_passages:
         return None
-    print("\n  [gemma] querying local Gemma for ploidy (grounded extraction) ...")
+    logger.info("\n  [gemma] querying local Gemma for ploidy (grounded extraction) ...")
     # Priority: HTTP server > GGUF in-process > HF float32 direct
     if _server_is_up():
         raw = _call_vllm(species, evidence_passages, accession=accession)
@@ -664,6 +685,10 @@ def run_gemma_ploidy(species: str, evidence_passages: list, accession: str | Non
 
 
 def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
+    """Fold a validated Gemma result into the rule+vector ensemble ploidy as a
+    third vote. Inferred (`suggested`) results are attached as a non-destructive
+    `gemma_suggestion`; explicit results can raise confidence on agreement, fill a
+    missing level, or flag a conflict. Also backfills sex and cultivar when absent."""
     if not gemma:
         return ensemble
 
