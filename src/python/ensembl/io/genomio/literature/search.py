@@ -15,8 +15,9 @@
 """Vector-search ensemble (BM25 + dense embeddings) over parsed sections, combined with the rule-based result."""
 
 import json
-import os
+import logging
 import re
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -25,6 +26,8 @@ from sentence_transformers import SentenceTransformer
 
 # Shared ploidy logic — keeps rule-based and vector stages consistent
 from .extract import resolve_ploidy_fields, _LEVEL_LABEL
+
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # Configuration
@@ -65,13 +68,13 @@ def get_section_weight(section_name: str) -> float:
 # STEP 1 — Load embedding model
 # ============================================================
 
-_embedder = None
+_embedder: SentenceTransformer | None = None
 
 
 def get_embedder() -> SentenceTransformer:
     global _embedder
     if _embedder is None:
-        print(f"  [search] Loading embedding model: {EMBED_MODEL}")
+        logger.info(f"  [search] Loading embedding model: {EMBED_MODEL}")
         _embedder = SentenceTransformer(EMBED_MODEL)
     return _embedder
 
@@ -83,7 +86,8 @@ def get_embedder() -> SentenceTransformer:
 
 def build_index(chunks: list[dict], paper_id: str) -> None:
     embedder = get_embedder()
-    os.makedirs(INDEX_DIR, exist_ok=True)
+    index_dir = Path(INDEX_DIR)
+    index_dir.mkdir(parents=True, exist_ok=True)
 
     # Attach paper_id to each chunk
     for chunk in chunks:
@@ -92,7 +96,7 @@ def build_index(chunks: list[dict], paper_id: str) -> None:
     texts = [c["text"] for c in chunks]
     passage_texts = [f"passage: {t}" for t in texts]
 
-    print(f"  [search] Encoding {len(texts)} chunks ...")
+    logger.info(f"  [search] Encoding {len(texts)} chunks ...")
     embeddings = embedder.encode(
         passage_texts,
         normalize_embeddings=True,
@@ -101,21 +105,21 @@ def build_index(chunks: list[dict], paper_id: str) -> None:
     )
 
     # Save dense embeddings
-    np.save(os.path.join(INDEX_DIR, "embeddings.npy"), np.asarray(embeddings).astype("float32"))
+    np.save(index_dir / "embeddings.npy", np.asarray(embeddings).astype("float32"))
 
     # Save BM25 tokens
     tokenized = [t.lower().split() for t in texts]
-    with open(os.path.join(INDEX_DIR, "bm25_tokens.json"), "w") as f:
-        json.dump(tokenized, f)
+    with (index_dir / "bm25_tokens.json").open("w") as handle:
+        json.dump(tokenized, handle)
 
     # Save chunk metadata
     pd.DataFrame(chunks).to_json(
-        os.path.join(INDEX_DIR, "metadata.json"),
+        index_dir / "metadata.json",
         orient="records",
         force_ascii=False,
     )
 
-    print(f"  [search] Index saved to {INDEX_DIR}/ ({len(chunks)} chunks)")
+    logger.info(f"  [search] Index saved to {INDEX_DIR}/ ({len(chunks)} chunks)")
 
 
 # ============================================================
@@ -123,13 +127,14 @@ def build_index(chunks: list[dict], paper_id: str) -> None:
 # ============================================================
 
 
-def load_index() -> tuple:
-    embeddings = np.load(os.path.join(INDEX_DIR, "embeddings.npy"))
-    meta = pd.read_json(os.path.join(INDEX_DIR, "metadata.json"), orient="records")
-    with open(os.path.join(INDEX_DIR, "bm25_tokens.json")) as f:
-        bm25 = BM25Okapi(json.load(f))
+def load_index() -> tuple[np.ndarray, BM25Okapi, pd.DataFrame, list[str]]:
+    index_dir = Path(INDEX_DIR)
+    embeddings = np.load(index_dir / "embeddings.npy")
+    meta = pd.read_json(index_dir / "metadata.json", orient="records")
+    with (index_dir / "bm25_tokens.json").open() as handle:
+        bm25 = BM25Okapi(json.load(handle))
     texts = meta["text"].tolist()
-    print(f"  [search] Index loaded: {len(texts)} chunks")
+    logger.info(f"  [search] Index loaded: {len(texts)} chunks")
     return embeddings, bm25, meta, texts
 
 
@@ -427,14 +432,14 @@ def run_vector_search(parsed: dict, rule_result: dict) -> dict:
     paper_id = parsed.get("source", "unknown")
 
     # Build index for this paper
-    print("\n  [search] Building index ...")
+    logger.info("\n  [search] Building index ...")
     build_index(chunks, paper_id=paper_id)
 
     # Load index
     embeddings, bm25, meta, texts = load_index()
 
     # Search for each metadata field
-    print("\n  [search] Running hybrid search ...")
+    logger.info("\n  [search] Running hybrid search ...")
     vector_results = {}
     for field, query in QUERIES.items():
         results = search(query, embeddings, bm25, meta, texts, top_k=5)
@@ -447,7 +452,7 @@ def run_vector_search(parsed: dict, rule_result: dict) -> dict:
     v_strain = infer_strain(vector_results["strain"])
 
     # Ensemble with rule-based results
-    print("\n  [search] Running ensemble ...")
+    logger.info("\n  [search] Running ensemble ...")
     final: dict = {
         # NCBI-sourced fields (pass through from extract.py)
         "assembly_accession": rule_result.get("assembly_accession"),
@@ -479,27 +484,29 @@ def run_vector_search(parsed: dict, rule_result: dict) -> dict:
     ]
 
     # Print summary
-    print("\n" + "=" * 60)
-    print("Final Ensemble Results")
-    print("=" * 60)
-    print(f"  assembly_accession = {final['assembly_accession']}")
-    print(f"  assembly_name      = {final['assembly_name']}")
-    print(f"  taxon_id           = {final['taxon_id']}")
-    print(f"  species            = {final['species']['value']} " f"(source: {final['species']['source']})")
+    logger.info("\n" + "=" * 60)
+    logger.info("Final Ensemble Results")
+    logger.info("=" * 60)
+    logger.info(f"  assembly_accession = {final['assembly_accession']}")
+    logger.info(f"  assembly_name      = {final['assembly_name']}")
+    logger.info(f"  taxon_id           = {final['taxon_id']}")
+    logger.info(
+        f"  species            = {final['species']['value']} " f"(source: {final['species']['source']})"
+    )
     p = final["ploidy"]
-    print(
+    logger.info(
         f"  ploidy             = {p['tuple']} "
         f"(level={p['level']}, confidence: {p['confidence']}, method: {p['method']})"
     )
     c = final["chromosome_number"]
-    print(f"  chromosome_number  = {c['value']} (source: {c['source']})")
-    print(f"  cultivars          = {final['cultivars']['confirmed']}")
-    print(f"  sex                = {final['sex']['value']} " f"(method: {final['sex']['method']})")
-    print("=" * 60)
-    print("\n  Confidence guide:")
-    print("    consensus         both methods agree     -> highest reliability")
-    print("    rule_only         rule-based only        -> needs review")
-    print("    vector_only       vector search only     -> needs review")
-    print("    conflict          methods disagree       -> manual check required")
+    logger.info(f"  chromosome_number  = {c['value']} (source: {c['source']})")
+    logger.info(f"  cultivars          = {final['cultivars']['confirmed']}")
+    logger.info(f"  sex                = {final['sex']['value']} " f"(method: {final['sex']['method']})")
+    logger.info("=" * 60)
+    logger.info("\n  Confidence guide:")
+    logger.info("    consensus         both methods agree     -> highest reliability")
+    logger.info("    rule_only         rule-based only        -> needs review")
+    logger.info("    vector_only       vector search only     -> needs review")
+    logger.info("    conflict          methods disagree       -> manual check required")
 
     return final
