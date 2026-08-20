@@ -57,9 +57,11 @@ PRIORITY_SECTIONS = ["abstract", "introduction", "background"]
 
 
 def get_section_weight(section_name: str) -> float:
-    s = section_name.lower()
+    """Return the retrieval weight for a section by matching its name against
+    SECTION_WEIGHTS (0.0 = noise section to skip); defaults to 1.0 if unmatched."""
+    section_lower = section_name.lower()
     for key, weight in SECTION_WEIGHTS.items():
-        if key in s:
+        if key in section_lower:
             return weight
     return 1.0
 
@@ -72,6 +74,7 @@ _embedder: SentenceTransformer | None = None
 
 
 def get_embedder() -> SentenceTransformer:
+    """Return the shared SentenceTransformer, loading it lazily on first use."""
     global _embedder
     if _embedder is None:
         logger.info(f"  [search] Loading embedding model: {EMBED_MODEL}")
@@ -85,6 +88,8 @@ def get_embedder() -> SentenceTransformer:
 
 
 def build_index(chunks: list[dict], paper_id: str) -> None:
+    """Encode the chunks into dense embeddings and BM25 tokens and persist them
+    (embeddings.npy, bm25_tokens.json, metadata.json) under INDEX_DIR."""
     embedder = get_embedder()
     index_dir = Path(INDEX_DIR)
     index_dir.mkdir(parents=True, exist_ok=True)
@@ -128,6 +133,8 @@ def build_index(chunks: list[dict], paper_id: str) -> None:
 
 
 def load_index() -> tuple[np.ndarray, BM25Okapi, pd.DataFrame, list[str]]:
+    """Load the persisted index from INDEX_DIR and return
+    (embeddings, BM25 model, chunk metadata frame, chunk texts)."""
     index_dir = Path(INDEX_DIR)
     embeddings = np.load(index_dir / "embeddings.npy")
     meta = pd.read_json(index_dir / "metadata.json", orient="records")
@@ -149,6 +156,8 @@ def rrf_fuse(
     k: int = 5,
     rrf_k: int = RRF_K,
 ) -> list[tuple[int, float]]:
+    """Fuse BM25 and dense score arrays with Reciprocal Rank Fusion and return the
+    top-k (index, fused_score) pairs."""
     bm25_ranks = np.argsort(np.argsort(-bm25_scores))
     dense_ranks = np.argsort(np.argsort(-dense_scores))
     fused = 1.0 / (rrf_k + bm25_ranks) + 1.0 / (rrf_k + dense_ranks)
@@ -164,6 +173,8 @@ def search(
     texts: list[str],
     top_k: int = 5,
 ) -> list[dict]:
+    """Hybrid BM25 + dense search for one query: fuse the two rankings, drop noise
+    sections, apply section weights, and return the top_k weighted results."""
     embedder = get_embedder()
 
     # BM25 scores
@@ -227,6 +238,8 @@ def infer_ploidy(results: list) -> dict:
 
 
 def infer_sex(results: list[dict]) -> dict:
+    """Infer the sequenced individual's sex from retrieved chunks via SEX_KEYWORDS,
+    returning the match with context or {"value": "unknown"}."""
     for r in results:
         if get_section_weight(r["section"]) == 0.0:
             continue
@@ -245,6 +258,8 @@ def infer_sex(results: list[dict]) -> dict:
 
 
 def infer_species(results: list[dict]) -> dict:
+    """Return the best species-bearing chunk, preferring a priority section
+    (abstract/introduction/background) then the top-scored result."""
     for r in results:
         if any(p in r["section"].lower() for p in PRIORITY_SECTIONS):
             return {
@@ -262,6 +277,8 @@ def infer_species(results: list[dict]) -> dict:
 
 
 def infer_strain(results: list[dict]) -> dict:
+    """Return the top retrieved chunk likely to name a strain/cultivar, skipping
+    non-informative sections (author contributions, conclusions, acknowledgements)."""
     EXCLUDE = ["author contribution", "conclusions", "acknowledgement"]
     for r in results:
         if any(e in r["section"].lower() for e in EXCLUDE):
@@ -379,6 +396,8 @@ def ensemble_cultivars(
     vector_strain: dict,
     sections: dict,
 ) -> dict:
+    """Split rule-based cultivar candidates into confirmed vs unconfirmed by
+    checking each against the full section text; returns both lists plus section."""
     full_text = " ".join(text for sec, text in sections.items() if get_section_weight(sec) > 0)
     confirmed, unconfirmed = [], []
     for c in rule_cultivars:
@@ -396,6 +415,8 @@ def ensemble_cultivars(
 
 
 def ensemble_sex(rule_sex: dict, vector_sex: dict) -> dict:
+    """Combine rule-based and vector sex calls: consensus when they agree, the
+    non-unknown one when only one has a value, else 'unknown' (conflict)."""
     r_val = rule_sex.get("value", "unknown")
     v_val = vector_sex.get("value", "unknown")
     if r_val == v_val:
@@ -427,6 +448,9 @@ QUERIES = {
 
 
 def run_vector_search(parsed: dict, rule_result: dict) -> dict:
+    """Build the per-paper index, run hybrid search for each metadata field, infer
+    ploidy/sex/species/strain from the results, and ensemble them with the
+    rule-based result into the final metadata dict."""
     sections = parsed.get("sections", {})
     chunks = parsed.get("chunks", [])
     paper_id = parsed.get("source", "unknown")

@@ -42,6 +42,7 @@ def clean_text(text: str) -> str:
 
 
 def detect_text_type(text: str) -> str:
+    """Classify raw text as full-text 'xml' (starts with a tag) or plain 'abstract'."""
     return "xml" if text.lstrip().startswith("<") else "abstract"
 
 
@@ -79,6 +80,8 @@ def _serialize_table(table_wrap: ET.Element) -> str:
 
 
 def parse_xml_tables(root: ET.Element) -> dict[str, str]:
+    """Extract each <table-wrap> from a PMC article as a {title: caption + rows}
+    section, keeping the longest body when a title repeats."""
     tables: dict[str, str] = {}
     for i, tw in enumerate(root.iter("table-wrap"), 1):
         label = clean_text(tw.findtext("label", ""))
@@ -104,6 +107,8 @@ def parse_xml_tables(root: ET.Element) -> dict[str, str]:
 
 
 def parse_xml_sections(xml_text: str) -> dict[str, str]:
+    """Parse PMC full-text XML into a {section title: text} dict, including the
+    abstract, body sections (longest kept on title clashes) and tables."""
     sections = {}
     try:
         root = ET.fromstring(xml_text)
@@ -142,6 +147,7 @@ def parse_xml_sections(xml_text: str) -> dict[str, str]:
 
 
 def parse_abstract(abstract_text: str) -> dict[str, str]:
+    """Wrap a plain abstract string as a single {"Abstract": cleaned text} section."""
     # Abstract snippets from search results sometimes carry stray markup
     # (e.g. "<title>Abstract</title> <p>..."); strip tags before cleaning so
     # the section body is plain text.
@@ -172,6 +178,8 @@ def parse_supplementary(supp_text: str) -> dict[str, str]:
 
 
 def split_into_chunks(sections: dict[str, str], chunk_size: int = 300) -> list[dict]:
+    """Split each section's text into sentence-aware chunks of ~chunk_size chars,
+    returning a list of {section, text, chunk_index} dicts for embedding/search."""
     # chunk_size is in characters: ~300 keeps each chunk to a few sentences, which
     # suits the sentence-transformer in search.py (short, focused passages embed
     # and retrieve better than long ones) while staying well under its token limit.

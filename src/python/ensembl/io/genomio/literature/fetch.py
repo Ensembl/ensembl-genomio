@@ -75,6 +75,9 @@ def _fetch_assembly_report(accession: str) -> list:
 
 
 def fetch_assembly_metadata(accession: str) -> dict:
+    """Fetch an assembly's NCBI Datasets metadata (species, taxon_id, common name,
+    linked PMIDs, chromosome number), retrying without a stale version suffix.
+    Returns a dict with empty/None fields if no report is found."""
     reports = _fetch_assembly_report(accession)
 
     # A stale version suffix (e.g. GCA_000001405.15 when .29 is current) makes
@@ -129,6 +132,8 @@ def fetch_assembly_metadata(accession: str) -> dict:
 
 
 def fetch_taxonomy_common_name(taxon_id: str) -> str | None:
+    """Look up a taxon's common name from NCBI Taxonomy (GenBank common name
+    preferred), or None if unavailable."""
     # Caller (enrich_assembly_metadata) guards on taxon_id before calling this.
     try:
         r = entrez_get("efetch.fcgi", {"db": "taxonomy", "id": str(taxon_id)})
@@ -418,6 +423,7 @@ def search_europe_pmc(query: str, max_results: int = 5, retries: int = 3) -> lis
 
 
 def search_by_pmid(pmid: str) -> dict | None:
+    """Fetch one paper's Europe PMC record by PMID, or None if not found."""
     url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
     params = {
         "query": f"EXT_ID:{pmid} AND SRC:MED",
@@ -439,6 +445,9 @@ def search_europe_pmc_by_name(
     common_name: str = "",
     max_results: int = 5,
 ) -> list:
+    """Search Europe PMC for genome papers by scientific/common name, escalating
+    from full name to binomial to genus to taxon-ID queries and keeping only
+    genus-relevant hits. Returns up to max_results records ([] if none)."""
     tokens = scientific_name.split() if scientific_name else []
     genus = tokens[0] if tokens else ""
     # Binomial = genus + species epithet. For a subspecies / variety / hybrid
@@ -679,6 +688,9 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
 
 
 def search_semantic_scholar(scientific_name: str, max_results: int = 5) -> list:
+    """Last-resort search: query Semantic Scholar for genome-assembly papers by
+    scientific name, keeping only genus-relevant hits. Returns Europe-PMC-shaped
+    records ([] on failure)."""
     logger.info(f"  [Semantic Scholar] Searching for {scientific_name} ...")
 
     url = "https://api.semanticscholar.org/graph/v1/paper/search"
@@ -771,6 +783,7 @@ def validate_paper_ids(paper: dict) -> dict:
 
 
 def get_fulltext_by_pmcid(pmcid: str) -> str | None:
+    """Download an article's full-text XML from Europe PMC by PMCID, or None."""
     url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
     try:
         response = requests.get(url, timeout=30)
@@ -874,6 +887,7 @@ def get_supplementary_text_by_pmcid(pmcid: str, max_chars: int = 40000) -> str |
 
 
 def get_abstract_by_pmid(pmid: str) -> str | None:
+    """Return the abstract text for a PMID via Europe PMC, or None."""
     paper = search_by_pmid(pmid)
     if paper:
         return paper.get("abstractText")
@@ -881,6 +895,9 @@ def get_abstract_by_pmid(pmid: str) -> str | None:
 
 
 def get_best_available_text(paper: dict) -> dict:
+    """Return the best retrievable text for a paper as {source, text, ...}: full
+    text (+ supplementary) by PMCID, else abstract by PMID, else the search-result
+    abstract, else source 'none'."""
     pmcid = paper.get("pmcid")
     pmid = paper.get("pmid")
 
