@@ -17,6 +17,7 @@
 import json
 import logging
 import re
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -87,9 +88,11 @@ def get_embedder() -> SentenceTransformer:
 # ============================================================
 
 
-def build_index(chunks: list[dict], paper_id: str) -> None:
-    """Encode the chunks into dense embeddings and BM25 tokens and persist them
-    (embeddings.npy, bm25_tokens.json, metadata.json) under INDEX_DIR."""
+def build_index(chunks: list[dict], paper_id: str) -> tuple[np.ndarray, BM25Okapi, pd.DataFrame, list[str]]:
+    """Encode the chunks into dense embeddings and BM25 tokens, persist them
+    (embeddings.npy, bm25_tokens.json, metadata.json) under INDEX_DIR, and return
+    the in-memory (embeddings, BM25 model, chunk metadata frame, chunk texts) so
+    the caller can search without reloading from disk."""
     embedder = get_embedder()
     index_dir = Path(INDEX_DIR)
     index_dir.mkdir(parents=True, exist_ok=True)
@@ -102,29 +105,27 @@ def build_index(chunks: list[dict], paper_id: str) -> None:
     passage_texts = [f"passage: {t}" for t in texts]
 
     logger.info(f"  [search] Encoding {len(texts)} chunks ...")
-    embeddings = embedder.encode(
-        passage_texts,
-        normalize_embeddings=True,
-        show_progress_bar=True,
-        batch_size=32,
-    )
+    embeddings = np.asarray(
+        embedder.encode(
+            passage_texts,
+            normalize_embeddings=True,
+            show_progress_bar=True,
+            batch_size=32,
+        )
+    ).astype("float32")
 
-    # Save dense embeddings
-    np.save(index_dir / "embeddings.npy", np.asarray(embeddings).astype("float32"))
-
-    # Save BM25 tokens
     tokenized = [t.lower().split() for t in texts]
+    bm25 = BM25Okapi(tokenized)
+    meta = pd.DataFrame(chunks)
+
+    # Persist for provenance and reuse across runs
+    np.save(index_dir / "embeddings.npy", embeddings)
     with (index_dir / "bm25_tokens.json").open("w") as handle:
         json.dump(tokenized, handle)
-
-    # Save chunk metadata
-    pd.DataFrame(chunks).to_json(
-        index_dir / "metadata.json",
-        orient="records",
-        force_ascii=False,
-    )
+    meta.to_json(index_dir / "metadata.json", orient="records", force_ascii=False)
 
     logger.info(f"  [search] Index saved to {INDEX_DIR}/ ({len(chunks)} chunks)")
+    return embeddings, bm25, meta, texts
 
 
 # ============================================================
@@ -217,10 +218,6 @@ def search(
 
 SEX_KEYWORDS = ["female", "male", "XY", "ZW", "pistillate", "staminate", "dioecious"]
 
-# Evidence weighting — must match extract.py so both stages agree
-_COMPOUND_BOOST = 6.0
-_FORMULA_BOOST = 10.0
-
 
 def infer_ploidy(results: list) -> dict:
     """Ploidy (INSDC schema tuple) from retrieved chunks, using the SAME
@@ -228,31 +225,33 @@ def infer_ploidy(results: list) -> dict:
     stages apply identical ancestor-aware, compound-aware logic.
     """
     segments = []
-    for r in results:
-        w = get_section_weight(r["section"])
-        if w == 0.0:
+    for result in results:
+        weight = get_section_weight(result["section"])
+        if weight == 0.0:
             continue
-        is_priority = any(p in r["section"].lower() for p in PRIORITY_SECTIONS)
-        segments.append((r["text"], w, is_priority))
+        is_priority = any(p in result["section"].lower() for p in PRIORITY_SECTIONS)
+        segments.append((result["text"], weight, is_priority))
     return resolve_ploidy_fields(segments)
 
 
 def infer_sex(results: list[dict]) -> dict:
     """Infer the sequenced individual's sex from retrieved chunks via SEX_KEYWORDS,
-    returning the match with context or {"value": "unknown"}."""
-    for r in results:
-        if get_section_weight(r["section"]) == 0.0:
+    returning the FIRST keyword match (with surrounding context) or
+    {"value": "unknown"}. First-match is intentional: papers state the sequenced
+    sample's sex once, and results arrive ranked by relevance."""
+    for result in results:
+        if get_section_weight(result["section"]) == 0.0:
             continue
-        text_lower = r["text"].lower()
-        for kw in SEX_KEYWORDS:
-            if re.search(r"\b" + re.escape(kw.lower()) + r"\b", text_lower):
-                idx = text_lower.find(kw.lower())
+        text_lower = result["text"].lower()
+        for keyword in SEX_KEYWORDS:
+            if re.search(r"\b" + re.escape(keyword.lower()) + r"\b", text_lower):
+                idx = text_lower.find(keyword.lower())
                 start = max(0, idx - 60)
-                end = min(len(r["text"]), idx + 60)
+                end = min(len(result["text"]), idx + 60)
                 return {
-                    "value": kw,
-                    "section": r["section"],
-                    "context": r["text"][start:end],
+                    "value": keyword,
+                    "section": result["section"],
+                    "context": result["text"][start:end],
                 }
     return {"value": "unknown", "evidence": None}
 
@@ -300,91 +299,110 @@ def infer_strain(results: list[dict]) -> dict:
 _MECH_SPEC = {"amphidiploid": 3, "segmental_allopolyploid": 3, "allopolyploid": 1, "autopolyploid": 1}
 
 
-def _merge_mechanism(a: str | None, b: str | None) -> str | None:
-    cands = [m for m in (a, b) if m]
-    if not cands:
+def _merge_mechanism(rule_mechanism: str | None, vector_mechanism: str | None) -> str | None:
+    candidates = [mechanism for mechanism in (rule_mechanism, vector_mechanism) if mechanism]
+    if not candidates:
         return None
-    return max(cands, key=lambda m: _MECH_SPEC.get(m, 0))
+    return max(candidates, key=lambda mechanism: _MECH_SPEC.get(mechanism, 0))
+
+
+def _build_ploidy_result(
+    level: int | None,
+    conf: float,
+    method: str,
+    evidence: object,
+    origin: dict | None,
+    *,
+    mechanism: str | None,
+    irregular: object,
+    derivation: object,
+) -> dict:
+    """Assemble an ensemble ploidy result dict: null the mechanism for
+    monoploid/diploid levels and carry status/source from `origin`."""
+    mech = mechanism
+    if level is not None and level < 3:
+        mech = None  # monoploid/diploid carry no polyploidy mechanism
+    # carry the status/source from whichever result supplied the level
+    if origin is not None and (origin.get("status") or origin.get("source")):
+        status = origin.get("status")
+        source = origin.get("source")
+    elif level is not None or mech is not None:
+        status, source = "found_in_paper", "paper"
+    else:
+        status, source = "not_stated_in_paper", None
+    return {
+        "level": level,
+        "mechanism": mech,
+        "irregular": irregular,
+        "derivation": derivation,
+        "tuple": [level, mech, irregular, derivation],
+        "level_label": _LEVEL_LABEL.get(level) if level is not None else None,
+        "status": status,
+        "source": source,
+        "confidence": conf,
+        "method": method,
+        "evidence": evidence,
+    }
 
 
 def ensemble_ploidy(rule_result: dict, vector_result: dict) -> dict:
     """Combine rule-based and vector ploidy on the `level` field, merging the
     other schema elements (mechanism / irregular / derivation)."""
-    r_lvl = rule_result.get("level")
-    v_lvl = vector_result.get("level")
-    r_conf = rule_result.get("confidence", 0.0)
-    v_conf = vector_result.get("confidence", 0.0)
+    rule_level = rule_result.get("level")
+    vector_level = vector_result.get("level")
+    rule_conf = rule_result.get("confidence", 0.0)
+    vector_conf = vector_result.get("confidence", 0.0)
 
     mechanism = _merge_mechanism(rule_result.get("mechanism"), vector_result.get("mechanism"))
     irregular = rule_result.get("irregular") or vector_result.get("irregular") or False
     derivation = rule_result.get("derivation") or vector_result.get("derivation")
 
-    def out(
-        level: int | None, conf: float, method: str, evidence: object, origin: dict | None = None
-    ) -> dict:
-        mech = mechanism
-        if level == 1:
-            mech = None
-        elif level is not None and level < 3:
-            mech = None
-        # carry the status/source from whichever result supplied the level
-        if origin is not None and (origin.get("status") or origin.get("source")):
-            status = origin.get("status")
-            source = origin.get("source")
-        elif level is not None or mech is not None:
-            status, source = "found_in_paper", "paper"
-        else:
-            status, source = "not_stated_in_paper", None
-        return {
-            "level": level,
-            "mechanism": mech,
-            "irregular": irregular,
-            "derivation": derivation,
-            "tuple": [level, mech, irregular, derivation],
-            "level_label": _LEVEL_LABEL.get(level) if level is not None else None,
-            "status": status,
-            "source": source,
-            "confidence": conf,
-            "method": method,
-            "evidence": evidence,
-        }
+    build = partial(_build_ploidy_result, mechanism=mechanism, irregular=irregular, derivation=derivation)
 
-    if r_lvl is None and v_lvl is None:
+    if rule_level is None and vector_level is None:
         if mechanism:
-            return out(
+            return build(
                 None,
-                max(r_conf, v_conf, 0.4),
+                max(rule_conf, vector_conf, 0.4),
                 "mechanism_only",
                 rule_result.get("evidence") or vector_result.get("evidence"),
                 rule_result,
             )
-        return out(None, 0.0, "both_unknown", None, rule_result)
-    elif r_lvl == v_lvl:
-        return out(
-            r_lvl,
-            min(round((r_conf + v_conf) / 2 + 0.1, 2), 0.95),
+        return build(None, 0.0, "both_unknown", None, rule_result)
+    elif rule_level == vector_level:
+        return build(
+            rule_level,
+            min(round((rule_conf + vector_conf) / 2 + 0.1, 2), 0.95),
             "consensus",
             rule_result.get("evidence"),
             rule_result,
         )
-    elif r_lvl is None:
-        return out(v_lvl, round(v_conf * 0.9, 2), "vector_only", vector_result.get("evidence"), vector_result)
-    elif v_lvl is None:
-        return out(r_lvl, round(r_conf * 0.9, 2), "rule_only", rule_result.get("evidence"), rule_result)
+    elif rule_level is None:
+        return build(
+            vector_level,
+            round(vector_conf * 0.9, 2),
+            "vector_only",
+            vector_result.get("evidence"),
+            vector_result,
+        )
+    elif vector_level is None:
+        return build(
+            rule_level, round(rule_conf * 0.9, 2), "rule_only", rule_result.get("evidence"), rule_result
+        )
     else:
         # Conflict — penalise confidence, pick higher-confidence level
-        if r_conf >= v_conf:
-            return out(
-                r_lvl,
-                round(r_conf * 0.8, 2),
+        if rule_conf >= vector_conf:
+            return build(
+                rule_level,
+                round(rule_conf * 0.8, 2),
                 "rule_wins (conflict)",
                 rule_result.get("evidence"),
                 rule_result,
             )
         else:
-            return out(
-                v_lvl,
-                round(v_conf * 0.8, 2),
+            return build(
+                vector_level,
+                round(vector_conf * 0.8, 2),
                 "vector_wins (conflict)",
                 vector_result.get("evidence"),
                 vector_result,
@@ -417,14 +435,14 @@ def ensemble_cultivars(
 def ensemble_sex(rule_sex: dict, vector_sex: dict) -> dict:
     """Combine rule-based and vector sex calls: consensus when they agree, the
     non-unknown one when only one has a value, else 'unknown' (conflict)."""
-    r_val = rule_sex.get("value", "unknown")
-    v_val = vector_sex.get("value", "unknown")
-    if r_val == v_val:
-        return {"value": r_val, "method": "consensus"}
-    elif r_val == "unknown":
-        return {"value": v_val, "method": "vector_only"}
-    elif v_val == "unknown":
-        return {"value": r_val, "method": "rule_only"}
+    rule_val = rule_sex.get("value", "unknown")
+    vector_val = vector_sex.get("value", "unknown")
+    if rule_val == vector_val:
+        return {"value": rule_val, "method": "consensus"}
+    elif rule_val == "unknown":
+        return {"value": vector_val, "method": "vector_only"}
+    elif vector_val == "unknown":
+        return {"value": rule_val, "method": "rule_only"}
     else:
         return {"value": "unknown", "method": "conflict"}
 
@@ -455,12 +473,9 @@ def run_vector_search(parsed: dict, rule_result: dict) -> dict:
     chunks = parsed.get("chunks", [])
     paper_id = parsed.get("source", "unknown")
 
-    # Build index for this paper
+    # Build the index for this paper and keep it in memory (no reload from disk)
     logger.info("\n  [search] Building index ...")
-    build_index(chunks, paper_id=paper_id)
-
-    # Load index
-    embeddings, bm25, meta, texts = load_index()
+    embeddings, bm25, meta, texts = build_index(chunks, paper_id=paper_id)
 
     # Search for each metadata field
     logger.info("\n  [search] Running hybrid search ...")

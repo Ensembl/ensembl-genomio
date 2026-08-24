@@ -121,17 +121,20 @@ def is_enabled() -> bool:
     """Return whether the optional Gemma layer should run. `GEMMA_ENABLED=1`/`0`
     forces it on/off; otherwise it auto-enables when a GGUF file, local HF weights,
     or a running inference server is detected."""
-    env = os.environ.get("GEMMA_ENABLED")
-    if env == "1":
+    env_gemma = os.environ.get("GEMMA_ENABLED")
+
+    if env_gemma == "1":
         return True
-    if env == "0":
+    if env_gemma == "0":
         return False
     # Auto-detect: enabled if GGUF file, HF weights, or HTTP server available
     return _gguf_available() or _weights_available() or _server_is_up()
 
 
 def _load_gguf_backend() -> None:
+    """Load the GGUF (llama-cpp) model into the module singleton on first use."""
     global _gguf_model
+
     if _gguf_model is not None:
         return
     from llama_cpp import Llama
@@ -154,7 +157,11 @@ def _call_gguf(species: str, passages: list, accession: str | None = None) -> di
         logger.warning(f"  [gemma-gguf] load failed ({e}); will try next backend")
         return None
     messages = _build_messages(species, passages, accession=accession)
-    assert _gguf_model is not None  # populated by the loader above
+
+    if _gguf_model is None:
+        logger.warning("  [gemma-gguf] model failed to initialize")
+        return None
+
     try:
         resp = _gguf_model.create_chat_completion(
             messages=messages,
@@ -195,7 +202,11 @@ def _call_direct(species: str, passages: list, accession: str | None = None) -> 
     import torch
 
     messages = _build_messages(species, passages, accession=accession)
-    assert _direct_model is not None and _direct_tokenizer is not None  # populated by the loader above
+
+    if _direct_model is None or _direct_tokenizer is None:
+        logger.warning("  [gemma-direct] model failed to initialize")
+        return None
+
     encoded = _direct_tokenizer.apply_chat_template(
         messages,
         add_generation_prompt=True,
@@ -532,37 +543,17 @@ def _is_grounded(quote: str, passages: list) -> bool:
     return sum(1 for word in words if word in corpus) / len(words) >= 0.65
 
 
-def _validate(obj: dict, passages: list) -> dict | None:
-    if not isinstance(obj, dict):
-        return None
-    level = obj.get("ploidy_level")
-    mechanism = obj.get("mechanism")
-    explicit = bool(obj.get("stated_explicitly"))
-    conf_str = str(obj.get("confidence") or "").lower().strip()
-    chrom_formula = obj.get("chromosome_formula")
-    evidence_type = obj.get("evidence_type")
-    ambiguity = obj.get("ambiguity_note")
+def _normalize_sex(raw_sex: object) -> str:
+    """Map the model's free-form sex value onto the controlled vocabulary
+    (_SEX_VALID / _SEX_MAP), defaulting to "unknown"."""
+    sex_raw = str(raw_sex or "").lower().strip()
+    return _SEX_MAP.get(sex_raw, sex_raw if sex_raw in _SEX_VALID else "unknown")
 
-    # Handle evidence_quotes (list) with backward compat for legacy evidence_quote (str)
-    raw_quotes = obj.get("evidence_quotes") or obj.get("evidence_quote") or []
-    if isinstance(raw_quotes, str):
-        raw_quotes = [raw_quotes] if raw_quotes else []
-    quotes = [q.strip() for q in raw_quotes if q and isinstance(q, str)]
-    quote = quotes[0] if quotes else ""  # primary quote for grounding / mechanism scan
 
-    # Sex normalization (vocabulary defined at module level)
-    sex_raw = str(obj.get("sex") or "").lower().strip()
-    sex = _SEX_MAP.get(sex_raw, sex_raw if sex_raw in _SEX_VALID else "unknown")
-
-    # Strain / cultivar
-    strain_cultivar = obj.get("strain_cultivar")
-    if isinstance(strain_cultivar, str):
-        strain_cultivar = strain_cultivar.strip() or None
-    else:
-        strain_cultivar = None
-
-    # normalise level: accept integer, numeric string, or ploidy word form
-    # (_WORD_LEVEL defined at module level)
+def _normalize_level(level: object) -> int | None:
+    """Coerce the model's ploidy_level (int, numeric string, or ploidy word) to an
+    integer. Rejects implausibly large values (> 20) — the model sometimes returns
+    the 2n chromosome count (e.g. 30 from "2n=4x=30") instead of the ploidy."""
     if isinstance(level, str):
         level_word = level.lower().strip()
         if level_word in _WORD_LEVEL:
@@ -570,17 +561,16 @@ def _validate(obj: dict, passages: list) -> dict | None:
         else:
             match = re.search(r"\d+", level_word)
             level = int(match.group()) if match else None
-    if not isinstance(level, int):
-        level = None
-    # Reject implausibly large values — the model sometimes extracts the 2n
-    # chromosome count (e.g. 30 from "2n=4x=30") instead of the ploidy integer (4).
-    # No sequenced-genome assembly has ploidy > 20.
-    if isinstance(level, int) and level > 20:
-        level = None
+    if not isinstance(level, int) or level > 20:
+        return None
+    return level
 
-    # Normalise mechanism to controlled vocabulary (_MECH_KEYWORDS at module level).
-    # The model sometimes puts the full ploidy word or even a sentence — scan for
-    # keywords so we still extract signal even when instructions are partially ignored.
+
+def _normalize_mechanism(mechanism: object, quotes: list) -> str | None:
+    """Map the model's mechanism onto the controlled VALID_MECHANISMS vocabulary,
+    scanning for keywords when it returns a full ploidy word or a sentence, and
+    inferring from the evidence quotes when it left the field null. Returns None
+    if no controlled mechanism can be determined."""
     # Guard: model occasionally returns mechanism as a list (e.g. ["allopolyploid"])
     if isinstance(mechanism, list):
         mechanism = mechanism[0] if mechanism else None
@@ -600,8 +590,40 @@ def _validate(obj: dict, passages: list) -> dict | None:
         all_quotes_text = " ".join(quotes).lower()
         for keyword, controlled in _MECH_KEYWORDS:
             if keyword in all_quotes_text:
-                mechanism = controlled
-                break
+                return controlled
+    return mechanism
+
+
+def _validate(obj: dict, passages: list) -> dict | None:
+    if not isinstance(obj, dict):
+        return None
+
+    level = obj.get("ploidy_level")
+    mechanism = obj.get("mechanism")
+    explicit = bool(obj.get("stated_explicitly"))
+    conf_str = str(obj.get("confidence") or "").lower().strip()
+    chrom_formula = obj.get("chromosome_formula")
+    evidence_type = obj.get("evidence_type")
+    ambiguity = obj.get("ambiguity_note")
+
+    # Handle evidence_quotes (list) with backward compat for legacy evidence_quote (str)
+    raw_quotes = obj.get("evidence_quotes") or obj.get("evidence_quote") or []
+    if isinstance(raw_quotes, str):
+        raw_quotes = [raw_quotes] if raw_quotes else []
+    quotes = [q.strip() for q in raw_quotes if q and isinstance(q, str)]
+    quote = quotes[0] if quotes else ""  # primary quote for grounding / mechanism scan
+
+    # Normalise the model's free-form fields onto controlled vocabularies.
+    sex = _normalize_sex(obj.get("sex"))
+    level = _normalize_level(level)
+    mechanism = _normalize_mechanism(mechanism, quotes)
+
+    # Strain / cultivar
+    strain_cultivar = obj.get("strain_cultivar")
+    if isinstance(strain_cultivar, str):
+        strain_cultivar = strain_cultivar.strip() or None
+    else:
+        strain_cultivar = None
 
     # Grounding gate: at least one evidence_quote must be traceable to passages.
     grounded = any(_is_grounded(q, passages) for q in quotes) if quotes else False
@@ -693,13 +715,13 @@ def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
         return ensemble
 
     out = dict(ensemble)
-    e_lvl = ensemble.get("level")
-    g_lvl = gemma.get("level")
+    ensemble_level = ensemble.get("level")
+    gemma_level = gemma.get("level")
     suggested = gemma.get("suggested", False)
 
     # Annotation that is always attached when Gemma has something to say
     gemma_note = {
-        "level": g_lvl,
+        "level": gemma_level,
         "mechanism": gemma.get("mechanism"),
         "evidence": gemma.get("evidence"),
         "suggested": suggested,
@@ -709,25 +731,25 @@ def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
         # ── Gemma inferred (not explicitly stated) ──────────────────────────
         # Never overwrite the ensemble result; attach as a suggestion only.
         out["gemma_suggestion"] = gemma_note
-        if e_lvl is None and g_lvl is not None:
+        if ensemble_level is None and gemma_level is not None:
             # Nothing from rule/vector — show Gemma's inference as a low-confidence hint
             out["gemma_suggestion"]["note"] = (
                 "No result from rule-based or vector search. "
                 "Gemma inferred this level from genomic context — treat as a hint, "
                 "not a confirmed answer."
             )
-        elif e_lvl is not None and g_lvl is not None and e_lvl == g_lvl:
+        elif ensemble_level is not None and gemma_level is not None and ensemble_level == gemma_level:
             # Gemma agrees with ensemble via inference — small confidence nudge
             out["confidence"] = min(round(ensemble.get("confidence", 0.5) + 0.05, 2), 0.95)
             out["gemma_suggestion"]["note"] = "Gemma inferred the same level; adds soft support."
-        elif e_lvl is not None and g_lvl is not None and e_lvl != g_lvl:
+        elif ensemble_level is not None and gemma_level is not None and ensemble_level != gemma_level:
             out["gemma_suggestion"]["note"] = (
-                f"Gemma inferred level={g_lvl}, which conflicts with the ensemble "
-                f"result of level={e_lvl}. Manual review recommended."
+                f"Gemma inferred level={gemma_level}, which conflicts with the ensemble "
+                f"result of level={ensemble_level}. Manual review recommended."
             )
     else:
         # ── Gemma explicitly confirmed ───────────────────────────────────────
-        if e_lvl is not None and g_lvl is not None and e_lvl == g_lvl:
+        if ensemble_level is not None and gemma_level is not None and ensemble_level == gemma_level:
             # All three sources agree → highest confidence
             out["confidence"] = min(round(ensemble.get("confidence", 0.5) + 0.2, 2), 0.98)
             out["method"] = "consensus_3way"
@@ -741,15 +763,15 @@ def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
                 ]
             out["gemma"] = gemma_note
 
-        elif e_lvl is None and g_lvl is not None:
+        elif ensemble_level is None and gemma_level is not None:
             # Rule/vector found nothing; Gemma found an explicit statement
             out = dict(gemma)
             out["method"] = "gemma_only"
             out["confidence"] = round(gemma.get("confidence", 0.7) * 0.9, 2)
 
-        elif e_lvl is not None and g_lvl is not None and e_lvl != g_lvl:
+        elif ensemble_level is not None and gemma_level is not None and ensemble_level != gemma_level:
             # Explicit conflict — flag for manual review
-            out["method"] = f"conflict_rule_vector_vs_gemma ({e_lvl} vs {g_lvl})"
+            out["method"] = f"conflict_rule_vector_vs_gemma ({ensemble_level} vs {gemma_level})"
             out["confidence"] = round(ensemble.get("confidence", 0.5) * 0.8, 2)
             out["gemma"] = gemma_note
 

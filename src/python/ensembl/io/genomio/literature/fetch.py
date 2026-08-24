@@ -435,7 +435,7 @@ def search_by_pmid(pmid: str) -> dict | None:
         response.raise_for_status()
         results = response.json().get("resultList", {}).get("result", [])
         return results[0] if results else None
-    except requests.RequestException:
+    except (requests.RequestException, ValueError):
         return None
 
 
@@ -448,12 +448,12 @@ def search_europe_pmc_by_name(
     """Search Europe PMC for genome papers by scientific/common name, escalating
     from full name to binomial to genus to taxon-ID queries and keeping only
     genus-relevant hits. Returns up to max_results records ([] if none)."""
-    tokens = scientific_name.split() if scientific_name else []
+    tokens = scientific_name.split()  # "".split() -> [], so no guard needed
     genus = tokens[0] if tokens else ""
     # Binomial = genus + species epithet. For a subspecies / variety / hybrid
     # (e.g. "Oryza meyeriana var. indandamanica") the full trinomial rarely
     # appears in a paper, but the binomial ("Oryza meyeriana") usually does.
-    binomial = " ".join(tokens[:2]) if len(tokens) >= 2 else ""
+    binomial = " ".join(tokens[:2])
 
     # Multi-identifier name clause: scientific name, plus common name when
     # it is specific enough to be useful (>= 4 chars avoids junk like "fly").
@@ -480,10 +480,11 @@ def search_europe_pmc_by_name(
             f'"{binomial}" AND ("genome sequence" OR ploidy OR chromosome)',
         ]
 
-    queries += [
-        # 5th priority: taxon ID fallback (last resort)
-        f"TAXONOMY:{taxon_id} AND genome assembly",
-    ]
+    if taxon_id:
+        queries += [
+            # 5th priority: taxon ID fallback (last resort)
+            f"TAXONOMY:{taxon_id} AND genome assembly",
+        ]
 
     for query in queries:
         results = search_europe_pmc(query, max_results=max_results * 3)
@@ -519,16 +520,16 @@ def search_europe_pmc_fulltext(scientific_name: str, max_results: int = 5) -> li
     if not scientific_name:
         return []
     query = f'"{scientific_name}" AND (genome OR assembly OR chromosome OR ploidy)'
-    out = []
-    for r in search_europe_pmc(query, max_results=max_results * 3):
-        if r.get("pmcid") or r.get("pmCid"):
-            r["_needs_fulltext_confirm"] = True
-            out.append(r)
-        if len(out) >= max_results * 2:
+    candidates = []
+    for paper in search_europe_pmc(query, max_results=max_results * 3):
+        if paper.get("pmcid") or paper.get("pmCid"):
+            paper["_needs_fulltext_confirm"] = True
+            candidates.append(paper)
+        if len(candidates) >= max_results * 2:
             break
-    if out:
-        logger.info(f"  [EuropePMC] Full-text species search: {len(out)} open-access candidate(s)")
-    return out
+    if candidates:
+        logger.info(f"  [EuropePMC] Full-text species search: {len(candidates)} open-access candidate(s)")
+    return candidates
 
 
 def has_usable_fulltext(papers: list[dict]) -> bool:

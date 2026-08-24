@@ -155,36 +155,36 @@ _FORMULA_BOOST = 10.0
 def find_level_mentions(text: str, window: int = 50) -> list:
     """Find every ploidy-LEVEL mention and classify it.
 
-    Shared by extract.py and search.py. Each item:
-        {level, prefix, is_compound, is_ancestor, is_formula, context}
+    Shared by resolve_ploidy_fields (extract.py) and infer_ploidy (search.py).
+    Each item: {level, prefix, is_compound, is_ancestor, is_formula, context}
     """
     mentions = []
 
     # 2n = Nx = M  (definitive)
-    for m in _CHROM_FORMULA_RE.finditer(text):
-        x = int(m.group(1))
-        if not (1 <= x <= 20):
+    for match in _CHROM_FORMULA_RE.finditer(text):
+        level = int(match.group(1))
+        if not (1 <= level <= 20):
             continue
-        ctx = text[max(0, m.start() - window) : m.end() + window]
+        context = text[max(0, match.start() - window) : match.end() + window]
         mentions.append(
             {
-                "level": x,
+                "level": level,
                 "prefix": None,
                 "is_compound": True,
                 "is_ancestor": False,
                 "is_formula": True,
-                "context": ctx,
+                "context": context,
             }
         )
 
     # ploidy words
-    for m in _LEVEL_RE.finditer(text):
-        prefix = (m.group(1) or "").lower()
-        base = m.group(2).lower()
+    for match in _LEVEL_RE.finditer(text):
+        prefix = (match.group(1) or "").lower()
+        base = match.group(2).lower()
         level = _WORD_LEVEL[base]
-        ctx = text[max(0, m.start() - window) : m.end() + window]
+        context = text[max(0, match.start() - window) : match.end() + window]
         is_compound = prefix in ("allo", "auto")
-        is_ancestor = (not is_compound) and bool(_ANCESTOR_CONTEXT_RE.search(ctx))
+        is_ancestor = (not is_compound) and bool(_ANCESTOR_CONTEXT_RE.search(context))
         mentions.append(
             {
                 "level": level,
@@ -192,7 +192,7 @@ def find_level_mentions(text: str, window: int = 50) -> list:
                 "is_compound": is_compound,
                 "is_ancestor": is_ancestor,
                 "is_formula": False,
-                "context": ctx,
+                "context": context,
             }
         )
 
@@ -210,11 +210,11 @@ def detect_mechanism(text: str, window: int = 22) -> Optional[str]:
     """Return the most specific organism-level polyploidy mechanism, or None."""
     best, best_rank = None, -1
     for name, rx, rank in _MECH_PATTERNS:
-        m = rx.search(text)
-        if not m:
+        match = rx.search(text)
+        if not match:
             continue
-        ctx = text[max(0, m.start() - window) : m.end() + window]
-        if _MECH_ANCESTOR_RE.search(ctx):
+        context = text[max(0, match.start() - window) : match.end() + window]
+        if _MECH_ANCESTOR_RE.search(context):
             continue  # the term itself qualifies an ancestor, not the organism
         if rank > best_rank:
             best, best_rank = name, rank
@@ -246,56 +246,61 @@ def resolve_ploidy_fields(segments: list) -> dict:
     Returns the schema dict (level / mechanism / irregular / derivation + meta).
     Used by both extract.py (sections) and search.py (retrieved chunks).
     """
-    level_counts: dict = {}
-    best_ev: dict = {}
-    mech_votes: dict = {}
+    level_counts: dict[int, float] = {}
+    best_ev: dict[int, dict] = {}
+    mech_votes: dict[str, float] = {}
     irregular: str | bool = False
     derivation = None
-    n_org = 0
+    evidence_count = 0
 
     for text, weight, is_priority in segments:
         if not text or weight == 0.0:
             continue
 
-        for men in find_level_mentions(text):
-            if men["is_ancestor"]:
+        for mention in find_level_mentions(text):
+            if mention["is_ancestor"]:
                 continue
-            n_org += 1
-            if men["is_formula"]:
-                w = weight * _FORMULA_BOOST
-            elif men["is_compound"]:
-                w = weight * _COMPOUND_BOOST
-            else:
-                w = weight
-            lvl = men["level"]
-            level_counts[lvl] = level_counts.get(lvl, 0.0) + w
 
-            rank_new = (men["is_formula"], men["is_compound"], is_priority)
-            cur = best_ev.get(lvl)
-            if cur is None or rank_new > cur["_rank"]:
+            evidence_count += 1
+            if mention["is_formula"]:
+                boost_weight = weight * _FORMULA_BOOST
+            elif mention["is_compound"]:
+                boost_weight = weight * _COMPOUND_BOOST
+            else:
+                boost_weight = weight
+            lvl = mention["level"]
+            level_counts[lvl] = level_counts.get(lvl, 0.0) + boost_weight
+
+            rank_new = (mention["is_formula"], mention["is_compound"], is_priority)
+            current = best_ev.get(lvl)
+            if current is None or rank_new > current["_rank"]:
                 best_ev[lvl] = {
-                    "context": men["context"],
+                    "context": mention["context"],
                     "is_priority": is_priority,
-                    "is_formula": men["is_formula"],
+                    "is_formula": mention["is_formula"],
                     "_rank": rank_new,
                 }
 
-        m = detect_mechanism(text)
-        if m:
-            mech_votes[m] = mech_votes.get(m, 0.0) + weight
+        mechanism = detect_mechanism(text)
+        if mechanism:
+            mech_votes[mechanism] = mech_votes.get(mechanism, 0.0) + weight
+
         if not irregular:
             irregular = detect_irregular(text) or False
+
         if derivation is None:
             derivation = detect_derivation(text)
 
     # ----- choose level -----
     if level_counts:
         level = max(level_counts, key=lambda k: level_counts[k])
+
         total = sum(level_counts.values())
         base_conf = level_counts[level] / total
         ev = best_ev.get(level, {})
         priority_bonus = 0.1 if ev.get("is_priority") else 0.0
         confidence = min(round(base_conf + priority_bonus, 2), 0.95)
+
         method = "chromosome_formula" if ev.get("is_formula") else "text_weighted_vote"
         evidence = ev.get("context", "")
     else:
@@ -309,6 +314,7 @@ def resolve_ploidy_fields(segments: list) -> dict:
     if mech_votes:
         spec = {"amphidiploid": 3, "segmental_allopolyploid": 3, "allopolyploid": 1, "autopolyploid": 1}
         mechanism = max(mech_votes, key=lambda k: (spec.get(k, 0), mech_votes[k]))
+
         if confidence == 0.0:
             confidence = 0.5  # polyploid confirmed but level not stated
 
@@ -335,7 +341,7 @@ def resolve_ploidy_fields(segments: list) -> dict:
         "confidence": confidence,
         "method": method,
         "evidence": evidence,
-        "evidence_count": n_org,
+        "evidence_count": evidence_count,
         "weighted_counts": {k: round(v, 2) for k, v in level_counts.items()},
     }
 
@@ -376,6 +382,9 @@ KNOWN_PLOIDY = {
 # STEP 2 — Extract chromosome number from text
 # ============================================================
 
+# Characters of surrounding text kept as evidence around a chromosome-number match.
+CONTEXT_WINDOW = 50
+
 # Order matters: the compound "2n = Nx = M" form must be tried BEFORE the bare
 # "2n = N" form, otherwise "2n = 4x = 52" matches "2n = 4" and captures the ploidy
 # coefficient (4) instead of the chromosome count (52).
@@ -402,11 +411,11 @@ def extract_chromosome_number(weighted_sections: dict) -> dict:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 number = match.group(1)
-                ctx_start = max(0, match.start() - 50)
-                ctx_end = min(len(text), match.end() + 50)
+                context_start = max(0, match.start() - CONTEXT_WINDOW)
+                context_end = min(len(text), match.end() + CONTEXT_WINDOW)
                 return {
                     "value": number,
-                    "evidence": text[ctx_start:ctx_end],
+                    "evidence": text[context_start:context_end],
                     "section": sec_name,
                     "source": "text_extraction",
                 }
@@ -428,13 +437,6 @@ CULTIVAR_PATTERNS = [
 ]
 
 CULTIVAR_STOPWORDS = {
-    "the",
-    "and",
-    "for",
-    "this",
-    "that",
-    "with",
-    "from",
     "table",
     "figure",
     "supplementary",
@@ -564,6 +566,19 @@ def extract_species(sections: dict, weighted_sections: dict) -> Optional[str]:
 # ============================================================
 
 
+def _get_ncbi_metadata(assembly: dict) -> dict:
+    """Pull the NCBI-sourced assembly fields (accession, name, taxon, species,
+    chromosome number and its source) that downstream extraction relies on."""
+    return {
+        "accession": assembly.get("assembly_accession"),
+        "name": assembly.get("assembly_name"),
+        "taxon_id": assembly.get("taxon_id"),
+        "scientific_name": assembly.get("scientific_name"),
+        "chromosome_number": assembly.get("chromosome_number"),
+        "chromosome_source": assembly.get("chromosome_source"),
+    }
+
+
 def extract_metadata(parsed: dict, assembly: dict, paper_title: Optional[str] = None) -> dict:
     """Run the full rule-based extraction for one paper: ploidy, chromosome number,
     cultivars, sex and species. NCBI assembly fields take precedence; text is used
@@ -583,12 +598,13 @@ def extract_metadata(parsed: dict, assembly: dict, paper_title: Optional[str] = 
     logger.info("  [extract] Running rule-based extraction ...")
 
     # ── Fields from NCBI ──────────────────────────────────────
-    ncbi_accession = assembly.get("assembly_accession")
-    ncbi_name = assembly.get("assembly_name")
-    ncbi_taxon = assembly.get("taxon_id")
-    ncbi_species = assembly.get("scientific_name")
-    ncbi_chrom = assembly.get("chromosome_number")
-    ncbi_chrom_source = assembly.get("chromosome_source")
+    ncbi = _get_ncbi_metadata(assembly)
+    ncbi_accession = ncbi["accession"]
+    ncbi_name = ncbi["name"]
+    ncbi_taxon = ncbi["taxon_id"]
+    ncbi_species = ncbi["scientific_name"]
+    ncbi_chrom = ncbi["chromosome_number"]
+    ncbi_chrom_source = ncbi["chromosome_source"]
 
     if ncbi_species:
         species = {"value": ncbi_species, "source": "ncbi"}
