@@ -232,10 +232,10 @@ class MetaConf:
                 if "refseq" in ann_source.lower():
                     if asm_acc.startswith("GCF_"):
                         self.update("assembly.alt_accession", asm_acc_insdc)
-                        self.update("assembly.accession_body", "INSDC")
+                        self.update("assembly.accession_body", "RefSeq")
                     else:
                         self.update("assembly.alt_accession", asm_acc_refseq)
-                        self.update("assembly.accession_body", "RefSeq")
+                        self.update("assembly.accession_body", "INSDC")
 
         # species metadata
         _acc = str(asm_acc).replace("_", "").replace(".", "v")
