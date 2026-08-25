@@ -185,7 +185,9 @@ class MetaConf:
                 # BioSample:      SAMEA110187692
                 self.update_from_report_meta_value(line, r"#\s+BioSample:", "organism.biosample_id")
                 # Assembly level: Chromosome
-                self.update_from_report_meta_value(line, r"#\s+Assembly level:", "assembly.level")
+                asm_level = self.report_meta_value(line, r"#\s+Assembly level:", normalise=False)
+                if asm_level:
+                    self.update("assembly.level", asm_level.strip().lower().split("_")[0])
                 # GenBank assembly accession: GCA_947086385.1
                 self.update_from_report_meta_value(
                     line, r"#\s+GenBank assembly accession:", "assembly.accession_insdc", tech = True
@@ -230,8 +232,10 @@ class MetaConf:
                 if "refseq" in ann_source.lower():
                     if asm_acc.startswith("GCF_"):
                         self.update("assembly.alt_accession", asm_acc_insdc)
+                        self.update("assembly.accession_body", "INSDC")
                     else:
                         self.update("assembly.alt_accession", asm_acc_refseq)
+                        self.update("assembly.accession_body", "RefSeq")
 
         # species metadata
         _acc = str(asm_acc).replace("_", "").replace(".", "v")
