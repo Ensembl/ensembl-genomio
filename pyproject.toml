@@ -92,10 +92,10 @@ docs = [
 ]
 # Literature-based metadata extraction dependencies
 literature = [
-    "sentence-transformers >= 2.2.0",
-    "rank-bm25 >= 0.2.2",
-    "faiss-cpu >= 1.7.0",
     "beautifulsoup4 >= 4.11.0",
+    "faiss-cpu >= 1.7.0",
+    "rank-bm25 >= 0.2.2",
+    "sentence-transformers >= 2.2.0",
 ]
 # Database dependencies
 mysql = [

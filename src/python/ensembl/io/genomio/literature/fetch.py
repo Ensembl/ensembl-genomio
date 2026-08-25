@@ -18,13 +18,13 @@ import logging
 
 import requests
 
-from .metadata import fetch_assembly_metadata, enrich_assembly_metadata
-from .ncbi import (
+from ensembl.io.genomio.literature.metadata import fetch_assembly_metadata, enrich_assembly_metadata
+from ensembl.io.genomio.literature.ncbi import (
     fetch_linked_pubmed_for_assembly,
     fetch_bioproject_reference_papers,
     search_ncbi_entrez,
 )
-from .europepmc import (
+from ensembl.io.genomio.literature.europepmc import (
     search_by_pmid,
     search_europe_pmc_by_name,
     search_europe_pmc_fulltext,

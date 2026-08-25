@@ -18,7 +18,7 @@ import logging
 
 import requests
 
-from .europepmc import search_by_pmid
+from ensembl.io.genomio.literature.europepmc import search_by_pmid
 
 logger = logging.getLogger(__name__)
 

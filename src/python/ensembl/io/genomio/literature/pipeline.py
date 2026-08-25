@@ -18,12 +18,12 @@ import argparse
 import json
 import logging
 
-from .fetch import fetch_papers_for_assembly
-from .parse import parse_paper
-from .extract import extract_metadata
-from .search import run_vector_search
-from . import gemma
-from .gemma import combine_with_gemma
+from ensembl.io.genomio.literature import gemma
+from ensembl.io.genomio.literature.extract import extract_metadata
+from ensembl.io.genomio.literature.fetch import fetch_papers_for_assembly
+from ensembl.io.genomio.literature.gemma import combine_with_gemma
+from ensembl.io.genomio.literature.parse import parse_paper
+from ensembl.io.genomio.literature.search import run_vector_search
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +33,11 @@ logger = logging.getLogger(__name__)
 
 EXCLUDE_KEYWORDS = [
     "chloroplast",
+    "cpdna",
     "mitochondria",
+    "mtdna",
     "organelle",
     "plastid",
-    "cpdna",
-    "mtdna",
     "plastome",
 ]
 
@@ -54,13 +54,17 @@ def is_nuclear_genome_paper(paper: dict) -> bool:
 
 def select_best_paper(papers: list[dict]) -> dict | None:
     """Pick the highest-relevance paper that has usable text, preferring full text
-    over abstract on ties; falls back to the top candidate, or None if empty."""
-    # Candidates arrive pre-sorted by relevance_score (desc) from fetch.py.
-    # We pick the highest-relevance paper that has usable text. relevance_score
-    # already rewards genome/ploidy/name signals and heavily penalises organelle
-    # papers, so it is a better selector than "any fulltext first".
+    over abstract on ties; falls back to the top candidate, or None if empty.
+
+    Candidates arrive pre-sorted by relevance_score (desc) from fetch.py, whose
+    scorer already rewards genome/ploidy/name signals and heavily penalises
+    organelle papers, so relevance_score is a better selector than
+    "any fulltext first".
+    """
     usable = [
-        p for p in papers if p.get("text_data", {}).get("source") in ("fulltext", "abstract", "search_result")
+        paper
+        for paper in papers
+        if paper.get("text_data", {}).get("source") in ("fulltext", "abstract", "search_result")
     ]
     if not usable:
         if papers:
@@ -69,13 +73,13 @@ def select_best_paper(papers: list[dict]) -> dict | None:
         return None
 
     # Rank by relevance_score; tie-break prefers fulltext over abstract.
-    def rank(p: dict) -> tuple:
-        return (
-            p.get("relevance_score", 0.0),
-            1 if p.get("text_data", {}).get("source") == "fulltext" else 0,
-        )
-
-    best = max(usable, key=rank)
+    best = max(
+        usable,
+        key=lambda paper: (
+            paper.get("relevance_score", 0.0),
+            1 if paper.get("text_data", {}).get("source") == "fulltext" else 0,
+        ),
+    )
     logger.info(
         f"  Selected (score {best.get('relevance_score')}, "
         f"{best.get('retrieval_source')}, {best['text_data']['source']}): "
@@ -91,7 +95,7 @@ def select_best_paper(papers: list[dict]) -> dict | None:
 # ============================================================
 
 
-def run_pipeline(accession: str, max_results: int = 5) -> dict:
+def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     """Run the full extraction pipeline for one assembly accession: fetch papers,
     select the best one, parse it, run rule-based extraction, then vector search
     and ensemble (plus the optional Gemma layer). Returns the final metadata dict."""
@@ -101,7 +105,7 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
 
     # ── Step 1: fetch ─────────────────────────────────────────
     logger.info("\n[Step 1/4] Fetching assembly metadata and papers ...")
-    fetched = fetch_papers_for_assembly(accession, max_results=max_results)
+    fetched = fetch_papers_for_assembly(accession, max_results=max_papers)
     assembly = fetched["assembly"]
     papers = fetched["papers"]
     reference_paper = fetched.get("reference_paper")
@@ -117,7 +121,7 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
         )
         return {
             "assembly_accession": assembly.get("assembly_accession"),
-            "error": "no_assembly_metadata",
+            "error": "no assembly metadata",
         }
 
     if not papers:
@@ -146,7 +150,7 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
         logger.info("  No usable paper found.")
         return {
             "assembly_accession": assembly.get("assembly_accession"),
-            "error": "no_usable_paper",
+            "error": "no usable paper",
             "paper": {"note": "Not found relevant paper"},
         }
 
@@ -167,7 +171,7 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
             "assembly_accession": assembly.get("assembly_accession"),
             "assembly_name": assembly.get("assembly_name"),
             "taxon_id": assembly.get("taxon_id"),
-            "error": "no_sections_extracted",
+            "error": "no sections extracted",
         }
 
     logger.info(f"  Sections: {parsed['n_sections']}  Chunks: {parsed['n_chunks']}")
@@ -184,13 +188,13 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
     #     Local Gemma extracts a grounded ploidy candidate; combine_with_gemma
     #     folds it in as a third vote. No-op unless GEMMA_ENABLED=1.
     if gemma.is_enabled():
-        g = gemma.run_gemma_ploidy(
+        gemma_result = gemma.run_gemma_ploidy(
             final["species"]["value"],
             final["ploidy"].get("evidence_passages", []),
             accession=accession,
         )
-        if g is not None:
-            final["ploidy"] = combine_with_gemma(final["ploidy"], g)
+        if gemma_result is not None:
+            final["ploidy"] = combine_with_gemma(final["ploidy"], gemma_result)
             logger.info(
                 f"  [gemma] combined -> level={final['ploidy']['level']} "
                 f"(method: {final['ploidy']['method']})"
@@ -220,7 +224,7 @@ def run_pipeline(accession: str, max_results: int = 5) -> dict:
 # ============================================================
 
 
-def run_batch(accessions: list[str], max_results: int = 5) -> list[dict]:
+def run_batch(accessions: list[str], max_papers: int = 5) -> list[dict]:
     """Run run_pipeline over a list of accessions, tagging each result with a
     success/error status and continuing past failures. Returns the list of results."""
     results = []
@@ -230,7 +234,7 @@ def run_batch(accessions: list[str], max_results: int = 5) -> list[dict]:
         logger.info(f"\n{'=' * 60}")
         logger.info(f"Batch progress: {i}/{total}")
         try:
-            result = run_pipeline(accession, max_results=max_results)
+            result = run_pipeline(accession, max_papers=max_papers)
             result["status"] = "success"
         except Exception as e:
             logger.info(f"  ERROR for {accession}: {e}")
@@ -243,7 +247,7 @@ def run_batch(accessions: list[str], max_results: int = 5) -> list[dict]:
 
     logger.info(f"\n{'=' * 60}")
     logger.info(f"Batch complete: {len(results)} accessions processed")
-    successful = sum(1 for r in results if r.get("status") == "success")
+    successful = sum(r.get("status") == "success" for r in results)
     logger.info(f"  Successful: {successful}/{total}")
     logger.info(f"  Failed:     {total - successful}/{total}")
 
@@ -257,58 +261,49 @@ def run_batch(accessions: list[str], max_results: int = 5) -> list[dict]:
 
 def main(argv: list[str] | None = None) -> None:
     """CLI entry point: parse arguments and run a single accession (--accession) or
-    a batch (--batch), optionally writing JSON results to --output."""
+    a batch (--batch), optionally writing JSON results to --output (else stdout)."""
     # Surface fetch.py's logging output on the console (bare format matches the
     # previous print-based progress); the library itself stays log-config-free.
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     parser = argparse.ArgumentParser(description="Extract genomic metadata from an assembly accession.")
-    parser.add_argument(
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument(
         "--accession",
-        type=str,
         help="Single NCBI assembly accession (e.g. GCA_003086295.3)",
     )
-    parser.add_argument(
+    source.add_argument(
         "--batch",
-        type=str,
         help="Path to a text file with one accession per line (batch mode)",
     )
     parser.add_argument(
-        "--max_results",
+        "--max_papers",
         type=int,
         default=5,
         help="Max number of papers to fetch per accession (default: 5)",
     )
     parser.add_argument(
         "--output",
-        type=str,
-        default=None,
-        help="Path to save results as JSON (optional)",
+        help="Path to save results as JSON; printed to stdout if omitted",
     )
     args = parser.parse_args(argv)
 
     if args.accession:
-        result = run_pipeline(args.accession, max_results=args.max_results)
+        result = run_pipeline(args.accession, max_papers=args.max_papers)
         if args.output:
-            with open(args.output, "w") as f:
-                json.dump(result, f, indent=2, ensure_ascii=False)
+            with open(args.output, "w") as handle:
+                json.dump(result, handle, indent=2, ensure_ascii=False)
             logger.info(f"\nResults saved to {args.output}")
-
-    elif args.batch:
-        with open(args.batch) as f:
-            accessions = [line.strip() for line in f if line.strip()]
+        else:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        with open(args.batch) as handle:
+            accessions = [line.strip() for line in handle if line.strip()]
         logger.info(f"Batch mode: {len(accessions)} accessions loaded from {args.batch}")
-        results = run_batch(accessions, max_results=args.max_results)
+        results = run_batch(accessions, max_papers=args.max_papers)
         if args.output:
-            with open(args.output, "w") as f:
-                json.dump(results, f, indent=2, ensure_ascii=False)
+            with open(args.output, "w") as handle:
+                json.dump(results, handle, indent=2, ensure_ascii=False)
             logger.info(f"\nResults saved to {args.output}")
         else:
             print(json.dumps(results, indent=2, ensure_ascii=False))
-
-    else:
-        parser.print_help()
-
-
-if __name__ == "__main__":
-    main()

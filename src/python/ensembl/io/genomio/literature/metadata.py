@@ -20,7 +20,7 @@ from xml.etree import ElementTree as _ET
 
 import requests
 
-from .ncbi import entrez_get
+from ensembl.io.genomio.literature.ncbi import entrez_get
 
 logger = logging.getLogger(__name__)
 

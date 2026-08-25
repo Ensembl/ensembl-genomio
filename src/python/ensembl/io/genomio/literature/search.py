@@ -26,7 +26,7 @@ from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 
 # Shared ploidy logic — keeps rule-based and vector stages consistent
-from .extract import resolve_ploidy_fields, _LEVEL_LABEL
+from ensembl.io.genomio.literature.extract import resolve_ploidy_fields, _LEVEL_LABEL
 
 logger = logging.getLogger(__name__)
 

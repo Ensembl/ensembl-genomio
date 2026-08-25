@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # ---- controlled vocabulary (shared with extract.py) ----
 try:
-    from .extract import _LEVEL_LABEL
+    from ensembl.io.genomio.literature.extract import _LEVEL_LABEL
 except Exception:
     _LEVEL_LABEL = {
         1: "monoploid",

@@ -19,6 +19,6 @@ text (and supplementary files), and extract species, ploidy, chromosome
 number, cultivar/strain and sex via a rule + vector + optional-LLM ensemble.
 """
 
-from .pipeline import run_pipeline, run_batch
+__all__ = ["run_batch", "run_pipeline"]
 
-__all__ = ["run_pipeline", "run_batch"]
+from ensembl.io.genomio.literature.pipeline import run_batch, run_pipeline
