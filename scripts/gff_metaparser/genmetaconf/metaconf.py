@@ -187,7 +187,7 @@ class MetaConf:
                 # Assembly level: Chromosome
                 asm_level = self.report_meta_value(line, r"#\s+Assembly level:", normalise=False)
                 if asm_level:
-                    self.update("assembly.level", asm_level.strip().lower().split("_")[0])
+                    self.update("assembly.level", asm_level.strip().lower().split(" ")[0])
                 # GenBank assembly accession: GCA_947086385.1
                 self.update_from_report_meta_value(
                     line, r"#\s+GenBank assembly accession:", "assembly.accession_insdc", tech = True
