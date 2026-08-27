@@ -88,6 +88,30 @@ def select_best_paper(papers: list[dict]) -> dict | None:
     return best
 
 
+def _goat_agreement(paper_level: int | None, goat_ploidy: int | None) -> dict:
+    """Compare the paper-derived ploidy level against GoaT's species-level reference
+    ploidy and return a curator-facing agreement flag (agree / disagree /
+    no_reference / no_paper_ploidy). GoaT is species-level, so this flags conflicts
+    rather than overriding the paper-derived value."""
+    if goat_ploidy is None:
+        agreement = "no_reference"
+    elif paper_level is None:
+        agreement = "no_paper_ploidy"
+    elif paper_level == goat_ploidy:
+        agreement = "agree"
+    else:
+        agreement = "disagree"
+    return {"goat_ploidy": goat_ploidy, "agreement": agreement}
+
+
+def _ploidy_recovered(result: dict) -> bool:
+    """A batch result counts as useful only if a ploidy level was actually
+    recovered: a paper that parsed fine but states no ploidy is not a success."""
+    if result.get("error"):
+        return False
+    return (result.get("ploidy") or {}).get("level") is not None
+
+
 # ============================================================
 # MAIN FUNCTION — run full pipeline for one assembly accession
 #           input:  assembly accession string
@@ -185,12 +209,15 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     final = run_vector_search(parsed, rule_result)
 
     # ── Step 4.5 (optional): Gemma hybrid layer ───────────────
-    #     Local Gemma extracts a grounded ploidy candidate; combine_with_gemma
-    #     folds it in as a third vote. No-op unless GEMMA_ENABLED=1.
+    #     Local Gemma reads the FULL paper (all parsed sections), not just the
+    #     retrieved vector chunks, so it forms an independent opinion even when the
+    #     decisive ploidy sentence didn't make the vector-search cut. combine_with_gemma
+    #     folds its result in as a third vote. No-op unless GEMMA_ENABLED=1.
     if gemma.is_enabled():
+        gemma_passages = [{"text": text, "section": section} for section, text in parsed["sections"].items()]
         gemma_result = gemma.run_gemma_ploidy(
             final["species"]["value"],
-            final["ploidy"].get("evidence_passages", []),
+            gemma_passages,
             accession=accession,
         )
         if gemma_result is not None:
@@ -199,6 +226,18 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
                 f"  [gemma] combined -> level={final['ploidy']['level']} "
                 f"(method: {final['ploidy']['method']})"
             )
+
+    # ── GoaT cross-check ──────────────────────────────────────
+    #     Flag (do not override) when the paper-derived ploidy disagrees with
+    #     GoaT's species-level reference, so a curator can spot the conflict.
+    final["ploidy"]["reference_check"] = _goat_agreement(
+        final["ploidy"].get("level"), assembly.get("reference_ploidy")
+    )
+    if final["ploidy"]["reference_check"]["agreement"] == "disagree":
+        logger.info(
+            f"  [validate] paper ploidy {final['ploidy'].get('level')} disagrees with "
+            f"GoaT reference {assembly.get('reference_ploidy')}"
+        )
 
     # Add paper-level metadata to final output
     final["paper"] = {
@@ -235,7 +274,11 @@ def run_batch(accessions: list[str], max_papers: int = 5) -> list[dict]:
         logger.info(f"Batch progress: {i}/{total}")
         try:
             result = run_pipeline(accession, max_papers=max_papers)
-            result["status"] = "success"
+            if _ploidy_recovered(result):
+                result["status"] = "success"
+            else:
+                result["status"] = "error"
+                result.setdefault("error", "no ploidy recovered")
         except Exception as e:
             logger.info(f"  ERROR for {accession}: {e}")
             result = {

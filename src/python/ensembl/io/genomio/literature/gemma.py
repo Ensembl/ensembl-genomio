@@ -89,7 +89,12 @@ _DEFAULT_MODEL = str(_MODELS_DIR / "google_gemma-3-4b-it-Q4_K_M.gguf")
 BASE_URL = os.environ.get("GEMMA_BASE_URL", "http://localhost:8000/v1")
 MODEL = os.environ.get("GEMMA_MODEL", _DEFAULT_MODEL)
 TIMEOUT = int(os.environ.get("GEMMA_TIMEOUT", "300"))
-MAX_CHARS = 6000  # cap passage text sent to the model
+# Cap on passage text sent to the model. Raised so Gemma can read a full trusted
+# paper (not just the retrieved vector chunks); lower it for speed on the GGUF backend.
+MAX_CHARS = int(os.environ.get("GEMMA_MAX_CHARS", "30000"))
+# GGUF context window. Gemma-3-4B supports up to 128k; the default is large enough
+# to hold a full paper plus the system prompt and few-shot examples.
+N_CTX = int(os.environ.get("GEMMA_N_CTX", "32768"))
 N_THREADS = int(os.environ.get("GEMMA_N_THREADS", "32"))  # one NUMA node
 
 # ---- GGUF backend (llama-cpp-python, quantized, fastest CPU option) ----
@@ -142,7 +147,7 @@ def _load_gguf_backend() -> None:
     logger.info(f"  [gemma-gguf] loading {Path(MODEL).name} (first call, may take ~10s) ...")
     _gguf_model = Llama(
         model_path=MODEL,
-        n_ctx=4096,
+        n_ctx=N_CTX,
         n_threads=N_THREADS,
         chat_format="gemma",
         verbose=False,
