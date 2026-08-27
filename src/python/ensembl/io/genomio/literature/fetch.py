@@ -117,14 +117,15 @@ def score_paper_candidate(paper: dict, identifiers: dict) -> float:
 
     score = 0.0
 
-    # name match (scientific > common > genus)
+    # Name match: the exact scientific name is the trustworthy signal. Common
+    # name and (especially) genus-only matches are too generic to rank a paper
+    # on their own, so common name only adds a small nudge and genus-only is not
+    # scored here (it is still used as a relevance filter in the name searches).
     if sci and sci in title:
         score += 3.0
     elif sci and sci in text:
         score += 1.5
     if common and len(common) >= 4 and common in title:
-        score += 1.5
-    if genus and genus in title:
         score += 1.0
 
     # genome-paper signal (word-order tolerant: "assembly of the ... genome")
@@ -148,9 +149,18 @@ def score_paper_candidate(paper: dict, identifiers: dict) -> float:
     if paper.get("pmcid") or paper.get("pmCid"):
         score += 2.0
 
-    # BioProject-linked reference paper: canonical publication for the assembly
-    if paper.get("is_reference_paper"):
+    # Provenance: a paper linked to THIS assembly by accession (directly linked
+    # PMID / Entrez elink) or by its BioProject is far more trustworthy than a
+    # name-search hit, which is too generic on its own. Reward that provenance,
+    # and reward it more strongly when the scientific name also matches, so an
+    # accession/BioProject + scientific-name paper reliably outranks name-only hits.
+    source = paper.get("retrieval_source")
+    accession_linked = source in ("linked_pmid", "elink")
+    bioproject_linked = source == "bioproject" or paper.get("is_reference_paper")
+    if accession_linked or bioproject_linked:
         score += 2.5
+        if sci and (sci in title or sci in text):
+            score += 2.0
 
     # Full-text-confirmed species source: the exact binomial was found in the
     # article body (confirmation pass in fetch_papers_for_assembly) even though
