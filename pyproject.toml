@@ -90,6 +90,13 @@ cicd = [
 docs = [
     "ensembl-utils[docs] >= 1.0.0",
 ]
+# Literature-based metadata extraction dependencies
+literature = [
+    "beautifulsoup4 >= 4.11.0",
+    "faiss-cpu >= 1.7.0",
+    "rank-bm25 >= 0.2.2",
+    "sentence-transformers >= 2.2.0",
+]
 # Database dependencies
 mysql = [
     "ensembl-utils[mysql]",
@@ -120,6 +127,8 @@ fasta_process = "ensembl.io.genomio.fasta.process:main"
 fasta_recombine = "ensembl.io.genomio.fasta.recombine:main"
 fasta_split = "ensembl.io.genomio.fasta.split:main"
 fasta_stats = "ensembl.io.genomio.fasta.stats:main"
+# Literature
+literature_metadata = "ensembl.io.genomio.literature.pipeline:main"
 # Features
 features_combine_json = "ensembl.io.genomio.features.combine_json:main"
 features_convert_to_genomio_json = "ensembl.io.genomio.features.convert_to_genomio_json:main"
