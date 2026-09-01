@@ -62,7 +62,7 @@ dependencies = [
     "python-redmine >= 2.3.0",
     "requests >= 2.28.0",
     "spython >= 0.3.14",
-    "sqlalchemy >= 1.4.45",
+    "sqlalchemy >= 2.0.52",
 ]
 
 [project.optional-dependencies]
