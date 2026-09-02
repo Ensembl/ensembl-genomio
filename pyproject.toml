@@ -73,7 +73,7 @@ build = [
     "wheel",
 ]
 cicd = [
-    "black >= 23.11.0",
+    "black >= 26.5.1",
     "coverage >= 7.3.2",
     "deepdiff >= 9.1.0",
     "genbadge[coverage]",
