@@ -15,26 +15,28 @@
 """Generic framework for converting feature tool output to GenomIO JSON."""
 
 __all__ = [
-    "CONVERTERS_BY_LOGIC_NAME",
-    "TOP_LEVEL_CONVERTERS",
     "Consensus",
     "ConverterOptions",
     "FeatureConverter",
     "GenomioJsonConfig",
     "ParseFeaturesResult",
+    "converters_by_logic_name",
     "create_genomio_json",
-    "file_last_modified_time",
+    "file_created_time",
     "format_parse_errors",
     "parse_token",
     "register_converter",
     "register_top_level_converter",
+    "top_level_converters",
     "validate_parsed_coordinates",
 ]
 
+from abc import ABC, abstractmethod
 import argparse
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
+from inspect import isabstract
 import json
 import logging
 from pathlib import Path
@@ -106,8 +108,14 @@ class GenomioJsonConfig:
 # Converter interface and shared CLI arguments
 
 
-class FeatureConverter:
-    """Base class for feature output converters."""
+class FeatureConverter(ABC):
+    """Abstract class contract for tool-specific feature converters.
+
+    Concrete converters declare their analysis metadata, add a command parser,
+    and parse one tool output format. They are registered and invoked as
+    classes rather than instantiated. See ``docs/user_guide/converter_modules.md``
+    for instructions and an implementation template.
+    """
 
     analysis_logic_name: str | None = None
     analysis_display_label: str | None = None
@@ -116,6 +124,7 @@ class FeatureConverter:
     program: str | None = None
 
     @classmethod
+    @abstractmethod
     def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
         """Add this converter's CLI parser."""
         raise NotImplementedError
@@ -125,7 +134,6 @@ class FeatureConverter:
         """Add arguments shared by all supported analysis subcommands."""
         subparser.add_argument_src_path(
             "--input",
-            metavar="IN",
             required=True,
             help="Input file to be converted.",
         )
@@ -143,7 +151,7 @@ class FeatureConverter:
         subparser.add_argument(
             "--source-provider",
             default="Ensembl",
-            help="Source provider for the features (default: Ensembl).",
+            help="Source provider for the features.",
         )
         subparser.add_argument(
             "--is-primary",
@@ -158,6 +166,7 @@ class FeatureConverter:
         return ConverterOptions()
 
     @classmethod
+    @abstractmethod
     def parse_features(
         cls,
         input_path: Path,
@@ -165,9 +174,6 @@ class FeatureConverter:
     ) -> ParseFeaturesResult:
         """Parse features and consensus records from a tool output file."""
         raise NotImplementedError
-
-
-# Generic parsing helpers
 
 
 def parse_token(parser: Callable[[str], T], token: str, field_name: str, raw_line: str, path: Path) -> T:
@@ -200,11 +206,11 @@ def format_parse_errors(parser_name: str, input_path: Path, errors: list[str]) -
     )
 
 
-def file_last_modified_time(file_path: Path) -> str:
-    """Return the last modified time of the given file."""
+def file_created_time(file_path: Path) -> str:
+    """Return the creation time of the given file."""
     return (
         datetime.fromtimestamp(
-            file_path.stat().st_mtime,
+            file_path.stat().st_birthtime,
             tz=timezone.utc,
         )
         .isoformat()
@@ -263,25 +269,65 @@ def validate_parsed_coordinates(
 
 # Register every concrete converter class that parses a single analysis output,
 # keyed by the analysis.logic_name written to the JSON document.
-CONVERTERS_BY_LOGIC_NAME: dict[str, type[FeatureConverter]] = {}
+converters_by_logic_name: dict[str, type[FeatureConverter]] = {}
 
 # Register only converters that should appear as first-level CLI tool commands
 # under the main parser. A top-level converter may parse records itself, or it
 # may only create nested mode-specific subcommands.
-TOP_LEVEL_CONVERTERS: list[type[Any]] = []
+top_level_converters: list[type[Any]] = []
+
+
+def _converter_signature(converter: type[Any]) -> tuple[object, ...]:
+    """Return the registration-relevant attributes of a converter class.
+
+    The signature defines when independently created converter classes may
+    replace one another in a registry. It accepts composite top-level
+    converters, which need only define ``command`` and ``add_parser``; absent
+    FeatureConverter-specific attributes are represented by ``None``.
+
+    Args:
+        converter: Converter class to describe.
+
+    Returns:
+        Tuple containing converter metadata and implementation functions that
+        affect command-line parsing or feature conversion.
+
+    """
+
+    def implementation(name: str) -> object:
+        method = getattr(converter, name, None)
+        return getattr(method, "__func__", method)
+
+    return (
+        getattr(converter, "analysis_logic_name", None),
+        getattr(converter, "analysis_display_label", None),
+        getattr(converter, "analysis_description", None),
+        getattr(converter, "command", None),
+        getattr(converter, "program", None),
+        implementation("add_parser"),
+        implementation("add_common_arguments"),
+        implementation("options_from_args"),
+        implementation("parse_features"),
+    )
 
 
 def register_converter(converter: type[FeatureConverter]) -> type[FeatureConverter]:
-    """Register a concrete converter by analysis logic name."""
+    """Register a converter by analysis logic name."""
+    if isabstract(converter):
+        raise ValueError(f"Cannot register abstract converter {converter.__name__}")
+
     if not converter.analysis_logic_name:
         raise ValueError(f"Converter {converter.__name__} has no analysis logic name")
-    registered_converter = CONVERTERS_BY_LOGIC_NAME.get(converter.analysis_logic_name)
-    if registered_converter is not None and registered_converter is not converter:
+    registered_converter = converters_by_logic_name.get(converter.analysis_logic_name)
+
+    if registered_converter is not None and _converter_signature(
+        registered_converter
+    ) != _converter_signature(converter):
         raise ValueError(
             f"Converter logic name {converter.analysis_logic_name!r} already registered "
             f"by {registered_converter.__name__}"
         )
-    CONVERTERS_BY_LOGIC_NAME[converter.analysis_logic_name] = converter
+    converters_by_logic_name[converter.analysis_logic_name] = converter
     return converter
 
 
@@ -290,15 +336,19 @@ def register_top_level_converter(converter: TopLevelConverterT) -> TopLevelConve
     converter_command = getattr(converter, "command", None)
     if not converter_command:
         raise ValueError(f"Top-level converter {converter.__name__} has no command")
-    for registered_converter in TOP_LEVEL_CONVERTERS:
+    if isabstract(converter):
+        raise ValueError(f"Cannot register abstract top-level converter {converter.__name__}")
+    for index, registered_converter in enumerate(top_level_converters):
         registered_command = getattr(registered_converter, "command", None)
-        if registered_converter is not converter and registered_command == converter_command:
-            raise ValueError(
-                f"Top-level converter command {converter_command!r} already registered "
-                f"by {registered_converter.__name__}"
-            )
-    if converter not in TOP_LEVEL_CONVERTERS:
-        TOP_LEVEL_CONVERTERS.append(converter)
+        if registered_command == converter_command:
+            if _converter_signature(registered_converter) != _converter_signature(converter):
+                raise ValueError(
+                    f"Top-level converter command {converter_command!r} already registered "
+                    f"by {registered_converter.__name__}"
+                )
+            top_level_converters[index] = converter
+            return converter
+    top_level_converters.append(converter)
     return converter
 
 
@@ -320,7 +370,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
 
     subparsers = parser.add_subparsers(dest="tool", required=True)
-    for converter in TOP_LEVEL_CONVERTERS:
+    for converter in top_level_converters:
         converter.add_parser(subparsers)
 
     args = parser.parse_args(argv)
@@ -343,13 +393,13 @@ def create_genomio_json(config: GenomioJsonConfig) -> None:
 
     """
     try:
-        converter = CONVERTERS_BY_LOGIC_NAME[config.analysis_logic_name]
+        converter = converters_by_logic_name[config.analysis_logic_name]
     except KeyError:
         raise ValueError(f"Unsupported analysis logic name: {config.analysis_logic_name}") from None
     features, consensuses_by_key = converter.parse_features(config.input_path, config.converter_options)
 
     analysis: dict[str, str] = {
-        "run_date": file_last_modified_time(config.input_path),
+        "run_date": file_created_time(config.input_path),
         "logic_name": config.analysis_logic_name,
         "display_label": config.analysis_display_label,
         "description": config.analysis_description,
@@ -398,7 +448,7 @@ def main(argv: list[str] | None = None) -> None:
     """
     args = parse_args(argv)
     try:
-        converter = CONVERTERS_BY_LOGIC_NAME[args.analysis_logic_name]
+        converter = converters_by_logic_name[args.analysis_logic_name]
         create_genomio_json(
             config=GenomioJsonConfig(
                 input_path=args.input,

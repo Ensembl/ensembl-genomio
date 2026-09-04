@@ -19,6 +19,7 @@ __all__ = ["JsonValue", "NcRNAFeature", "RepeatConsensus", "RepeatFeature", "com
 
 import argparse
 from collections.abc import Callable, Iterable, Iterator
+from datetime import datetime
 import hashlib
 import json
 import logging
@@ -138,6 +139,16 @@ class _TopLevelAccumulator:
         if prev != date_removed_value:
             prev_path = self._paths[key]
             raise ValueError(f"Top-level '{key}' differs between inputs:\n  - {prev_path}\n  - {path}\n")
+
+        if key == "analysis":
+            stored_analysis = cast("dict[str, JsonValue]", self._original_values[key])
+            candidate_analysis = cast("dict[str, JsonValue]", value)
+            earliest_run_date = min(
+                cast(str, stored_analysis["run_date"]),
+                cast(str, candidate_analysis["run_date"]),
+                key=lambda run_date: datetime.fromisoformat(run_date.replace("Z", "+00:00")),
+            )
+            self._original_values[key] = {**stored_analysis, "run_date": earliest_run_date}
 
     def get_required(self, key: str) -> JsonValue:
         """Return the stored value for a required top-level field.

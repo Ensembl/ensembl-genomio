@@ -94,8 +94,8 @@ def test_format_parse_errors() -> None:
     assert output == "Found 2 errors while parsing dummy output in input.dat:\n- first error\n- second error"
 
 
-def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
-    """Test ``base.file_last_modified_time()`` returns a UTC ISO timestamp.
+def test_file_created_time_returns_utc_isoformat(tmp_path: Path) -> None:
+    """Test ``base.file_created_time()`` returns a UTC ISO timestamp.
 
     Args:
         tmp_path: Temporary directory provided by pytest.
@@ -103,11 +103,11 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
     """
     input_path = tmp_path / "input.out"
     input_path.write_text("content", encoding="utf-8")
-    modified_time = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc).timestamp()
+    created_time = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc).timestamp()
 
-    os.utime(input_path, (modified_time, modified_time))
+    os.utime(input_path, (created_time, created_time))
 
-    assert base.file_last_modified_time(input_path) == "2024-01-02T03:04:05Z"
+    assert base.file_created_time(input_path) == "2024-01-02T03:04:05Z"
 
 
 @pytest.mark.parametrize(
@@ -214,23 +214,42 @@ class _DummyConverter(convert_to_genomio_json.FeatureConverter):
 
 def test_converter_registration(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test generic registration helpers populate converter registries."""
-    monkeypatch.setattr(base, "CONVERTERS_BY_LOGIC_NAME", {})
-    monkeypatch.setattr(base, "TOP_LEVEL_CONVERTERS", [])
+    monkeypatch.setattr(base, "converters_by_logic_name", {})
+    monkeypatch.setattr(base, "top_level_converters", [])
 
     assert base.register_converter(_DummyConverter) is _DummyConverter
     assert base.register_top_level_converter(_DummyConverter) is _DummyConverter
     assert base.register_converter(_DummyConverter) is _DummyConverter
     assert base.register_top_level_converter(_DummyConverter) is _DummyConverter
-    assert {"dummy": _DummyConverter} == base.CONVERTERS_BY_LOGIC_NAME
-    assert [_DummyConverter] == base.TOP_LEVEL_CONVERTERS
+    assert {"dummy": _DummyConverter} == base.converters_by_logic_name
+    assert [_DummyConverter] == base.top_level_converters
+
+
+def test_equivalent_converter_replaces_registered_converter(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test equivalent converter classes replace existing registration entries."""
+    monkeypatch.setattr(base, "converters_by_logic_name", {})
+    monkeypatch.setattr(base, "top_level_converters", [])
+
+    class EquivalentConverter(_DummyConverter):
+        """Converter with the same registration signature as the dummy converter."""
+
+    base.register_converter(_DummyConverter)
+    base.register_converter(EquivalentConverter)
+    base.register_top_level_converter(_DummyConverter)
+    base.register_top_level_converter(EquivalentConverter)
+
+    assert base.converters_by_logic_name == {"dummy": EquivalentConverter}
+    assert base.top_level_converters == [EquivalentConverter]
 
 
 def test_duplicate_converter_logic_names_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test converter registration rejects conflicting classes for one logic name."""
-    monkeypatch.setattr(base, "CONVERTERS_BY_LOGIC_NAME", {})
+    monkeypatch.setattr(base, "converters_by_logic_name", {})
 
     class ConflictingConverter(_DummyConverter):
         """Converter with the same logic name as the dummy converter."""
+
+        program = "conflicting-program"
 
     base.register_converter(_DummyConverter)
 
@@ -239,28 +258,49 @@ def test_duplicate_converter_logic_names_rejected(monkeypatch: pytest.MonkeyPatc
 
 
 @pytest.mark.parametrize(
-    ("analysis_logic_name", "converter_name"),
+    ("converter_base", "analysis_logic_name", "converter_name", "error_message"),
     [
-        pytest.param(None, "NoLogicNameConverter", id="missing logic name"),
-        pytest.param("", "BlankLogicNameConverter", id="blank logic name"),
+        pytest.param(
+            _DummyConverter,
+            None,
+            "NoLogicNameConverter",
+            r"Converter NoLogicNameConverter has no analysis logic name",
+            id="missing logic name",
+        ),
+        pytest.param(
+            _DummyConverter,
+            "",
+            "BlankLogicNameConverter",
+            r"Converter BlankLogicNameConverter has no analysis logic name",
+            id="blank logic name",
+        ),
+        pytest.param(
+            convert_to_genomio_json.FeatureConverter,
+            "abstract",
+            "AbstractConverter",
+            r"Cannot register abstract converter AbstractConverter",
+            id="abstract converter",
+        ),
     ],
 )
-def test_converters_without_logic_name_rejected(
+def test_invalid_converters_rejected(
     monkeypatch: pytest.MonkeyPatch,
+    converter_base: type[convert_to_genomio_json.FeatureConverter],
     analysis_logic_name: str | None,
     converter_name: str,
+    error_message: str,
 ) -> None:
-    """Test converter registration requires a non-blank logic name."""
-    monkeypatch.setattr(base, "CONVERTERS_BY_LOGIC_NAME", {})
-    converter = type(converter_name, (_DummyConverter,), {"analysis_logic_name": analysis_logic_name})
+    """Test converter registration rejects abstract or unnamed converter classes."""
+    monkeypatch.setattr(base, "converters_by_logic_name", {})
+    converter = type(converter_name, (converter_base,), {"analysis_logic_name": analysis_logic_name})
 
-    with pytest.raises(ValueError, match=rf"Converter {converter_name} has no analysis logic name"):
+    with pytest.raises(ValueError, match=error_message):
         base.register_converter(converter)
 
 
 def test_duplicate_top_level_converter_commands_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test top-level converter registration rejects conflicting classes for one command."""
-    monkeypatch.setattr(base, "TOP_LEVEL_CONVERTERS", [])
+    monkeypatch.setattr(base, "top_level_converters", [])
 
     class ConflictingTopLevelConverter(convert_to_genomio_json.FeatureConverter):
         """Top-level converter with the same command as the dummy converter."""
@@ -302,7 +342,7 @@ def test_top_level_converters_without_commands_rejected(
     converter_name: str,
 ) -> None:
     """Test top-level converter registration requires a non-blank CLI command."""
-    monkeypatch.setattr(base, "TOP_LEVEL_CONVERTERS", [])
+    monkeypatch.setattr(base, "top_level_converters", [])
     converter = type(
         converter_name,
         (convert_to_genomio_json.FeatureConverter,),
@@ -314,6 +354,22 @@ def test_top_level_converters_without_commands_rejected(
 
     with pytest.raises(ValueError, match=rf"Top-level converter {converter_name} has no command"):
         base.register_top_level_converter(converter)
+
+
+def test_abstract_top_level_converter_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test top-level converter registration rejects an abstract class with a command."""
+    monkeypatch.setattr(base, "top_level_converters", [])
+
+    abstract_converter = type(
+        "AbstractTopLevelConverter",
+        (convert_to_genomio_json.FeatureConverter,),
+        {"command": "abstract"},
+    )
+
+    with pytest.raises(
+        ValueError, match=r"Cannot register abstract top-level converter AbstractTopLevelConverter"
+    ):
+        base.register_top_level_converter(abstract_converter)
 
 
 @pytest.mark.parametrize(
@@ -333,7 +389,7 @@ def test_parse_args_common_arguments(
     program_version = "1.0"
     input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
-    monkeypatch.setattr(base, "TOP_LEVEL_CONVERTERS", [_DummyConverter])
+    monkeypatch.setattr(base, "top_level_converters", [_DummyConverter])
     argv = [
         "dummy",
         "--input",
@@ -382,8 +438,8 @@ def test_main_passes_common_config_fields(
     """Test ``convert_to_genomio_json.main()`` passes common parsed config fields."""
     input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
-    monkeypatch.setattr(base, "TOP_LEVEL_CONVERTERS", [_DummyConverter])
-    monkeypatch.setitem(base.CONVERTERS_BY_LOGIC_NAME, "dummy", _DummyConverter)
+    monkeypatch.setattr(base, "top_level_converters", [_DummyConverter])
+    monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
 
     main(
         [
@@ -428,8 +484,8 @@ def test_main_reraises_exceptions(
     """Test the ``convert_to_genomio_json.main()`` function reraises exceptions."""
     input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
-    monkeypatch.setattr(base, "TOP_LEVEL_CONVERTERS", [_DummyConverter])
-    monkeypatch.setitem(base.CONVERTERS_BY_LOGIC_NAME, "dummy", _DummyConverter)
+    monkeypatch.setattr(base, "top_level_converters", [_DummyConverter])
+    monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
 
     mock_create_genomio_json.side_effect = RuntimeError("boom")
 
@@ -485,7 +541,7 @@ def test_create_genomio_json_assembles_generic_document(
     input_path = tmp_path / "input.out"
     input_path.write_text("parser input", encoding="utf-8")
     output_path = tmp_path / "out.json"
-    monkeypatch.setitem(base.CONVERTERS_BY_LOGIC_NAME, "dummy", _DummyConverter)
+    monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
 
     _DummyConverter.consensuses_by_key = consensuses_by_key
     convert_to_genomio_json.create_genomio_json(
@@ -542,7 +598,7 @@ def test_create_genomio_json_omits_program_parameters_when_none(
     input_path = tmp_path / "input.out"
     input_path.write_text("parser input", encoding="utf-8")
     output_path = tmp_path / "out.json"
-    monkeypatch.setitem(base.CONVERTERS_BY_LOGIC_NAME, "dummy", _DummyConverter)
+    monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
 
     convert_to_genomio_json.create_genomio_json(
         convert_to_genomio_json.GenomioJsonConfig(
