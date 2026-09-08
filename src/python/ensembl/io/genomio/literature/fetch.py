@@ -278,6 +278,27 @@ def _strongest_score(candidates: list, identifiers: dict) -> float:
     return max((score_paper_candidate(p, identifiers) for p in candidates), default=0.0)
 
 
+def _paper_is_accession_linked(paper: dict, accession: str) -> bool:
+    """Strict acceptance gate: a paper is trusted only if it is tied to THIS assembly
+    by its accession or BioProject. Papers retrieved via a direct accession/BioProject
+    link (NCBI-established) qualify on provenance; papers found by name / full-text
+    search qualify only if the assembly accession (version-less) actually appears in
+    the paper's title, abstract or full text."""
+    if paper.get("retrieval_source") in ("linked_pmid", "elink", "bioproject") or paper.get(
+        "is_reference_paper"
+    ):
+        return True
+    acc_base = accession.split(".")[0].lower()
+    text = " ".join(
+        [
+            paper.get("title", "") or "",
+            paper.get("abstractText", "") or "",
+            (paper.get("text_data", {}) or {}).get("text") or "",
+        ]
+    ).lower()
+    return acc_base in text
+
+
 def _gather_paper_candidates(accession: str, assembly: dict, identifiers: dict, max_results: int) -> list:
     """Run the Mode-B retrieval escalation and return the pooled candidate papers.
 
@@ -488,9 +509,23 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
         )
 
     enriched_papers = _prepare_papers(papers_found)
+
+    # ---- strict acceptance gate (precision-first) ----
+    # `papers` keeps only those tied to THIS assembly by its accession or BioProject
+    # (linked in NCBI, or the accession appears in the paper text) — the confirmed,
+    # literature-grounded set. `candidate_papers` keeps the full ranked list so the
+    # pipeline can fall back to the best candidate as a *suggestion* (or to GoaT)
+    # when nothing qualifies strictly.
+    accepted = [paper for paper in enriched_papers if _paper_is_accession_linked(paper, accession)]
+    if len(accepted) < len(enriched_papers):
+        logger.info(
+            f"      [strict] kept {len(accepted)}/{len(enriched_papers)} paper(s) "
+            f"linked to {accession} (accession/BioProject); the rest are suggestion-only"
+        )
+
     reference_paper = _extract_reference_paper(papers_found)
 
-    logger.info(f"\n[4/4] Done. {len(enriched_papers)} paper(s) ready for extraction.")
+    logger.info(f"\n[4/4] Done. {len(accepted)} accession-linked paper(s) ready for extraction.")
     logger.info(
         f"      chromosome_number will be "
         f"{'used from NCBI' if assembly.get('chromosome_number') else 'extracted from text in extract.py'}"
@@ -498,6 +533,7 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
 
     return {
         "assembly": assembly,
-        "papers": enriched_papers,
+        "papers": accepted,
+        "candidate_papers": enriched_papers,
         "reference_paper": reference_paper,
     }
