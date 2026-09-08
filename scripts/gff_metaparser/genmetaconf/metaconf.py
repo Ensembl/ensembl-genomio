@@ -220,6 +220,11 @@ class MetaConf:
         aname = self.get("assembly.name")
         self.update("assembly.default", aname)
         self.update_from_dict(defaults, "assembly.version", tech=True)
+        # assembly accession body
+        acc_body = "INSDC"
+        if asm_acc.startswith("GCF_"):
+            acc_body = "RefSeq"
+        self.update("assembly.accession_body", acc_body)
         # get annotation source
         ann_source = self.get("species.annotation_source", default="").strip()
         ann_source = self.normalise_asm_name(ann_source)
@@ -232,10 +237,8 @@ class MetaConf:
                 if "refseq" in ann_source.lower():
                     if asm_acc.startswith("GCF_"):
                         self.update("assembly.alt_accession", asm_acc_insdc)
-                        self.update("assembly.accession_body", "RefSeq")
                     else:
                         self.update("assembly.alt_accession", asm_acc_refseq)
-                        self.update("assembly.accession_body", "INSDC")
 
         # species metadata
         _acc = str(asm_acc).replace("_", "").replace(".", "v")
