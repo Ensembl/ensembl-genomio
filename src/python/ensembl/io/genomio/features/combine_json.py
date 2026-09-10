@@ -144,8 +144,8 @@ class _TopLevelAccumulator:
             stored_analysis = cast("dict[str, JsonValue]", self._original_values[key])
             candidate_analysis = cast("dict[str, JsonValue]", value)
             earliest_run_date = min(
-                cast(str, stored_analysis["run_date"]),
-                cast(str, candidate_analysis["run_date"]),
+                cast("str", stored_analysis["run_date"]),
+                cast("str", candidate_analysis["run_date"]),
                 key=lambda run_date: datetime.fromisoformat(run_date.replace("Z", "+00:00")),
             )
             self._original_values[key] = {**stored_analysis, "run_date": earliest_run_date}
