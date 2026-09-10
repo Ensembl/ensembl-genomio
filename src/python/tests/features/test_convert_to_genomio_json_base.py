@@ -94,8 +94,8 @@ def test_format_parse_errors() -> None:
     assert output == "Found 2 errors while parsing dummy output in input.dat:\n- first error\n- second error"
 
 
-def test_file_created_time_returns_utc_isoformat(tmp_path: Path) -> None:
-    """Test ``base.file_created_time()`` returns a UTC ISO timestamp.
+def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
+    """Test ``base.file_last_modified_time()`` returns a UTC ISO timestamp.
 
     Args:
         tmp_path: Temporary directory provided by pytest.
@@ -103,11 +103,11 @@ def test_file_created_time_returns_utc_isoformat(tmp_path: Path) -> None:
     """
     input_path = tmp_path / "input.out"
     input_path.write_text("content", encoding="utf-8")
-    created_time = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc).timestamp()
+    last_modified_time = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc).timestamp()
 
-    os.utime(input_path, (created_time, created_time))
+    os.utime(input_path, (last_modified_time, last_modified_time))
 
-    assert base.file_created_time(input_path) == "2024-01-02T03:04:05Z"
+    assert base.file_last_modified_time(input_path) == "2024-01-02T03:04:05Z"
 
 
 @pytest.mark.parametrize(

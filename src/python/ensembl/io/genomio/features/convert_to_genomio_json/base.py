@@ -22,7 +22,7 @@ __all__ = [
     "ParseFeaturesResult",
     "converters_by_logic_name",
     "create_genomio_json",
-    "file_created_time",
+    "file_last_modified_time",
     "format_parse_errors",
     "parse_token",
     "register_converter",
@@ -206,11 +206,11 @@ def format_parse_errors(parser_name: str, input_path: Path, errors: list[str]) -
     )
 
 
-def file_created_time(file_path: Path) -> str:
-    """Return the creation time of the given file."""
+def file_last_modified_time(file_path: Path) -> str:
+    """Return the last modified time of the given file."""
     return (
         datetime.fromtimestamp(
-            file_path.stat().st_birthtime,
+            file_path.stat().st_mtime,
             tz=timezone.utc,
         )
         .isoformat()
@@ -399,7 +399,7 @@ def create_genomio_json(config: GenomioJsonConfig) -> None:
     features, consensuses_by_key = converter.parse_features(config.input_path, config.converter_options)
 
     analysis: dict[str, str] = {
-        "run_date": file_created_time(config.input_path),
+        "run_date": file_last_modified_time(config.input_path),
         "logic_name": config.analysis_logic_name,
         "display_label": config.analysis_display_label,
         "description": config.analysis_description,
