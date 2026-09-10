@@ -39,6 +39,7 @@ class MyToolConverter(FeatureConverter):
 
     @classmethod
     def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
+        """Add the MyTool subcommand parser."""
         parser = subparsers.add_parser(cls.command, help="Convert MyTool output to GenomIO JSON.")
         cls.add_common_arguments(parser)
         parser.set_defaults(
@@ -54,6 +55,7 @@ class MyToolConverter(FeatureConverter):
         input_path: Path,
         _options: ConverterOptions | None = None,
     ) -> ParseFeaturesResult:
+        """Parse MyTool output."""
         return parse_my_tool_output(input_path)
 ```
 
