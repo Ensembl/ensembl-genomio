@@ -190,11 +190,11 @@ class MetaConf:
                     self.update("assembly.level", asm_level.strip().lower().split(" ")[0])
                 # GenBank assembly accession: GCA_947086385.1
                 self.update_from_report_meta_value(
-                    line, r"#\s+GenBank assembly accession:", "assembly.accession_insdc", tech = True
+                    line, r"#\s+GenBank assembly accession:", "assembly.accession_insdc", tech=True
                 )
                 # RefSeq assembly accession: GCF_947086385.1
                 self.update_from_report_meta_value(
-                    line, r"#\s+RefSeq assembly accession:", "assembly.accession_refseq", tech = True
+                    line, r"#\s+RefSeq assembly accession:", "assembly.accession_refseq", tech=True
                 )
                 # assembly date: GCA_947086385.1
                 asm_date = self.report_meta_value(line, r"#\s+Date:", normalise=False)
@@ -229,8 +229,8 @@ class MetaConf:
         ann_source = self.get("species.annotation_source", default="").strip()
         ann_source = self.normalise_asm_name(ann_source)
         # picking assembly.alt_accession
-        asm_acc_insdc = self.get("assembly.accession_insdc", tech = True)
-        asm_acc_refseq = self.get("assembly.accession_refseq", tech = True)
+        asm_acc_insdc = self.get("assembly.accession_insdc", tech=True)
+        asm_acc_refseq = self.get("assembly.accession_refseq", tech=True)
         if not self.get("assembly.alt_accession"):
             if asm_acc_refseq and asm_acc_insdc:
                 # only if species.annotaion_source is ~ "RefSeq"

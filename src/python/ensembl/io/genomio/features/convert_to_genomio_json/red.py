@@ -49,7 +49,6 @@ RED_RPT_CONSENSUS = Consensus(
 RED_RPT_CONSENSUS_KEY = RED_RPT_CONSENSUS.sha256_key()
 
 
-
 @register_top_level_converter
 @register_converter
 class RedConverter(FeatureConverter):
