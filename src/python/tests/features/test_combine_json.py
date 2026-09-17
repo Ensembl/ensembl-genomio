@@ -227,13 +227,13 @@ def test_top_level_accumulator_require_same_ignores_analysis_run_date(tmp_path: 
     path1.write_text("{}", encoding="utf-8")
     path2.write_text("{}", encoding="utf-8")
 
-    analysis_a = _analysis("rm", "2026-01-01T00:00:00Z")
-    analysis_b = _analysis("rm", "2026-02-01T00:00:00Z")
+    analysis_a = _analysis("rm", "2026-02-01T00:00:00Z")
+    analysis_b = _analysis("rm", "2026-01-01T00:00:00Z")
 
     acc.require_same("analysis", analysis_a, path1)
     acc.require_same("analysis", analysis_b, path2)
 
-    assert acc.get_required("analysis") == analysis_a
+    assert acc.get_required("analysis") == analysis_b
 
 
 @pytest.mark.parametrize(
@@ -1258,6 +1258,43 @@ def test_combine_ncrna_json_paths(
         assert out["source"] == expected["source"]
         assert out["ncrna_tool"] == expected["ncrna_tool"]
         assert out["ncrna_features"] == expected["ncrna_features"]
+
+
+def test_combine_feature_json_truncates_mixed_load_type_error(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test mixed-load-type errors report mismatches beyond the display limit."""
+    first_path = tmp_path / "repeat.json"
+    mismatched_paths = [
+        tmp_path / f"ncrna_{index}.json" for index in range(combine_json._MISMATCH_ERRORS_TO_REPORT + 1)
+    ]
+    json_paths = [first_path, *mismatched_paths]
+
+    def get_manifest_paths(_manifest: Path) -> list[Path]:
+        """Return paths containing one repeat document and many ncRNA documents."""
+        return json_paths
+
+    def load_document(_path: Path) -> dict[str, combine_json.JsonValue]:
+        """Return a placeholder document because load-type detection is mocked."""
+        return {}
+
+    def detect_load_type(_document: dict[str, combine_json.JsonValue], path: Path) -> str:
+        """Identify the first document as repeat and all following documents as ncRNA."""
+        return "repeat" if path == first_path else "ncrna"
+
+    monkeypatch.setattr(combine_json, "get_paths_from_manifest", get_manifest_paths)
+    monkeypatch.setattr(combine_json, "_load_json_document", load_document)
+    monkeypatch.setattr(combine_json, "_detect_load_type", detect_load_type)
+
+    with pytest.raises(ValueError, match=r"\(\+1 more\)"):
+        combine_json.combine_feature_json(
+            json_manifest=tmp_path / "manifest.txt",
+            out_json=tmp_path / "out.json",
+            chunk_re=CHUNK_RE,
+            agp_file=None,
+            allow_revcomp=False,
+        )
 
 
 @pytest.mark.parametrize(

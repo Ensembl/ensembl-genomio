@@ -79,7 +79,7 @@ sub param_defaults {
                         'rRNA_gene', 'snoRNA_gene', 'snRNA_gene', 'tRNA_gene',
                         'transposable_element'],
     mrna_types      => ['mRNA', 'transcript', 'misc_RNA', 'RNA',
-                        'pseudogenic_transcript', 'pseudogenic_rRNA', 'pseudogenic_tRNA',
+                        'pseudogenic_transcript', 'pseudogenic_rRNA', 'pseudogenic_tRNA', 'nontranslating_CDS',
                         'ncRNA', 'lincRNA', 'miRNA', 'pre_miRNA',
                         'lncRNA', 'lnc_RNA', 'piRNA',
                         'RNase_MRP_RNA', 'RNAse_P_RNA', 'rRNA', 'snoRNA',

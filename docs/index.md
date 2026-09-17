@@ -1,33 +1,45 @@
+---
+myst:
+  html_meta:
+    "description lang=en": |
+      Top-level documentation for ensembl-genomio package, with links to the rest of the site.
+html_theme.sidebar_secondary.remove: true
+---
+
 # Ensembl GenomIO
 
-A repository dedicated to pipelines used to turn basic genomic data into formatted 
-Ensembl core databases. Also allow users to dump core databases into various formats.
+A Python library dedicated to turn basic genomic data into formatted Ensembl core databases.
 
-File formats handled : FastA, GFF3, JSON (*following BRC4 specifications*).
+## User Guide
 
-## Contents
+Information about installing and using this library.
 
-Check out [installation](install.md) section for further information on how 
-to install the project.
+```{toctree}
+:maxdepth: 2
 
-1. [Install](install.md)
-2. [Usage](usage.md)
-3. [Code of Conduct](code_of_conduct.md)
-4. [Code reference](reference/ensembl/io/genomio)
+user_guide/index
+```
 
-## Ehive pipelines
+## Code Reference
 
-Check out the [usage](usage.md) section for further information of requirements to
-run ensembl-genomio pipelines.
+Coverage report of the unit tests for this library and its code reference.
 
-1. __Genome loader__: Creates an Ensembl core database from a set of flat files.
-2. __Genome dumper__: Dumps flat files from an Ensembl core database.
+```{toctree}
+:maxdepth: 1
 
-## Nextflow pipelines
+coverage_report
+```
 
-1. __Additional seq prepare__: BRC/Ensembl metazoa pipeline. Preparation of genome data loading files for new sequence(s) to existing species databases.  
-2. __Genome Prepare__: BRC/Ensembl metazoa pipeline. Retrieve data for genome(s), obtained from INSDC and RefSeq, validate and prepare GFF3, FASTA, JSON files for each genome accession.
+```{toctree}
+:maxdepth: 1
+
+reference/ensembl.io.genomio
+```
 
 ## License
 
 Software as part of [Ensembl GenomIO](https://github.com/Ensembl/ensembl-genomio) is distributed under the [Apache-2.0 License](https://www.apache.org/licenses/LICENSE-2.0.txt).
+
+## Code of Conduct
+
+The Ensembl project is built on a foundation of collaboration, mutual respect and equality with a diverse and global community. We do not condone discrimination or abusive behaviour of any form. We encourage participation and engagement for everyone, in a professional manner, and wish all members of our community to adhere to the same principles.
