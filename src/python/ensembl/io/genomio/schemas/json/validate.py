@@ -17,6 +17,7 @@
 Examples::
 
     from ensembl.io.genomio.schemas import json
+
     # Valid JSON schema
     json.schema_validator(json_file="functional_annotation.json", json_schema="functional_annotation")
     # Incorrect JSON schema raises jsonschema.exceptions.ValidationError
