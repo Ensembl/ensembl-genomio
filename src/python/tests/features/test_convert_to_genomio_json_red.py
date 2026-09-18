@@ -109,22 +109,16 @@ def test_parse_output_collates_all_errors(tmp_path: Path) -> None:
     """
     rpt_path = tmp_path / "errors.rpt"
     rpt_path.write_text("chr1 start 20\nchr2 30 20\nchr3 40\n", encoding="utf-8")
-    expected_fragments = [
-        "Found 3 errors while parsing Red output",
-        "Invalid 'start'",
-        "seq_region_end < seq_region_start",
-        "Expected 3 columns",
-    ]
-
     with pytest.raises(
         ValueError,
-        match=r"^Found \d+ errors while parsing Red output in .*:",
-    ) as excinfo:
+        match=(
+            r"\AFound 3 errors while parsing Red output in .*:\n"
+            r"- Invalid 'start'.*\n"
+            r"- seq_region_end < seq_region_start.*\n"
+            r"- Expected 3 columns.*\Z"
+        ),
+    ):
         red.parse_output(rpt_path)
-
-    error_message = str(excinfo.value)
-    for expected_fragment in expected_fragments:
-        assert expected_fragment in error_message
 
 
 def test_red_converter_parse_features_uses_tool_specific_parser(
