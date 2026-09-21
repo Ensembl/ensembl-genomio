@@ -17,6 +17,7 @@
 import argparse
 import json
 import logging
+import os
 
 from ensembl.io.genomio.literature.extract import extract_metadata
 from ensembl.io.genomio.literature.fetch import fetch_papers_for_assembly
@@ -29,6 +30,12 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # Paper quality filter
 # ============================================================
+
+# Confidence attached to a GoaT species-level reference ploidy used as a fallback.
+# Deliberately moderate: GoaT is a curated species-level reference, not evidence read
+# from THIS assembly's paper, so it should rank below any paper-derived value while
+# staying above a pure guess.
+GOAT_REFERENCE_CONFIDENCE = 0.6
 
 EXCLUDE_KEYWORDS = [
     "chloroplast",
@@ -114,15 +121,20 @@ def _ploidy_recovered(result: dict) -> bool:
 def _is_correct_paper_for_accession(paper: dict, assembly: dict) -> bool:
     """Accession-level check before letting Gemma read a paper: only trust a paper
     that is genuinely tied to THIS assembly — linked by accession (directly linked
-    PMID / Entrez elink) or by its BioProject, or with the assembly's scientific
-    name actually present in the paper text. This stops Gemma from confidently
-    reading ploidy out of an off-target paper."""
+    PMID / Entrez elink) or by its BioProject, or with corroborating assembly
+    metadata (the accession itself, or failing that the scientific name) actually
+    present in the paper text. This stops Gemma from confidently reading ploidy out
+    of an off-target paper."""
     if paper.get("retrieval_source") in ("linked_pmid", "elink", "bioproject") or paper.get(
         "is_reference_paper"
     ):
         return True
-    scientific_name = (assembly.get("scientific_name") or "").lower()
     paper_text = (paper.get("text_data", {}).get("text") or "").lower()
+    # Prefer the strongest signal: the assembly accession printed in the paper.
+    accession = (assembly.get("assembly_accession") or "").split(".")[0].lower()
+    if accession and accession in paper_text:
+        return True
+    scientific_name = (assembly.get("scientific_name") or "").lower()
     return bool(scientific_name) and scientific_name in paper_text
 
 
@@ -189,7 +201,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
                 "status": "from_reference",
                 "source": "GoaT",
                 "method": "reference_taxon",
-                "confidence": 0.6,
+                "confidence": GOAT_REFERENCE_CONFIDENCE,
                 "reference_check": {"goat_ploidy": goat_level, "agreement": "no_qualifying_paper"},
             }
             status, error = "success", None
@@ -400,7 +412,17 @@ def main(argv: list[str] | None = None) -> None:
         "--output",
         help="Path to save results as JSON; printed to stdout if omitted",
     )
+    parser.add_argument(
+        "--gemma",
+        action="store_true",
+        help="Enable the optional local Gemma LLM layer (overrides auto-detection)",
+    )
     args = parser.parse_args(argv)
+
+    # A convenience switch for the same GEMMA_ENABLED env var is_enabled() already reads,
+    # so no plumbing through run_pipeline/run_batch is needed.
+    if args.gemma:
+        os.environ["GEMMA_ENABLED"] = "1"
 
     if args.accession:
         result = run_pipeline(args.accession, max_papers=args.max_papers)
