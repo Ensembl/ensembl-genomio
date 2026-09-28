@@ -415,8 +415,12 @@ def create_genomio_json(config: GenomioJsonConfig) -> None:
             "source_provider": config.source_provider,
             "is_primary": config.is_primary,
         },
-        "repeat_features": features,
     }
+    if getattr(converter, "ncrna_tool", None) is not None:
+        json_doc["ncrna_tool"] = converter.ncrna_tool
+        json_doc["ncrna_features"] = features
+    else:
+        json_doc["repeat_features"] = features
 
     if consensuses_by_key:
         repeat_consensuses: list[dict[str, str]] = []

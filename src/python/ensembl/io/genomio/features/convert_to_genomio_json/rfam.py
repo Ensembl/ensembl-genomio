@@ -1,0 +1,147 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Parse the Rfam hits TSV into GenomIO ncRNA records."""
+
+__all__ = ["RfamConverter",
+    "RfamParsedRow"]
+
+import argparse
+from dataclasses import dataclass
+from pathlib import Path
+
+from ensembl.io.genomio.features.convert_to_genomio_json.base import (
+    ConverterOptions,
+    FeatureConverter,
+    ParseFeaturesResult,
+    format_parse_errors,
+    parse_token,
+    register_converter,
+    register_top_level_converter,
+    validate_parsed_coordinates,
+)
+from ensembl.utils.archive import open_gz_file
+
+RFAM_HITS_COLUMNS = 11
+
+
+@register_top_level_converter
+@register_converter
+class RfamConverter(FeatureConverter):
+    """Converter for the Rfam hits TSV."""
+
+    analysis_logic_name = "cmscan_rfam"
+    command = "rfam"
+    ncrna_tool = "cmscan"
+
+    @classmethod
+    def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
+        """Add the Rfam subcommand parser."""
+        rfam_parser = subparsers.add_parser(
+            cls.command,
+            help="Convert the Rfam hits TSV to GenomIO JSON.",
+        )
+        cls.add_common_arguments(rfam_parser)
+        rfam_parser.set_defaults(
+            analysis_logic_name=cls.analysis_logic_name,
+            analysis_display_label="Rfam Models",
+            analysis_description=(
+                "Covariance models from <a href='https://rfam.xfam.org'>Rfam</a>, "
+                "aligned to the genome with 'cmscan' from the "
+                "<a href='http://eddylab.org/infernal'>Infernal</a> suite of programs."
+            ),
+            program="cmscan",
+        )
+
+    @classmethod
+    def parse_features(cls, input_path: Path, _options: ConverterOptions | None = None) -> ParseFeaturesResult:
+        """Parse the Rfam hits TSV."""
+        return parse_output(input_path)
+
+
+@dataclass(frozen=True)
+class RfamParsedRow:
+    """Parsed Rfam hits TSV row."""
+
+    feature: dict[str, object]
+
+
+def parse_row(input_path: Path, line: str) -> RfamParsedRow:
+    """Parse one Rfam hits TSV row."""
+    columns = line.split()
+    if len(columns) != RFAM_HITS_COLUMNS:
+        raise ValueError(
+            f"Expected {RFAM_HITS_COLUMNS} columns in {input_path}, got {len(columns)}: line={line!r}"
+        )
+
+    seq_region, seq_start, seq_end, strand = columns[:4]
+    model_start, model_end = columns[4:6]
+    score, evalue = columns[6:8]
+    target_name, target_accession, biotype = columns[8:11]
+
+    if strand not in {"+", "-"}:
+        raise ValueError(f"Unexpected strand token in {input_path}: token={strand!r}, line={line!r}")
+    model_start_i = parse_token(int, model_start, "model_start", line, input_path)
+    model_end_i = parse_token(int, model_end, "model_end", line, input_path)
+    seq_start_i = parse_token(int, seq_start, "seq_region_start", line, input_path)
+    seq_end_i = parse_token(int, seq_end, "seq_region_end", line, input_path)
+    seq_region_start, seq_region_end = min(seq_start_i, seq_end_i), max(seq_start_i, seq_end_i)
+
+    validate_parsed_coordinates(
+        input_path,
+        seq_region_start=seq_region_start,
+        seq_region_end=seq_region_end,
+        repeat_start=model_start_i,
+        repeat_end=model_end_i,
+        line=line,
+    )
+
+    feature: dict[str, object] = {
+        "seq_region": seq_region,
+        "seq_region_start": seq_region_start,
+        "seq_region_end": seq_region_end,
+        "hit_strand": strand,
+        "biotype": biotype,
+        "score": parse_token(float, score, "score", line, input_path),
+        "evalue": parse_token(float, evalue, "evalue", line, input_path),
+        "target_name": target_name,
+        "hit_start": model_start_i,
+        "hit_end": model_end_i,
+        "is_significant": True,
+    }
+    if target_accession != "-":
+        feature["target_accession"] = target_accession
+    return RfamParsedRow(feature=feature)
+
+
+def parse_output(input_path: Path) -> ParseFeaturesResult:
+    """Parse all Rfam hits TSV rows, collating malformed-row errors."""
+    features: list[dict[str, object]] = []
+    errors: list[str] = []
+    with open_gz_file(input_path) as fh:
+        for raw_line in fh:
+            line = raw_line.strip()
+            if not line or line.lower().startswith("seqname"):
+                continue
+            try:
+                parsed_row = parse_row(input_path, line)
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
+
+            features.append(parsed_row.feature)
+
+    if errors:
+        raise ValueError(format_parse_errors("Rfam hits TSV", input_path, errors))
+    return features, {}
