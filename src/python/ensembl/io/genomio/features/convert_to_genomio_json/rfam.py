@@ -61,7 +61,8 @@ class RfamConverter(FeatureConverter):
                 "aligned to the genome with 'cmscan' from the "
                 "<a href='http://eddylab.org/infernal'>Infernal</a> suite of programs."
             ),
-            program="cmscan",
+            program="Infernal",
+            source_provider="Rfam",
         )
 
     @classmethod
@@ -92,18 +93,18 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
 
     if strand not in {"+", "-"}:
         raise ValueError(f"Unexpected strand token in {input_path}: token={strand!r}, line={line!r}")
-    model_start_i = parse_token(int, model_start, "model_start", line, input_path)
-    model_end_i = parse_token(int, model_end, "model_end", line, input_path)
-    seq_start_i = parse_token(int, seq_start, "seq_region_start", line, input_path)
-    seq_end_i = parse_token(int, seq_end, "seq_region_end", line, input_path)
-    seq_region_start, seq_region_end = min(seq_start_i, seq_end_i), max(seq_start_i, seq_end_i)
+    model_start_parse = parse_token(int, model_start, "model_start", line, input_path)
+    model_end_parse = parse_token(int, model_end, "model_end", line, input_path)
+    seq_start_parse = parse_token(int, seq_start, "seq_region_start", line, input_path)
+    seq_end_parse = parse_token(int, seq_end, "seq_region_end", line, input_path)
+    seq_region_start, seq_region_end = min(seq_start_parse, seq_end_parse), max(seq_start_parse, seq_end_parse)
 
     validate_parsed_coordinates(
         input_path,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
-        repeat_start=model_start_i,
-        repeat_end=model_end_i,
+        repeat_start=model_start_parse,
+        repeat_end=model_end_parse,
         line=line,
     )
 
@@ -116,13 +117,13 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
         "score": parse_token(float, score, "score", line, input_path),
         "evalue": parse_token(float, evalue, "evalue", line, input_path),
         "target_name": target_name,
-        "hit_start": model_start_i,
-        "hit_end": model_end_i,
+        "hit_start": model_start_parse,
+        "hit_end": model_end_parse,
         "is_significant": True,
     }
     if target_accession != "-":
         feature["target_accession"] = target_accession
-    return RfamParsedRow(feature=feature)
+    return RfamParsedRow(feature)
 
 
 def parse_output(input_path: Path) -> ParseFeaturesResult:
