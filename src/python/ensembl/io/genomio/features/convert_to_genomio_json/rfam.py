@@ -41,7 +41,7 @@ RFAM_HITS_COLUMNS = 11
 class RfamConverter(FeatureConverter):
     """Converter for the Rfam hits TSV."""
 
-    analysis_logic_name = "cmscan_rfam"
+    analysis_logic_name = "cmscan_rfam_14.5"
     command = "rfam"
     ncrna_tool = "cmscan"
 
@@ -66,7 +66,7 @@ class RfamConverter(FeatureConverter):
         )
 
     @classmethod
-    def parse_features(cls, input_path: Path, _options: ConverterOptions | None = None) -> ParseFeaturesResult:
+    def parse_features(cls, input_path: Path, _options: None = None) -> ParseFeaturesResult:
         """Parse the Rfam hits TSV."""
         return parse_output(input_path)
 
@@ -112,14 +112,13 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
         "seq_region": seq_region,
         "seq_region_start": seq_region_start,
         "seq_region_end": seq_region_end,
-        "hit_strand": strand,
-        "biotype": biotype,
-        "score": parse_token(float, score, "score", line, input_path),
-        "evalue": parse_token(float, evalue, "evalue", line, input_path),
-        "target_name": target_name,
         "hit_start": model_start_parse,
         "hit_end": model_end_parse,
-        "is_significant": True,
+        "hit_strand": strand,
+        "score": parse_token(float, score, "score", line, input_path),
+        "evalue": parse_token(float, evalue, "evalue", line, input_path),
+        "biotype": biotype,
+        "target_name": target_name,
     }
     if target_accession != "-":
         feature["target_accession"] = target_accession
