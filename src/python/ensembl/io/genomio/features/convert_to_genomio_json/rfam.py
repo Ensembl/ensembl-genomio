@@ -132,7 +132,7 @@ def parse_output(input_path: Path) -> ParseFeaturesResult:
     with open_gz_file(input_path) as fh:
         for raw_line in fh:
             line = raw_line.strip()
-            if not line or line.lower().startswith("seqname"):
+            if line.lower().startswith("seqname"):
                 continue
             try:
                 parsed_row = parse_row(input_path, line)
