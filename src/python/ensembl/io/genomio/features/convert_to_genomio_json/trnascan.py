@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # See the NOTICE file distributed with this work for additional information
 # regarding copyright ownership.
 #
@@ -14,103 +12,41 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Parse tRNAscan output into GenomIO JSON converter records."""
+"""Parse tRNAscan-SE output into GenomIO ncRNA feature records."""
 
 __all__ = [
     "TrnaScanConverter",
+    "TrnaScanParsedRow",
 ]
 
 import argparse
-from datetime import datetime, timezone
-import json
-import re
-import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+import re
 
+from ensembl.io.genomio.features.convert_to_genomio_json.base import (
+    ConverterOptions,
+    FeatureConverter,
+    ParseFeaturesResult,
+    format_parse_errors,
+    parse_token,
+    register_converter,
+    register_top_level_converter,
+)
+
+TRNASCAN_MIN_COLUMNS = 9
+TRNASCAN_HEADER_NAMES = {"Sequence", "Name"}
 BASE_COMPLEMENTS = str.maketrans("ACGTUacgtu", "TGCAAtgcaa")
 
 
-def anticodon_to_codon(anticodon: str) -> str:
-    """Return the DNA codon paired with a tRNA anticodon."""
-    return anticodon.translate(BASE_COMPLEMENTS)[::-1].upper()
-
-
-def is_pseudogene(trna_type: str, note: Optional[str]) -> bool:
-    """Detect pseudogene annotations from tRNAscan-SE fields."""
-    values = [trna_type]
-    if note:
-        values.append(note)
-    return any("pseudo" in value.lower() for value in values)
-
-
-def parse_trnascan_line(line: str, line_number: int) -> Optional[dict[str, Any]]:
-    """Parse one tRNAscan-SE output row."""
-    stripped = line.strip()
-    if not stripped or stripped.startswith("-"):
-        return None
-
-    fields = [field.strip() for field in (stripped.split("\t") if "\t" in stripped else re.split(r"\s+", stripped))]
-    if len(fields) < 9:
-        return None
-    if not fields[1].isdigit() or not fields[2].isdigit() or not fields[3].isdigit():
-        return None
-
-    try:
-        begin = int(fields[2])
-        end = int(fields[3])
-        isotype = fields[4]
-        anticodon = fields[5]
-        note = " ".join(fields[9:]) if len(fields) > 9 else None
-
-        return {
-            "seq_region": fields[0],
-            "seq_region_start": min(begin, end),
-            "seq_region_end": max(begin, end),
-            "seq_region_strand": "+" if begin <= end else "-",
-            "biotype": "tRNA",
-            "display_label": f"tRNA-{isotype}",
-            "score": float(fields[8]),
-            "isotype": isotype,
-            "anticodon": anticodon,
-            "codon": anticodon_to_codon(anticodon),
-            "is_pseudogene": is_pseudogene(isotype, note),
-        }
-    except ValueError as exc:
-        raise ValueError(f"Could not parse data row on line {line_number}: {line.rstrip()}") from exc
-
-
-def parse_trnascan_features(input_tsv: Path) -> list[dict[str, Any]]:
-    """Parse tRNAscan-SE tabular output into feature records."""
-    records: list[dict[str, Any]] = []
-
-    with input_tsv.open("r", encoding="utf-8") as in_handle:
-        for line_number, line in enumerate(in_handle, start=1):
-            record = parse_trnascan_line(line, line_number)
-            if record is not None:
-                records.append(record)
-
-    return records
-
-
-def _add_trnascan_arguments(subparser: argparse.ArgumentParser) -> None:
-    """Add tRNAscan-SE arguments, with a plain-argparse fallback for local execution."""
-    try:
-        subparser.add_argument_src_path("--input", required=True, help="Input tRNAscan-SE TSV file")
-        subparser.add_argument_dst_path("--output", required=True, help="JSON output path")
-    except AttributeError:
-        subparser.add_argument("--input", required=True, type=Path, help="Input tRNAscan-SE TSV file")
-        subparser.add_argument("--output", required=True, type=Path, help="JSON output path")
-
-
-class TrnaScanConverter:
+@register_top_level_converter
+@register_converter
+class TrnaScanConverter(FeatureConverter):
     """Converter for tRNAscan-SE output."""
 
     analysis_logic_name = "trnascan"
-    analysis_display_label = "tRNAs"
-    analysis_description = "tRNA genes predicted by tRNAscan-SE."
     command = "trnascan"
-    program = "tRNAscan-SE"
+    feature_collection_name = "ncrna_features"
 
     @classmethod
     def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
@@ -119,93 +55,133 @@ class TrnaScanConverter:
             cls.command,
             help="Convert tRNAscan-SE output to GenomIO JSON.",
         )
-        _add_trnascan_arguments(trnascan_parser)
+        cls.add_common_arguments(trnascan_parser)
         trnascan_parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label=cls.analysis_display_label,
-            analysis_description=cls.analysis_description,
-            program=cls.program,
+            analysis_display_label="tRNAs",
+            analysis_description="tRNA genes predicted by tRNAscan-SE.",
+            program="tRNAscan-SE",
         )
 
     @classmethod
     def parse_features(
         cls,
         input_path: Path,
-        _options: Optional[object] = None,
-    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        _options: ConverterOptions | None = None,
+    ) -> ParseFeaturesResult:
         """Parse tRNAscan-SE output."""
-        return parse_trnascan_features(input_path), {}
+        return parse_output(input_path)
+
+    @classmethod
+    def additional_json_fields(cls) -> dict[str, object]:
+        """Add tRNAscan-specific metadata to the JSON document."""
+        return {"ncrna_tool": "trnascan"}
+
+@dataclass(frozen=True)
+class TrnaScanParsedRow:
+    """Parsed tRNAscan-SE row."""
+
+    feature: dict[str, object]
 
 
-def build_genomio_json_file(input_tsv: Path) -> dict[str, object]:
-    """Build a GenomIO JSON file from tRNAscan-SE results."""
-    return {
-        "analysis": {
-            "run_date": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            "logic_name": "trnascan",
-            "display_label": "tRNAs",
-            "description": "tRNA genes predicted by tRNAscan-SE.",
-            "program": "tRNAscan-SE",
-        },
-        "source": {
-            "source_provider": "tRNAscan-SE",
-            "is_primary": True,
-        },
-        "ncrna_tool": "trnascan",
-        "ncrna_features": parse_trnascan_features(input_tsv),
-    }
+def anticodon_to_codon(anticodon: str) -> str:
+    """Return the DNA codon paired with a tRNA anticodon."""
+    return anticodon.translate(BASE_COMPLEMENTS)[::-1].upper()
 
 
-def write_trnascan_json(input_tsv: Path, output_json: Path) -> None:
-    """Read tRNAscan-SE tabular output and write the GenomIO JSON file."""
-    document = build_genomio_json_file(input_tsv)
-    output_json.parent.mkdir(parents=True, exist_ok=True)
-    output_json.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+def is_pseudogene(trna_type: str, note: str | None) -> bool:
+    """Detect pseudogene annotations from tRNAscan-SE fields."""
+    values = [trna_type]
+    if note:
+        values.append(note)
+    return any("pseudo" in value.lower() for value in values)
 
 
-def add_trnascan_arguments(subparser: argparse.ArgumentParser) -> None:
-    """Add tRNAscan-SE specific CLI arguments."""
-    subparser.add_argument("--input", required=True, type=Path, help="Input tRNAscan-SE TSV file")
-    subparser.add_argument("--output", required=True, type=Path, help="JSON output path")
+def parse_row(input_path: Path, line: str) -> TrnaScanParsedRow:
+    """Parse a single tRNAscan-SE data row.
+
+    Args:
+        input_path: Input path used in parsing error messages.
+        line: Raw tRNAscan-SE data row without surrounding whitespace.
+
+    Returns:
+        Parsed row containing one ncRNA feature.
+
+    Raises:
+        ValueError: If the row is malformed or contains invalid numeric values.
+
+    """
+    columns = [column.strip() for column in (line.split("\t") if "\t" in line else re.split(r"\s+", line))]
+    if len(columns) < TRNASCAN_MIN_COLUMNS:
+        raise ValueError(
+            f"Expected at least {TRNASCAN_MIN_COLUMNS} columns in {input_path}, "
+            f"got {len(columns)}: line={line!r}"
+        )
+
+    parse_token(int, columns[1], "tRNA number", line, input_path)
+    begin = parse_token(int, columns[2], "begin coordinate", line, input_path)
+    end = parse_token(int, columns[3], "end coordinate", line, input_path)
+    score = parse_token(float, columns[8], "score", line, input_path)
+
+    if begin < 1 or end < 1:
+        raise ValueError(
+            f"Invalid coordinates in {input_path}: begin={begin}, end={end}, line={line!r}"
+        )
+
+    isotype = columns[4]
+    anticodon = columns[5]
+    note = " ".join(columns[TRNASCAN_MIN_COLUMNS:]) or None
+
+    return TrnaScanParsedRow(
+        feature={
+            "seq_region": columns[0],
+            "seq_region_start": min(begin, end),
+            "seq_region_end": max(begin, end),
+            "seq_region_strand": "+" if begin <= end else "-",
+            "biotype": "tRNA",
+            "display_label": f"tRNA-{isotype}",
+            "score": score,
+            "isotype": isotype,
+            "anticodon": anticodon,
+            "codon": anticodon_to_codon(anticodon),
+            "is_pseudogene": is_pseudogene(isotype, note),
+        }
+    )
 
 
-def build_parser() -> argparse.ArgumentParser:
-    """Build the tRNAscan-SE converter CLI parser."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    subparsers = parser.add_subparsers(dest="tool", required=True)
-    trnascan_parser = subparsers.add_parser("trnascan", help="Convert tRNAscan-SE output to GenomIO JSON.")
-    add_trnascan_arguments(trnascan_parser)
-    trnascan_parser.set_defaults(handler=run_trnascan)
-    return parser
+def parse_output(input_path: Path) -> ParseFeaturesResult:
+    """Parse a tRNAscan-SE output file into ncRNA feature dictionaries.
 
+    Returns:
+        A tuple containing the ncRNA features and an empty consensus mapping.
 
-def parse_args(arg_list: Optional[list[str]] = None) -> argparse.Namespace:
-    """Parse command-line arguments."""
-    if arg_list is None:
-        arg_list = sys.argv[1:]
-    if arg_list is not None and arg_list and arg_list[0] != "trnascan":
-        arg_list = ["trnascan", *arg_list]
-    return build_parser().parse_args(arg_list)
+    Raises:
+        ValueError: If one or more data rows are malformed.
 
+    """
+    features: list[dict[str, object]] = []
+    errors: list[str] = []
 
-def run_trnascan(args: argparse.Namespace) -> int:
-    """Run the tRNAscan-SE conversion command."""
-    try:
-        write_trnascan_json(input_tsv=args.input, output_json=args.output)
-    except Exception as exc:
-        print(exc, file=sys.stderr)
-        return 1
-    return 0
+    with input_path.open("r", encoding="utf-8") as input_handle:
+        for raw_line in input_handle:
+            line = raw_line.strip()
+            if not line or line.startswith("-"):
+                continue
 
+            first_column = line.split("\t", maxsplit=1)[0].split(maxsplit=1)[0]
+            if first_column in TRNASCAN_HEADER_NAMES:
+                continue
 
-def main(arg_list: Optional[list[str]] = None) -> int:
-    """Command-line entry point."""
-    args = parse_args(arg_list)
-    handler = getattr(args, "handler", None)
-    if handler is None:
-        raise ValueError("No command selected")
-    return handler(args)
+            try:
+                parsed_row = parse_row(input_path, line)
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
 
+            features.append(parsed_row.feature)
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+    if errors:
+        raise ValueError(format_parse_errors("tRNAscan-SE output", input_path, errors))
+
+    return features, {}
+
