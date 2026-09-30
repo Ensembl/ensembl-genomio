@@ -91,8 +91,6 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
     score, evalue = columns[6:8]
     target_name, target_accession, biotype = columns[8:11]
 
-    if strand not in {"+", "-"}:
-        raise ValueError(f"Unexpected strand token in {input_path}: token={strand!r}, line={line!r}")
     model_start_parse = parse_token(int, model_start, "model_start", line, input_path)
     model_end_parse = parse_token(int, model_end, "model_end", line, input_path)
     seq_start_parse = parse_token(int, seq_start, "seq_region_start", line, input_path)
@@ -103,6 +101,7 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
         input_path,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
+        seq_region_strand=strand,
         repeat_start=model_start_parse,
         repeat_end=model_end_parse,
         line=line,
