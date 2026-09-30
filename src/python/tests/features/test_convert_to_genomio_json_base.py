@@ -111,10 +111,21 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("seq_region_start", "seq_region_end", "repeat_start", "repeat_end", "expectation"),
+    ("seq_region_strand", "seq_region_start", "seq_region_end", "repeat_start", "repeat_end", "expectation"),
     [
-        pytest.param(1, 10, 2, 5, does_not_raise(), id="Valid coordinates"),
+        pytest.param("+", 1, 10, 2, 5, does_not_raise(), id="Valid coordinates"),
+        pytest.param("-", 2, 20, 3, 15, does_not_raise(), id="Valid negative strand coordinates"),
         pytest.param(
+            "C",
+            1,
+            10,
+            2,
+            5,
+            pytest.raises(ValueError, match=r"Unexpected strand token"),
+            id="Invalid strand"
+        ),
+        pytest.param(
+            "+",
             0,
             10,
             1,
@@ -123,6 +134,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             id="Non-positive sequence region start",
         ),
         pytest.param(
+            "+",
             10,
             9,
             1,
@@ -131,6 +143,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             id="Sequence region end before start",
         ),
         pytest.param(
+            "+",
             1,
             10,
             0,
@@ -139,6 +152,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             id="Non-positive repeat start",
         ),
         pytest.param(
+            "+",
             1,
             10,
             5,
@@ -150,6 +164,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
 )
 def test_validate_parsed_coordinates(
     *,
+    seq_region_strand: str,
     seq_region_start: int,
     seq_region_end: int,
     repeat_start: int,
@@ -169,6 +184,7 @@ def test_validate_parsed_coordinates(
     with expectation:
         base.validate_parsed_coordinates(
             Path("input.out"),
+            seq_region_strand=seq_region_strand,
             seq_region_start=seq_region_start,
             seq_region_end=seq_region_end,
             repeat_start=repeat_start,
