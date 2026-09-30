@@ -115,6 +115,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
     [
         pytest.param(1, 10, "+", 2, 5, does_not_raise(), id="Valid coordinates"),
         pytest.param(2, 20, "-", 3, 15, does_not_raise(), id="Valid negative strand coordinates"),
+        pytest.param(1, 10, ".", 2, 5, does_not_raise(), id="Valid unstranded coordinates"),
         pytest.param(
             1,
             10,

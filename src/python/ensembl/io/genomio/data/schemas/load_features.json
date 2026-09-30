@@ -23,8 +23,8 @@
 
     "strand": {
       "type": "string",
-      "enum": ["-", "+"],
-      "description": "Strand (+/-)."
+      "enum": ["-", "+", "."],
+      "description": "Strand (+/-/.)."
     },
 
     "sha256_hex": {
@@ -101,7 +101,12 @@
     "repeat_consensus": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repeat_consensus_key", "repeat_name", "repeat_class", "repeat_type"],
+      "required": [
+        "repeat_consensus_key",
+        "repeat_name",
+        "repeat_class",
+        "repeat_type"
+      ],
       "properties": {
         "repeat_consensus_key": {
           "$ref": "#/definitions/sha256_hex",
@@ -248,7 +253,13 @@
 
     "ncrna_feature_base": {
       "type": "object",
-      "required": ["seq_region", "seq_region_start", "seq_region_end", "seq_region_strand", "biotype"],
+      "required": [
+        "seq_region",
+        "seq_region_start",
+        "seq_region_end",
+        "seq_region_strand",
+        "biotype"
+      ],
       "properties": {
         "seq_region": {
           "$ref": "#/definitions/non_empty_string",
@@ -401,8 +412,14 @@
         },
         {
           "allOf": [
-            { "if": { "required": ["model_start"] }, "then": { "required": ["model_end"] } },
-            { "if": { "required": ["model_end"] }, "then": { "required": ["model_start"] } }
+            {
+              "if": { "required": ["model_start"] },
+              "then": { "required": ["model_end"] }
+            },
+            {
+              "if": { "required": ["model_end"] },
+              "then": { "required": ["model_start"] }
+            }
           ]
         }
       ],
@@ -471,7 +488,10 @@
         {
           "allOf": [
             {
-              "if": { "properties": { "mirna_type": { "const": "mature" } }, "required": ["mirna_type"] },
+              "if": {
+                "properties": { "mirna_type": { "const": "mature" } },
+                "required": ["mirna_type"]
+              },
               "then": {
                 "description": "If you require parent_hairpin_name for mature entries, add it to required here. Currently optional."
               }
@@ -541,16 +561,43 @@
 
       "allOf": [
         {
-          "if": { "properties": { "ncrna_tool": { "const": "trnascan" } }, "required": ["ncrna_tool"] },
-          "then": { "properties": { "ncrna_features": { "items": { "$ref": "#/definitions/trnascan_feature" } } } }
+          "if": {
+            "properties": { "ncrna_tool": { "const": "trnascan" } },
+            "required": ["ncrna_tool"]
+          },
+          "then": {
+            "properties": {
+              "ncrna_features": {
+                "items": { "$ref": "#/definitions/trnascan_feature" }
+              }
+            }
+          }
         },
         {
-          "if": { "properties": { "ncrna_tool": { "const": "cmscan" } }, "required": ["ncrna_tool"] },
-          "then": { "properties": { "ncrna_features": { "items": { "$ref": "#/definitions/cmscan_feature" } } } }
+          "if": {
+            "properties": { "ncrna_tool": { "const": "cmscan" } },
+            "required": ["ncrna_tool"]
+          },
+          "then": {
+            "properties": {
+              "ncrna_features": {
+                "items": { "$ref": "#/definitions/cmscan_feature" }
+              }
+            }
+          }
         },
         {
-          "if": { "properties": { "ncrna_tool": { "const": "mirbase" } }, "required": ["ncrna_tool"] },
-          "then": { "properties": { "ncrna_features": { "items": { "$ref": "#/definitions/mirbase_feature" } } } }
+          "if": {
+            "properties": { "ncrna_tool": { "const": "mirbase" } },
+            "required": ["ncrna_tool"]
+          },
+          "then": {
+            "properties": {
+              "ncrna_features": {
+                "items": { "$ref": "#/definitions/mirbase_feature" }
+              }
+            }
+          }
         }
       ],
 
@@ -592,7 +639,7 @@
             }
           ]
         }
-    ] 
+      ]
     }
   }
 }
