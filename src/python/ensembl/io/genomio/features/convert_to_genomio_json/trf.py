@@ -196,7 +196,7 @@ def parse_data_row(
         seq_region_start = start
         seq_region_end = end
 
-    seq_region_strand = "+"
+    seq_region_strand = "."
 
     validate_parsed_coordinates(
         input_path,
