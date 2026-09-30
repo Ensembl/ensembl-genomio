@@ -22,7 +22,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
-    ConverterOptions,
     FeatureConverter,
     ParseFeaturesResult,
     format_parse_errors,
@@ -107,13 +106,14 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
         line=line,
     )
 
+    hit_strand = 1 if strand == "+" else -1
     feature: dict[str, object] = {
         "seq_region": seq_region,
         "seq_region_start": seq_region_start,
         "seq_region_end": seq_region_end,
         "hit_start": model_start_parse,
         "hit_end": model_end_parse,
-        "hit_strand": strand,
+        "hit_strand": hit_strand,
         "score": parse_token(float, score, "score", line, input_path),
         "evalue": parse_token(float, evalue, "evalue", line, input_path),
         "biotype": biotype,
