@@ -200,9 +200,9 @@ def parse_data_row(
 
     validate_parsed_coordinates(
         input_path,
-        seq_region_strand=seq_region_strand,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
+        seq_region_strand=seq_region_strand,
         repeat_start=1,
         repeat_end=period_size,
         line=line,

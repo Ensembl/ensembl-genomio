@@ -121,9 +121,9 @@ def parse_row(input_path: Path, line: str) -> RedParsedRow:
 
     validate_parsed_coordinates(
         input_path,
-        seq_region_strand=seq_region_strand,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
+        seq_region_strand=seq_region_strand,
         repeat_start=1,
         repeat_end=repeat_length,
         line=line,

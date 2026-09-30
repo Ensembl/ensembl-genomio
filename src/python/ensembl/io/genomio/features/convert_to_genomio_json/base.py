@@ -221,9 +221,9 @@ def file_last_modified_time(file_path: Path) -> str:
 def validate_parsed_coordinates(
     input_path: Path,
     *,
-    seq_region_strand: str,
     seq_region_start: int,
     seq_region_end: int,
+    seq_region_strand: str,
     repeat_start: int,
     repeat_end: int,
     line: str,
@@ -232,9 +232,9 @@ def validate_parsed_coordinates(
 
     Args:
         input_path: Input file path used.
-        seq_region_strand: Strand of the sequence region, either "+" or "-".
         seq_region_start: Start coordinate on the sequence region.
         seq_region_end: End coordinate on the sequence region.
+        seq_region_strand: Strand of the sequence region, either "+" or "-".
         repeat_start: Start coordinate on the repeat consensus.
         repeat_end: End coordinate on the repeat consensus.
         line: Original input line for error reporting.
@@ -244,10 +244,6 @@ def validate_parsed_coordinates(
         negative, zero, or end < start).
 
     """
-    if seq_region_strand not in {"+", "-"}:
-        raise ValueError(
-            f"Unexpected strand token in {input_path}: token={seq_region_strand!r}, line={line!r}"
-        )
     if seq_region_start < 1 or seq_region_end < 1:
         raise ValueError(
             f"Invalid seq_region coordinates in {input_path}: "
@@ -258,7 +254,10 @@ def validate_parsed_coordinates(
             f"seq_region_end < seq_region_start in {input_path}: "
             f"start={seq_region_start}, end={seq_region_end}, line={line!r}"
         )
-
+    if seq_region_strand not in {"+", "-"}:
+        raise ValueError(
+            f"Unexpected strand token in {input_path}: token={seq_region_strand!r}, line={line!r}"
+        )
     if repeat_start < 1 or repeat_end < 1:
         raise ValueError(
             f"Invalid repeat coordinates in {input_path}: "

@@ -99,9 +99,9 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
 
     validate_parsed_coordinates(
         input_path,
-        seq_region_strand=strand,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
+        seq_region_strand=strand,
         repeat_start=model_start_parse,
         repeat_end=model_end_parse,
         line=line,
