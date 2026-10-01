@@ -111,25 +111,25 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("seq_region_start", "seq_region_end", "repeat_start", "repeat_end", "expectation"),
+    ("seq_region_start", "seq_region_end", "feature_start", "feature_end", "expectation"),
     [
         pytest.param(1, 10, 2, 5, does_not_raise(), id="Valid coordinates"),
-        pytest.param(1, 10, None, None, does_not_raise(), id="Missing repeat coordinates"),
+        pytest.param(1, 10, None, None, does_not_raise(), id="Missing feature coordinates"),
         pytest.param(
             1,
             10,
             2,
             None,
-            pytest.raises(ValueError, match=r"repeat_start and repeat_end must be supplied together"),
-            id="Missing repeat end",
+            pytest.raises(ValueError, match=r"feature_start and feature_end must be supplied together"),
+            id="Missing feature end",
         ),
         pytest.param(
             1,
             10,
             None,
             5,
-            pytest.raises(ValueError, match=r"repeat_start and repeat_end must be supplied together"),
-            id="Missing repeat start",
+            pytest.raises(ValueError, match=r"feature_start and feature_end must be supplied together"),
+            id="Missing feature start",
         ),
         pytest.param(
             0,
@@ -152,16 +152,16 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             10,
             0,
             5,
-            pytest.raises(ValueError, match=r"Invalid repeat coordinates"),
-            id="Non-positive repeat start",
+            pytest.raises(ValueError, match=r"Invalid feature coordinates"),
+            id="Non-positive feature start",
         ),
         pytest.param(
             1,
             10,
             5,
             4,
-            pytest.raises(ValueError, match=r"repeat_end < repeat_start"),
-            id="Repeat end before start",
+            pytest.raises(ValueError, match=r"feature_end < feature_start"),
+            id="Feature end before start",
         ),
     ],
 )
@@ -169,8 +169,8 @@ def test_validate_parsed_coordinates(
     *,
     seq_region_start: int,
     seq_region_end: int,
-    repeat_start: int | None,
-    repeat_end: int | None,
+    feature_start: int | None,
+    feature_end: int | None,
     expectation: ContextManager,
 ) -> None:
     """Test ``base.validate_parsed_coordinates()`` correctly validates coordinates.
@@ -178,16 +178,16 @@ def test_validate_parsed_coordinates(
     Args:
         seq_region_start: Sequence region start coordinate.
         seq_region_end: Sequence region end coordinate.
-        repeat_start: Optional repeat start coordinate.
-        repeat_end: Optional repeat end coordinate.
+        feature_start: Optional feature start coordinate.
+        feature_end: Optional feature end coordinate.
         expectation: Context manager for the expected result or exception.
 
     """
-    repeat_coordinates = {}
-    if repeat_start is not None:
-        repeat_coordinates["repeat_start"] = repeat_start
-    if repeat_end is not None:
-        repeat_coordinates["repeat_end"] = repeat_end
+    feature_coordinates = {}
+    if feature_start is not None:
+        feature_coordinates["feature_start"] = feature_start
+    if feature_end is not None:
+        feature_coordinates["feature_end"] = feature_end
 
     with expectation:
         base.validate_parsed_coordinates(
@@ -195,7 +195,7 @@ def test_validate_parsed_coordinates(
             seq_region_start=seq_region_start,
             seq_region_end=seq_region_end,
             line="raw line",
-            **repeat_coordinates,
+            **feature_coordinates,
         )
 
 

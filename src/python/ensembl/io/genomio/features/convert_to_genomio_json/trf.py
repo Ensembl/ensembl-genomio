@@ -200,8 +200,8 @@ def parse_data_row(
         input_path,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
-        repeat_start=1,
-        repeat_end=period_size,
+        feature_start=1,
+        feature_end=period_size,
         line=line,
     )
 

@@ -122,8 +122,8 @@ def parse_row(input_path: Path, line: str) -> RedParsedRow:
         input_path,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
-        repeat_start=1,
-        repeat_end=repeat_length,
+        feature_start=1,
+        feature_end=repeat_length,
         line=line,
     )
 

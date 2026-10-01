@@ -362,8 +362,8 @@ def parse_row(input_path: Path, line: str) -> RepeatMaskerParsedRow:
         input_path,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
-        repeat_start=repeat_start,
-        repeat_end=repeat_end,
+        feature_start=repeat_start,
+        feature_end=repeat_end,
         line=line,
     )
 
