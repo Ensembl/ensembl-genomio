@@ -111,12 +111,24 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("seq_region_start", "seq_region_end", "repeat_start", "repeat_end", "expectation"),
+    ("seq_region_start", "seq_region_end", "seq_region_strand", "repeat_start", "repeat_end", "expectation"),
     [
-        pytest.param(1, 10, 2, 5, does_not_raise(), id="Valid coordinates"),
+        pytest.param(1, 10, "+", 2, 5, does_not_raise(), id="Valid coordinates"),
+        pytest.param(2, 20, "-", 3, 15, does_not_raise(), id="Valid negative strand coordinates"),
+        pytest.param(1, 10, ".", 2, 5, does_not_raise(), id="Valid unstranded coordinates"),
+        pytest.param(
+            1,
+            10,
+            "C",
+            2,
+            5,
+            pytest.raises(ValueError, match=r"Unexpected strand token"),
+            id="Invalid strand"
+        ),
         pytest.param(
             0,
             10,
+            "+",
             1,
             5,
             pytest.raises(ValueError, match=r"Invalid seq_region coordinates"),
@@ -125,6 +137,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
         pytest.param(
             10,
             9,
+            "+",
             1,
             5,
             pytest.raises(ValueError, match=r"seq_region_end < seq_region_start"),
@@ -133,6 +146,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
         pytest.param(
             1,
             10,
+            "+",
             0,
             5,
             pytest.raises(ValueError, match=r"Invalid repeat coordinates"),
@@ -141,6 +155,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
         pytest.param(
             1,
             10,
+            "+",
             5,
             4,
             pytest.raises(ValueError, match=r"repeat_end < repeat_start"),
@@ -152,6 +167,7 @@ def test_validate_parsed_coordinates(
     *,
     seq_region_start: int,
     seq_region_end: int,
+    seq_region_strand: str,
     repeat_start: int,
     repeat_end: int,
     expectation: ContextManager,
@@ -161,6 +177,7 @@ def test_validate_parsed_coordinates(
     Args:
         seq_region_start: Sequence region start coordinate.
         seq_region_end: Sequence region end coordinate.
+        seq_region_strand: Sequence region strand.
         repeat_start: Repeat start coordinate.
         repeat_end: Repeat end coordinate.
         expectation: Context manager for the expected result or exception.
@@ -171,6 +188,7 @@ def test_validate_parsed_coordinates(
             Path("input.out"),
             seq_region_start=seq_region_start,
             seq_region_end=seq_region_end,
+            seq_region_strand=seq_region_strand,
             repeat_start=repeat_start,
             repeat_end=repeat_end,
             line="raw line",

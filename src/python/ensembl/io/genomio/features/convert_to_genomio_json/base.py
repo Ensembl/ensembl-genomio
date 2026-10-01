@@ -223,6 +223,7 @@ def validate_parsed_coordinates(
     *,
     seq_region_start: int,
     seq_region_end: int,
+    seq_region_strand: str,
     repeat_start: int,
     repeat_end: int,
     line: str,
@@ -233,13 +234,14 @@ def validate_parsed_coordinates(
         input_path: Input file path used.
         seq_region_start: Start coordinate on the sequence region.
         seq_region_end: End coordinate on the sequence region.
+        seq_region_strand: Strand of the sequence region, either "+", "-", or ".".
         repeat_start: Start coordinate on the repeat consensus.
         repeat_end: End coordinate on the repeat consensus.
         line: Original input line for error reporting.
 
     Raises:
-        ValueError: If sequence region or repeat coordinate values are invalid (i.e. negative, zero,
-        or end < start).
+        ValueError: If sequence region or repeat coordinate values are invalid (i.e. invalid strand,
+        negative, zero, or end < start).
 
     """
     if seq_region_start < 1 or seq_region_end < 1:
@@ -252,7 +254,10 @@ def validate_parsed_coordinates(
             f"seq_region_end < seq_region_start in {input_path}: "
             f"start={seq_region_start}, end={seq_region_end}, line={line!r}"
         )
-
+    if seq_region_strand not in {"+", "-", "."}:
+        raise ValueError(
+            f"Unexpected strand token in {input_path}: token={seq_region_strand!r}, line={line!r}"
+        )
     if repeat_start < 1 or repeat_end < 1:
         raise ValueError(
             f"Invalid repeat coordinates in {input_path}: "
@@ -415,8 +420,12 @@ def create_genomio_json(config: GenomioJsonConfig) -> None:
             "source_provider": config.source_provider,
             "is_primary": config.is_primary,
         },
-        "repeat_features": features,
     }
+    if getattr(converter, "ncrna_tool", None) is not None:
+        json_doc["ncrna_tool"] = converter.ncrna_tool
+        json_doc["ncrna_features"] = features
+    else:
+        json_doc["repeat_features"] = features
 
     if consensuses_by_key:
         repeat_consensuses: list[dict[str, str]] = []
