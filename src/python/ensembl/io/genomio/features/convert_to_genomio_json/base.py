@@ -122,6 +122,7 @@ class FeatureConverter(ABC):
     analysis_description: str | None = None
     command: str | None = None
     program: str | None = None
+    ncrna_tool: str | None = None
 
     @classmethod
     @abstractmethod
@@ -224,9 +225,9 @@ def validate_parsed_coordinates(
     seq_region_start: int,
     seq_region_end: int,
     seq_region_strand: str,
-    repeat_start: int,
-    repeat_end: int,
     line: str,
+    feature_start: int | None = None,
+    feature_end: int | None = None,
 ) -> None:
     """Validate parsed coordinate values for a feature.
 
@@ -235,13 +236,14 @@ def validate_parsed_coordinates(
         seq_region_start: Start coordinate on the sequence region.
         seq_region_end: End coordinate on the sequence region.
         seq_region_strand: Strand of the sequence region, either "+", "-", or ".".
-        repeat_start: Start coordinate on the repeat consensus.
-        repeat_end: End coordinate on the repeat consensus.
         line: Original input line for error reporting.
+        feature_start: Optional feature start coordinate.
+        feature_end: Optional feature end coordinate.
 
     Raises:
-        ValueError: If sequence region or repeat coordinate values are invalid (i.e. invalid strand,
-        negative, zero, or end < start).
+        ValueError: If sequence region coordinates are invalid, feature coordinates are an incomplete
+        pair, or supplied coordinate values are invalid (i.e. invalid strand, negative, zero, or end < start).
+
 
     """
     if seq_region_start < 1 or seq_region_end < 1:
@@ -258,15 +260,25 @@ def validate_parsed_coordinates(
         raise ValueError(
             f"Unexpected strand token in {input_path}: token={seq_region_strand!r}, line={line!r}"
         )
-    if repeat_start < 1 or repeat_end < 1:
+
+    if feature_start is None and feature_end is None:
+        return
+
+    if feature_start is None or feature_end is None:
         raise ValueError(
-            f"Invalid repeat coordinates in {input_path}: "
-            f"repeat_start={repeat_start}, repeat_end={repeat_end}, line={line!r}"
+            f"feature_start and feature_end must be supplied together in {input_path}: "
+            f"feature_start={feature_start}, feature_end={feature_end}, line={line!r}"
         )
-    if repeat_end < repeat_start:
+
+    if feature_start < 1 or feature_end < 1:
         raise ValueError(
-            f"repeat_end < repeat_start in {input_path}: "
-            f"repeat_start={repeat_start}, repeat_end={repeat_end}, line={line!r}"
+            f"Invalid feature coordinates in {input_path}: "
+            f"feature_start={feature_start}, feature_end={feature_end}, line={line!r}"
+        )
+    if feature_end < feature_start:
+        raise ValueError(
+            f"feature_end < feature_start in {input_path}: "
+            f"feature_start={feature_start}, feature_end={feature_end}, line={line!r}"
         )
 
 

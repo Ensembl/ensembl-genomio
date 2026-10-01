@@ -111,19 +111,21 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("seq_region_start", "seq_region_end", "seq_region_strand", "repeat_start", "repeat_end", "expectation"),
+    (
+        "seq_region_start",
+        "seq_region_end",
+        "seq_region_strand",
+        "feature_start",
+        "feature_end",
+        "expectation",
+    ),
     [
         pytest.param(1, 10, "+", 2, 5, does_not_raise(), id="Valid coordinates"),
         pytest.param(2, 20, "-", 3, 15, does_not_raise(), id="Valid negative strand coordinates"),
         pytest.param(1, 10, ".", 2, 5, does_not_raise(), id="Valid unstranded coordinates"),
+        pytest.param(1, 10, "+", None, None, does_not_raise(), id="Missing feature coordinates"),
         pytest.param(
-            1,
-            10,
-            "C",
-            2,
-            5,
-            pytest.raises(ValueError, match=r"Unexpected strand token"),
-            id="Invalid strand"
+            1, 10, "C", 2, 5, pytest.raises(ValueError, match=r"Unexpected strand token"), id="Invalid strand"
         ),
         pytest.param(
             0,
@@ -147,10 +149,28 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             1,
             10,
             "+",
+            2,
+            None,
+            pytest.raises(ValueError, match=r"feature_start and feature_end must be supplied together"),
+            id="Missing feature end",
+        ),
+        pytest.param(
+            1,
+            10,
+            "+",
+            None,
+            5,
+            pytest.raises(ValueError, match=r"feature_start and feature_end must be supplied together"),
+            id="Missing feature start",
+        ),
+        pytest.param(
+            1,
+            10,
+            "+",
             0,
             5,
-            pytest.raises(ValueError, match=r"Invalid repeat coordinates"),
-            id="Non-positive repeat start",
+            pytest.raises(ValueError, match=r"Invalid feature coordinates"),
+            id="Non-positive feature start",
         ),
         pytest.param(
             1,
@@ -158,8 +178,8 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
             "+",
             5,
             4,
-            pytest.raises(ValueError, match=r"repeat_end < repeat_start"),
-            id="Repeat end before start",
+            pytest.raises(ValueError, match=r"feature_end < feature_start"),
+            id="Feature end before start",
         ),
     ],
 )
@@ -168,8 +188,8 @@ def test_validate_parsed_coordinates(
     seq_region_start: int,
     seq_region_end: int,
     seq_region_strand: str,
-    repeat_start: int,
-    repeat_end: int,
+    feature_start: int,
+    feature_end: int,
     expectation: ContextManager,
 ) -> None:
     """Test ``base.validate_parsed_coordinates()`` correctly validates coordinates.
@@ -178,20 +198,25 @@ def test_validate_parsed_coordinates(
         seq_region_start: Sequence region start coordinate.
         seq_region_end: Sequence region end coordinate.
         seq_region_strand: Sequence region strand.
-        repeat_start: Repeat start coordinate.
-        repeat_end: Repeat end coordinate.
+        feature_start: Optional feature start coordinate.
+        feature_end: Optional feature end coordinate.
         expectation: Context manager for the expected result or exception.
 
     """
+    feature_coordinates = {}
+    if feature_start is not None:
+        feature_coordinates["feature_start"] = feature_start
+    if feature_end is not None:
+        feature_coordinates["feature_end"] = feature_end
+
     with expectation:
         base.validate_parsed_coordinates(
             Path("input.out"),
             seq_region_start=seq_region_start,
             seq_region_end=seq_region_end,
             seq_region_strand=seq_region_strand,
-            repeat_start=repeat_start,
-            repeat_end=repeat_end,
             line="raw line",
+            **feature_coordinates,
         )
 
 
