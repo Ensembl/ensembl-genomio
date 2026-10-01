@@ -147,6 +147,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
         pytest.param(
             1,
             10,
+            "+",
             2,
             None,
             pytest.raises(ValueError, match=r"feature_start and feature_end must be supplied together"),
@@ -155,6 +156,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
         pytest.param(
             1,
             10,
+            "+",
             None,
             5,
             pytest.raises(ValueError, match=r"feature_start and feature_end must be supplied together"),

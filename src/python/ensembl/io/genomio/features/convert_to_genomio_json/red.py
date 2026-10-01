@@ -136,8 +136,8 @@ def parse_row(input_path: Path, line: str) -> RedParsedRow:
             "seq_region_start": seq_region_start,
             "seq_region_end": seq_region_end,
             "seq_region_strand": seq_region_strand,
-            "feature_start": repeat_start,
-            "feature_end": repeat_end,
+            "repeat_start": repeat_start,
+            "repeat_end": repeat_end,
             "repeat_consensus": RED_RPT_CONSENSUS_KEY,
         }
     )
