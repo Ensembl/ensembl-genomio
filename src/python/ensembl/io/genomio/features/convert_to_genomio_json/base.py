@@ -261,9 +261,10 @@ def validate_parsed_coordinates(
             f"Unexpected strand token in {input_path}: token={seq_region_strand!r}, line={line!r}"
         )
 
+    if feature_start is None and feature_end is None:
+        return
+
     if feature_start is None or feature_end is None:
-        if feature_start is None and feature_end is None:
-            return
         raise ValueError(
             f"feature_start and feature_end must be supplied together in {input_path}: "
             f"feature_start={feature_start}, feature_end={feature_end}, line={line!r}"
