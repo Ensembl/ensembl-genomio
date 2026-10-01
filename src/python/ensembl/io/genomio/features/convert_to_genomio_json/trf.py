@@ -196,11 +196,15 @@ def parse_data_row(
         seq_region_start = start
         seq_region_end = end
 
+    seq_region_strand = "."
+    repeat_start = 1
+
     validate_parsed_coordinates(
         input_path,
         seq_region_start=seq_region_start,
         seq_region_end=seq_region_end,
-        feature_start=1,
+        seq_region_strand=seq_region_strand,
+        feature_start=repeat_start,
         feature_end=period_size,
         line=line,
     )
@@ -234,8 +238,8 @@ def parse_data_row(
             "seq_region": seq_region,
             "seq_region_start": seq_region_start,
             "seq_region_end": seq_region_end,
-            "seq_region_strand": "+",
-            "repeat_start": 1,
+            "seq_region_strand": seq_region_strand,
+            "repeat_start": repeat_start,
             "repeat_end": period_size,
             "repeat_consensus": repeat_consensus.sha256_key(),
             "score": score,

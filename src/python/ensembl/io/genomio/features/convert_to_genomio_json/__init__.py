@@ -15,6 +15,7 @@
 """Constructs a GenomIO JSON document from output of feature identification tools."""
 
 from .base import *
+from .rfam import *
 from .red import *
 from .repeatmasker import *
 from .trf import *
