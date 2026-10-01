@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
+    ConverterOptions,
     FeatureConverter,
     ParseFeaturesResult,
     format_parse_errors,
@@ -32,8 +33,7 @@ from ensembl.io.genomio.features.convert_to_genomio_json.base import (
 )
 from ensembl.utils.archive import open_gz_file
 
-RFAM_HITS_COLUMNS = 11
-
+RFAM_HITS_COLUMNS = 15
 
 @register_top_level_converter
 @register_converter
@@ -65,7 +65,7 @@ class RfamConverter(FeatureConverter):
         )
 
     @classmethod
-    def parse_features(cls, input_path: Path, _options: None = None) -> ParseFeaturesResult:
+    def parse_features(cls, input_path: Path, _options: ConverterOptions | None = None) -> ParseFeaturesResult:
         """Parse the Rfam hits TSV."""
         return parse_output(input_path)
 
@@ -79,23 +79,26 @@ class RfamParsedRow:
 
 def parse_row(input_path: Path, line: str) -> RfamParsedRow:
     """Parse one Rfam hits TSV row."""
-    columns = line.split()
+    # The description is the final field and may contain spaces.
+    columns = line.split(maxsplit=RFAM_HITS_COLUMNS - 1)
     if len(columns) != RFAM_HITS_COLUMNS:
         raise ValueError(
             f"Expected {RFAM_HITS_COLUMNS} columns in {input_path}, got {len(columns)}: line={line!r}"
         )
 
     seq_region, seq_start, seq_end, strand = columns[:4]
-    model_start, model_end = columns[4:6]
-    score, evalue = columns[6:8]
-    target_name, target_accession, biotype = columns[8:11]
+    truncation, gc, bias = columns[4:7]
+    model_start, model_end = columns[7:9]
+    score, evalue = columns[9:11]
+    target_name, target_accession, biotype, description = columns[11:15]
 
     model_start_parse = parse_token(int, model_start, "model_start", line, input_path)
     model_end_parse = parse_token(int, model_end, "model_end", line, input_path)
     seq_start_parse = parse_token(int, seq_start, "seq_region_start", line, input_path)
     seq_end_parse = parse_token(int, seq_end, "seq_region_end", line, input_path)
     seq_region_start, seq_region_end = min(seq_start_parse, seq_end_parse), max(seq_start_parse, seq_end_parse)
-
+    gc_parse = parse_token(float, gc, "gc", line, input_path)
+    bias_parse = parse_token(float, bias, "bias", line, input_path)
     validate_parsed_coordinates(
         input_path,
         seq_region_start=seq_region_start,
@@ -106,18 +109,21 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
         line=line,
     )
 
-    hit_strand = 1 if strand == "+" else -1
     feature: dict[str, object] = {
         "seq_region": seq_region,
         "seq_region_start": seq_region_start,
         "seq_region_end": seq_region_end,
-        "hit_start": model_start_parse,
-        "hit_end": model_end_parse,
-        "hit_strand": hit_strand,
+        "model_start": model_start_parse,
+        "model_end": model_end_parse,
+        "seq_region_strand": strand,
         "score": parse_token(float, score, "score", line, input_path),
         "evalue": parse_token(float, evalue, "evalue", line, input_path),
+        "gc": gc_parse,
+        "bias": bias_parse,
+        "truncation": truncation,
         "biotype": biotype,
         "target_name": target_name,
+        "description": description,
     }
     if target_accession != "-":
         feature["target_accession"] = target_accession

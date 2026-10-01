@@ -21,7 +21,7 @@ import pytest
 
 from ensembl.io.genomio.features.convert_to_genomio_json import rfam
 
-VALID_ROW = "NC_003076.8 4479446 4479542 - 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN"
+VALID_ROW = "NC_003076.8 4479446 4479542 - no 0.39 0.0 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN MIR848 description"
 
 
 @pytest.mark.parametrize(
@@ -34,61 +34,65 @@ VALID_ROW = "NC_003076.8 4479446 4479542 - 1 97 113.6 9.7e-27 MIR848 RF03308 pre
                 "seq_region": "NC_003076.8",
                 "seq_region_start": 4479446,
                 "seq_region_end": 4479542,
-                "hit_start": 1,
-                "hit_end": 97,
-                "hit_strand": -1,
+                "model_start": 1,
+                "model_end": 97,
+                "seq_region_strand": "-",
                 "score": 113.6,
                 "evalue": 9.7e-27,
+                "gc": 0.39,
+                "bias": 0.0,
+                "truncation": "no",
                 "biotype": "pre_miRN",
                 "target_name": "MIR848",
                 "target_accession": "RF03308",
+                "description": "MIR848 description",
             },
             id="valid row",
         ),
         pytest.param(
-            f"{VALID_ROW} extra",
-            pytest.raises(ValueError, match="Expected 11 columns"),
+            " ".join(VALID_ROW.split()[:14]),
+            pytest.raises(ValueError, match="Expected 15 columns"),
             None,
             id="too many columns",
         ),
         pytest.param(
             "NC_003076.8 4479446 4479542",
-            pytest.raises(ValueError, match="Expected 11 columns"),
+            pytest.raises(ValueError, match="Expected 15 columns"),
             None,
             id="too few columns",
         ),
         pytest.param(
-            "NC_003076.8 4479446 4479542 ? 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN",
+            VALID_ROW.replace(" - ", " ? ", 1),
             pytest.raises(ValueError, match="Unexpected strand token"),
             None,
             id="invalid strand",
         ),
         pytest.param(
-            "NC_003076.8 start 4479542 - 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN",
+            VALID_ROW.replace("4479446", "start", 1),
             pytest.raises(ValueError, match="Invalid 'seq_region_start'"),
             None,
             id="invalid sequence start",
         ),
         pytest.param(
-            "NC_003076.8 0 4479542 - 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN",
+            VALID_ROW.replace("4479446", "0", 1),
             pytest.raises(ValueError, match="Invalid seq_region coordinates"),
             None,
             id="non-positive sequence coordinate",
         ),
         pytest.param(
-            "NC_003076.8 4479446 4479542 - first 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN",
+            VALID_ROW.replace(" 1 97 ", " first 97 ", 1),
             pytest.raises(ValueError, match="Invalid 'model_start'"),
             None,
             id="invalid model start",
         ),
         pytest.param(
-            "NC_003076.8 4479446 4479542 - 1 97 score 9.7e-27 MIR848 RF03308 pre_miRN",
+            VALID_ROW.replace("113.6", "score", 1),
             pytest.raises(ValueError, match="Invalid 'score'"),
             None,
             id="invalid score",
         ),
         pytest.param(
-            "NC_003076.8 4479446 4479542 - 1 97 113.6 evalue MIR848 RF03308 pre_miRN",
+            VALID_ROW.replace("9.7e-27", "evalue", 1),
             pytest.raises(ValueError, match="Invalid 'evalue'"),
             None,
             id="invalid evalue",
@@ -117,14 +121,18 @@ def test_parse_row(
                     "seq_region": "NC_003076.8",
                     "seq_region_start": 4479446,
                     "seq_region_end": 4479542,
-                    "hit_start": 1,
-                    "hit_end": 97,
-                    "hit_strand": -1,
+                    "model_start": 1,
+                    "model_end": 97,
+                    "seq_region_strand": "-",
                     "score": 113.6,
                     "evalue": 9.7e-27,
+                    "gc": 0.39,
+                    "bias": 0.0,
+                    "truncation": "no",
                     "biotype": "pre_miRN",
                     "target_name": "MIR848",
                     "target_accession": "RF03308",
+                    "description": "MIR848 description",
                 }
             ],
             {},
@@ -140,7 +148,7 @@ def test_parse_output_success(
     """Test that ``parse_output`` parses the header and one valid Rfam row."""
     input_file = tmp_path / "rfam_hits.tsv"
     input_file.write_text(
-        "seqname\tstart\tend\tstrand\tmdl_from\tmdl_to\tscore\tevalue\tmodel_name\taccession\tbiotype\n"
+        "seqname\tstart\tend\tstrand\ttrunc\tgc\tbias\tmdl_from\tmdl_to\tscore\tevalue\tmodel_name\taccession\tbiotype\ttarget_description\n"
         f"{VALID_ROW}\n",
         encoding="utf-8",
     )
@@ -153,14 +161,14 @@ def test_parse_output_success(
     ("invalid_rows", "error_pattern"),
     [
         pytest.param(
-            ["NC_003076.8 4479446 4479542 ? 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN"],
+            [VALID_ROW.replace(" - ", " ? ", 1)],
             r"Found 1 errors while parsing Rfam hits TSV in .*:\n- Unexpected strand token.*",
             id="one parsing error",
         ),
         pytest.param(
             [
-                "NC_003076.8 4479446 4479542 ? 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN",
-                "NC_003076.8 start 4479542 - 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN",
+                VALID_ROW.replace(" - ", " ? ", 1),
+                VALID_ROW.replace("4479446", "start", 1),
             ],
             (
                 r"Found 2 errors while parsing Rfam hits TSV in .*:\n"
