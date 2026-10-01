@@ -223,9 +223,9 @@ def validate_parsed_coordinates(
     *,
     seq_region_start: int,
     seq_region_end: int,
-    repeat_start: int,
-    repeat_end: int,
     line: str,
+    repeat_start: int | None = None,
+    repeat_end: int | None = None,
 ) -> None:
     """Validate parsed coordinate values for a feature.
 
@@ -233,13 +233,13 @@ def validate_parsed_coordinates(
         input_path: Input file path used.
         seq_region_start: Start coordinate on the sequence region.
         seq_region_end: End coordinate on the sequence region.
-        repeat_start: Start coordinate on the repeat consensus.
-        repeat_end: End coordinate on the repeat consensus.
         line: Original input line for error reporting.
+        repeat_start: Optional start coordinate on the repeat consensus.
+        repeat_end: Optional end coordinate on the repeat consensus.
 
     Raises:
-        ValueError: If sequence region or repeat coordinate values are invalid (i.e. negative, zero,
-        or end < start).
+        ValueError: If sequence region coordinates are invalid, repeat coordinates are an incomplete
+        pair, or supplied repeat coordinate values are invalid (i.e. negative, zero, or end < start).
 
     """
     if seq_region_start < 1 or seq_region_end < 1:
@@ -251,6 +251,14 @@ def validate_parsed_coordinates(
         raise ValueError(
             f"seq_region_end < seq_region_start in {input_path}: "
             f"start={seq_region_start}, end={seq_region_end}, line={line!r}"
+        )
+
+    if repeat_start is None or repeat_end is None:
+        if repeat_start is None and repeat_end is None:
+            return
+        raise ValueError(
+            f"repeat_start and repeat_end must be supplied together in {input_path}: "
+            f"repeat_start={repeat_start}, repeat_end={repeat_end}, line={line!r}"
         )
 
     if repeat_start < 1 or repeat_end < 1:

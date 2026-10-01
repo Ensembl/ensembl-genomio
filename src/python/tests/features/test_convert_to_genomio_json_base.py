@@ -114,6 +114,23 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
     ("seq_region_start", "seq_region_end", "repeat_start", "repeat_end", "expectation"),
     [
         pytest.param(1, 10, 2, 5, does_not_raise(), id="Valid coordinates"),
+        pytest.param(1, 10, None, None, does_not_raise(), id="Missing repeat coordinates"),
+        pytest.param(
+            1,
+            10,
+            2,
+            None,
+            pytest.raises(ValueError, match=r"repeat_start and repeat_end must be supplied together"),
+            id="Missing repeat end",
+        ),
+        pytest.param(
+            1,
+            10,
+            None,
+            5,
+            pytest.raises(ValueError, match=r"repeat_start and repeat_end must be supplied together"),
+            id="Missing repeat start",
+        ),
         pytest.param(
             0,
             10,
@@ -152,8 +169,8 @@ def test_validate_parsed_coordinates(
     *,
     seq_region_start: int,
     seq_region_end: int,
-    repeat_start: int,
-    repeat_end: int,
+    repeat_start: int | None,
+    repeat_end: int | None,
     expectation: ContextManager,
 ) -> None:
     """Test ``base.validate_parsed_coordinates()`` correctly validates coordinates.
@@ -161,19 +178,24 @@ def test_validate_parsed_coordinates(
     Args:
         seq_region_start: Sequence region start coordinate.
         seq_region_end: Sequence region end coordinate.
-        repeat_start: Repeat start coordinate.
-        repeat_end: Repeat end coordinate.
+        repeat_start: Optional repeat start coordinate.
+        repeat_end: Optional repeat end coordinate.
         expectation: Context manager for the expected result or exception.
 
     """
+    repeat_coordinates = {}
+    if repeat_start is not None:
+        repeat_coordinates["repeat_start"] = repeat_start
+    if repeat_end is not None:
+        repeat_coordinates["repeat_end"] = repeat_end
+
     with expectation:
         base.validate_parsed_coordinates(
             Path("input.out"),
             seq_region_start=seq_region_start,
             seq_region_end=seq_region_end,
-            repeat_start=repeat_start,
-            repeat_end=repeat_end,
             line="raw line",
+            **repeat_coordinates,
         )
 
 
