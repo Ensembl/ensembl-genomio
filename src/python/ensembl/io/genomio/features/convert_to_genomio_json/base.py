@@ -122,6 +122,7 @@ class FeatureConverter(ABC):
     analysis_description: str | None = None
     command: str | None = None
     program: str | None = None
+    ncrna_tool: str | None = None
 
     @classmethod
     @abstractmethod
@@ -256,9 +257,9 @@ def validate_parsed_coordinates(
             f"start={seq_region_start}, end={seq_region_end}, line={line!r}"
         )
     if seq_region_strand not in {"+", "-", "."}:
-            raise ValueError(
-                f"Unexpected strand token in {input_path}: token={seq_region_strand!r}, line={line!r}"
-            )
+        raise ValueError(
+            f"Unexpected strand token in {input_path}: token={seq_region_strand!r}, line={line!r}"
+        )
 
     if feature_start is None or feature_end is None:
         if feature_start is None and feature_end is None:

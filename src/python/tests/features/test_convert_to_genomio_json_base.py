@@ -111,20 +111,21 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("seq_region_start", "seq_region_end", "seq_region_strand", "feature_start", "feature_end", "expectation"),
+    (
+        "seq_region_start",
+        "seq_region_end",
+        "seq_region_strand",
+        "feature_start",
+        "feature_end",
+        "expectation",
+    ),
     [
         pytest.param(1, 10, "+", 2, 5, does_not_raise(), id="Valid coordinates"),
         pytest.param(2, 20, "-", 3, 15, does_not_raise(), id="Valid negative strand coordinates"),
         pytest.param(1, 10, ".", 2, 5, does_not_raise(), id="Valid unstranded coordinates"),
         pytest.param(1, 10, "+", None, None, does_not_raise(), id="Missing feature coordinates"),
         pytest.param(
-            1,
-            10,
-            "C",
-            2,
-            5,
-            pytest.raises(ValueError, match=r"Unexpected strand token"),
-            id="Invalid strand"
+            1, 10, "C", 2, 5, pytest.raises(ValueError, match=r"Unexpected strand token"), id="Invalid strand"
         ),
         pytest.param(
             0,

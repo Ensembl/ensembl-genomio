@@ -14,8 +14,7 @@
 # limitations under the License.
 """Parse the Rfam hits TSV into GenomIO ncRNA records."""
 
-__all__ = ["RfamConverter",
-    "RfamParsedRow"]
+__all__ = ["RfamConverter", "RfamParsedRow"]
 
 import argparse
 from dataclasses import dataclass
@@ -35,13 +34,20 @@ from ensembl.utils.archive import open_gz_file
 
 RFAM_HITS_COLUMNS = 15
 
+
 @register_top_level_converter
 @register_converter
 class RfamConverter(FeatureConverter):
     """Converter for the Rfam hits TSV."""
 
     analysis_logic_name = "cmscan_rfam_14.5"
+    analysis_display_label = "Rfam Models"
+    analysis_description = (
+        "Covariance models from <a href='https://rfam.xfam.org'>Rfam</a>, aligned to the genome with "
+        "'cmscan' from the <a href='http://eddylab.org/infernal'>Infernal</a> suite of programs."
+    )
     command = "rfam"
+    program = "Infernal"
     ncrna_tool = "cmscan"
 
     @classmethod
@@ -54,18 +60,16 @@ class RfamConverter(FeatureConverter):
         cls.add_common_arguments(rfam_parser)
         rfam_parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label="Rfam Models",
-            analysis_description=(
-                "Covariance models from <a href='https://rfam.xfam.org'>Rfam</a>, "
-                "aligned to the genome with 'cmscan' from the "
-                "<a href='http://eddylab.org/infernal'>Infernal</a> suite of programs."
-            ),
-            program="Infernal",
+            analysis_display_label=cls.analysis_display_label,
+            analysis_description=cls.analysis_description,
+            program=cls.program,
             source_provider="Rfam",
         )
 
     @classmethod
-    def parse_features(cls, input_path: Path, _options: ConverterOptions | None = None) -> ParseFeaturesResult:
+    def parse_features(
+        cls, input_path: Path, _options: ConverterOptions | None = None
+    ) -> ParseFeaturesResult:
         """Parse the Rfam hits TSV."""
         return parse_output(input_path)
 
@@ -96,10 +100,12 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
     model_end_parse = parse_token(int, model_end, "model_end", line, input_path)
     seq_start_parse = parse_token(int, seq_start, "seq_region_start", line, input_path)
     seq_end_parse = parse_token(int, seq_end, "seq_region_end", line, input_path)
-    seq_region_start, seq_region_end = min(seq_start_parse, seq_end_parse), max(seq_start_parse, seq_end_parse)
+    seq_region_start, seq_region_end = min(seq_start_parse, seq_end_parse), max(
+        seq_start_parse, seq_end_parse
+    )
     gc_parse = parse_token(float, gc, "gc", line, input_path)
     bias_parse = parse_token(float, bias, "bias", line, input_path)
-    
+
     validate_parsed_coordinates(
         input_path,
         seq_region_start=seq_region_start,

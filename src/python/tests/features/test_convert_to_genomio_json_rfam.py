@@ -16,12 +16,15 @@
 
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
+from typing import ContextManager
 
 import pytest
 
 from ensembl.io.genomio.features.convert_to_genomio_json import rfam
 
-VALID_ROW = "NC_003076.8 4479446 4479542 - no 0.39 0.0 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN MIR848 description"
+VALID_ROW = (
+    "NC_003076.8 4479446 4479542 - no 0.39 0.0 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN MIR848 description"
+)
 
 
 @pytest.mark.parametrize(
@@ -101,7 +104,7 @@ VALID_ROW = "NC_003076.8 4479446 4479542 - no 0.39 0.0 1 97 113.6 9.7e-27 MIR848
 )
 def test_parse_row(
     line: str,
-    expectation: object,
+    expectation: ContextManager[object],
     expected_feature: dict[str, object] | None,
 ) -> None:
     """Test that ``parse_row`` parses valid rows and rejects malformed rows."""
@@ -148,14 +151,15 @@ def test_parse_output_success(
     """Test that ``parse_output`` parses the header and one valid Rfam row."""
     input_file = tmp_path / "rfam_hits.tsv"
     input_file.write_text(
-        "seqname\tstart\tend\tstrand\ttrunc\tgc\tbias\tmdl_from\tmdl_to\tscore\tevalue\tmodel_name\taccession\tbiotype\ttarget_description\n"
-        f"{VALID_ROW}\n",
+        "seqname\tstart\tend\tstrand\ttrunc\tgc\tbias\tmdl_from\tmdl_to\tscore\tevalue\tmodel_name"
+        f"\taccession\tbiotype\ttarget_description\n{VALID_ROW}\n",
         encoding="utf-8",
     )
     features, consensuses_by_key = rfam.parse_output(input_file)
 
     assert features == expected_features
     assert consensuses_by_key == expected_consensuses
+
 
 @pytest.mark.parametrize(
     ("invalid_rows", "error_pattern"),
