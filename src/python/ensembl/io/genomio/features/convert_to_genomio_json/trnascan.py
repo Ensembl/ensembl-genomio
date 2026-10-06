@@ -45,8 +45,13 @@ class TrnaScanConverter(FeatureConverter):
     """Converter for tRNAscan-SE output."""
 
     analysis_logic_name = "trnascan"
+    analysis_display_label = "tRNA Models"
+    analysis_description = (
+        'tRNA models predicted with <a href="http://lowelab.ucsc.edu/tRNAscan-SE">tRNAscan-SE</a>' "(release 1.3.1)"
+        )
     command = "trnascan"
-    feature_collection_name = "ncrna_features"
+    program = "tRNAscan-SE"
+    """feature_collection_name = "ncrna_features" """
 
     @classmethod
     def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
@@ -58,9 +63,9 @@ class TrnaScanConverter(FeatureConverter):
         cls.add_common_arguments(trnascan_parser)
         trnascan_parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label="tRNAs",
-            analysis_description="tRNA genes predicted by tRNAscan-SE.",
-            program="tRNAscan-SE",
+            analysis_display_label=cls.analysis_display_label,
+            analysis_description=cls.analysis_description,
+            program=cls.program,
         )
 
     @classmethod
