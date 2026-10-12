@@ -37,6 +37,10 @@ logger = logging.getLogger(__name__)
 # staying above a pure guess.
 GOAT_REFERENCE_CONFIDENCE = 0.6
 
+# Minimum confidence for reporting a paper-derived ploidy level that is not backed
+# by a chromosome formula; below it the level is withheld (see _precision_guard).
+MIN_PAPER_CONFIDENCE = 0.5
+
 EXCLUDE_KEYWORDS = [
     "chloroplast",
     "cpdna",
@@ -108,6 +112,76 @@ def _goat_agreement(paper_level: int | None, goat_ploidy: int | None) -> dict:
     else:
         agreement = "disagree"
     return {"goat_ploidy": goat_ploidy, "agreement": agreement}
+
+
+def _precision_guard(ploidy: dict, assembly: dict) -> dict:
+    """Withhold a paper-derived ploidy level whose evidence is weak or contested.
+
+    A level other than 2 is always withheld when the title / abstract describes the
+    line as a doubled monoploid or dihaploid (which are diploid). Otherwise, without
+    strong evidence (a chromosome formula consistent with the assembly, or a 3-way
+    consensus with Gemma), a level is withheld when the methods conflict, no
+    supporting mention names the target organism nearby, a diploid call is
+    contradicted by organism-level "haploid" mentions, its confidence is below
+    MIN_PAPER_CONFIDENCE, or it disagrees with GoaT's direct species-level value.
+    A withheld level is replaced by the GoaT reference when one exists (except for a
+    derivation conflict), otherwise reported as null; the withheld value is kept for
+    curators."""
+    level = ploidy.get("level")
+    if level is None or ploidy.get("status") != "found_in_paper":
+        return ploidy
+
+    reference_check = ploidy.get("reference_check") or {}
+    strong = ploidy.get("formula_backed") or ploidy.get("method") == "consensus_3way"
+    if ploidy.get("priority_derivation") in ("doubled_monoploid", "dihaploid") and level != 2:
+        reason = "derivation_conflict"
+    elif strong:
+        return ploidy
+    elif "conflict" in str(ploidy.get("method") or ""):
+        reason = "conflicting_evidence"
+    elif ploidy.get("anchored") is False:
+        reason = "not_anchored_to_target"
+    elif level == 2 and ploidy.get("haploid_mentions", 0) > 0:
+        reason = "haploid_counter_evidence"
+    elif (ploidy.get("confidence") or 0.0) < MIN_PAPER_CONFIDENCE:
+        reason = "weak_evidence"
+    elif reference_check.get("agreement") == "disagree":
+        reason = "disagrees_with_reference"
+    else:
+        return ploidy
+
+    logger.info(f"  [guard] withholding paper ploidy {level} ({reason})")
+    withheld = {
+        "level": level,
+        "confidence": ploidy.get("confidence"),
+        "method": ploidy.get("method"),
+        "evidence": ploidy.get("evidence"),
+        "reason": reason,
+    }
+    # A doubled monoploid / dihaploid line differs from its species by construction,
+    # so GoaT's species-level value cannot stand in for it.
+    goat_level = assembly.get("reference_ploidy") if reason != "derivation_conflict" else None
+    if goat_level is not None:
+        return {
+            "level": goat_level,
+            "mechanism": None,
+            "tuple": [goat_level, None, False, None],
+            "status": "from_reference",
+            "source": "GoaT",
+            "method": "reference_taxon",
+            "confidence": GOAT_REFERENCE_CONFIDENCE,
+            "reference_check": {"goat_ploidy": goat_level, "agreement": reason},
+            "withheld_paper_ploidy": withheld,
+        }
+    return {
+        "level": None,
+        "mechanism": None,
+        "tuple": [None, None, False, None],
+        "status": "withheld",
+        "source": None,
+        "reference_check": reference_check,
+        "withheld_paper_ploidy": withheld,
+    }
 
 
 def _ploidy_recovered(result: dict) -> bool:
@@ -297,6 +371,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
             f"  [validate] paper ploidy {final['ploidy'].get('level')} disagrees with "
             f"GoaT reference {assembly.get('reference_ploidy')}"
         )
+    final["ploidy"] = _precision_guard(final["ploidy"], assembly)
 
     # Add paper-level metadata to final output
     final["paper"] = {

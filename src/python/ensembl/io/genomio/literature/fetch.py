@@ -19,6 +19,7 @@ import re
 
 import requests
 
+from ensembl.io.genomio.literature.extract import target_names
 from ensembl.io.genomio.literature.metadata import fetch_assembly_metadata, enrich_assembly_metadata
 from ensembl.io.genomio.literature.ncbi import (
     fetch_linked_pubmed_for_assembly,
@@ -279,16 +280,43 @@ def _strongest_score(candidates: list, identifiers: dict) -> float:
     return max((score_paper_candidate(p, identifiers) for p in candidates), default=0.0)
 
 
-def _paper_is_accession_linked(paper: dict, accession: str) -> bool:
+# A paper citing this many other assembly accessions is a comparative / resource
+# paper that merely used the assembly, unless it names the organism up front.
+MANY_OTHER_ACCESSIONS = 5
+
+# Characters from the start of the text treated as "title + abstract".
+HEAD_CHARS = 3000
+
+
+def _names_target_up_front(paper: dict, names: list[str]) -> bool:
+    """True if the target organism (genus, epithet or common name, see
+    extract.target_names) appears in the paper's title or the opening of its text
+    (where the abstract sits)."""
+    if not names:
+        return True  # nothing to check against
+    head = " ".join(
+        [paper.get("title", "") or "", ((paper.get("text_data", {}) or {}).get("text") or "")[:HEAD_CHARS]]
+    ).lower()
+    return any(re.search(rf"\b{re.escape(name)}", head) for name in names)
+
+
+def _paper_is_accession_linked(paper: dict, accession: str, names: list[str] | None = None) -> bool:
     """Strict acceptance gate: a paper is trusted only if it is tied to THIS assembly
-    by its accession or BioProject. Papers retrieved via a direct accession/BioProject
-    link (NCBI-established) qualify on provenance; papers found by name / full-text
-    search qualify only if the assembly accession (version-less) actually appears in
-    the paper's title, abstract or full text."""
-    if paper.get("retrieval_source") in ("linked_pmid", "elink", "bioproject") or paper.get(
-        "is_reference_paper"
-    ):
+    by its accession or BioProject. Papers retrieved via a direct accession link
+    (NCBI-established) qualify on provenance. BioProject-linked papers must also name
+    the target organism up front, since umbrella BioProjects (e.g. RefSeq) link papers
+    about other topics. Papers found by name / full-text search qualify only if the
+    assembly accession (version-less) appears in the paper's title, abstract or full
+    text, and, when they also cite many other assemblies, name the organism up front."""
+    if paper.get("retrieval_source") in ("linked_pmid", "elink"):
         return True
+    if paper.get("retrieval_source") == "bioproject" or paper.get("is_reference_paper"):
+        if _names_target_up_front(paper, names or []):
+            return True
+        logger.info(
+            f"      [strict] BioProject paper does not name the organism: {paper.get('title', '')[:60]}"
+        )
+        return False
     acc_base = accession.split(".")[0].lower()
     text = " ".join(
         [
@@ -306,7 +334,15 @@ def _paper_is_accession_linked(paper: dict, accession: str) -> bool:
     }
     if other_accessions:
         paper["other_accessions_in_text"] = sorted(other_accessions)
-    return acc_base in text
+    if acc_base not in text:
+        return False
+    if len(other_accessions) >= MANY_OTHER_ACCESSIONS and not _names_target_up_front(paper, names or []):
+        logger.info(
+            f"      [strict] {accession} cited among {len(other_accessions)} other assemblies in a paper "
+            f"that does not name the organism: {paper.get('title', '')[:60]}"
+        )
+        return False
+    return True
 
 
 def _gather_paper_candidates(accession: str, assembly: dict, identifiers: dict, max_results: int) -> list:
@@ -525,7 +561,11 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
     # (linked in NCBI, or the accession appears in the paper text). Name-only matches
     # are discarded rather than offered as suggestions, since they are the main source
     # of false positives; the pipeline reports "No relevant papers found" instead.
-    accepted = [paper for paper in enriched_papers if _paper_is_accession_linked(paper, accession)]
+    accepted = [
+        paper
+        for paper in enriched_papers
+        if _paper_is_accession_linked(paper, accession, target_names(scientific_name, common_name))
+    ]
     if len(accepted) < len(enriched_papers):
         logger.info(
             f"      [strict] kept {len(accepted)}/{len(enriched_papers)} paper(s) "

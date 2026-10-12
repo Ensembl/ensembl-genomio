@@ -118,6 +118,9 @@ def fetch_goat_reference(taxon_id: str) -> dict:
     value; "ancestor"/"descendant" = phylogenetically *inferred*. We only trust
     DIRECT values — inferred ones repeat the polyploid-ancestor trap (e.g. for
     Arabidopsis, GoaT's ploidy_inferred is 4 via the tribe, which is wrong).
+    Ploidy is further required to be unanimous across GoaT's direct records
+    (min == max): a mode over conflicting records can be wrong (Sorghum bicolor:
+    six Kew C-value entries say 4, one says 2, true value 2).
     Any unexpected shape -> returns Nones so the pipeline falls back safely.
     """
     out: dict[str, int | None] = {"reference_ploidy": None, "reference_chromosome": None}
@@ -139,7 +142,7 @@ def fetch_goat_reference(taxon_id: str) -> dict:
             return out
         attrs = (recs[0].get("record", {}) or {}).get("attributes", {}) or {}
 
-        def _direct_int(*keys: str) -> int | None:
+        def _direct_int(*keys: str, unanimous: bool = False) -> int | None:
             # try each attribute key in order; accept only directly-measured values
             for key in keys:
                 attr = attrs.get(key)
@@ -147,6 +150,12 @@ def fetch_goat_reference(taxon_id: str) -> dict:
                     continue
                 if attr.get("aggregation_source") != "direct":
                     continue  # skip inferred (ancestor/descendant) values
+                if unanimous and attr.get("min") != attr.get("max"):
+                    logger.info(
+                        f"      GoaT {key} records disagree (min {attr.get('min')}, "
+                        f"max {attr.get('max')}); not used"
+                    )
+                    continue
                 for value_key in ("value", "median", "mode", "max", "min"):
                     value = attr.get(value_key)
                     if value is None:
@@ -156,7 +165,7 @@ def fetch_goat_reference(taxon_id: str) -> dict:
                         return int(match.group())
             return None
 
-        out["reference_ploidy"] = _direct_int("ploidy", "ploidy_inferred")
+        out["reference_ploidy"] = _direct_int("ploidy", "ploidy_inferred", unanimous=True)
         out["reference_chromosome"] = _direct_int("chromosome_number", "haploid_chromosome_count")
     except (requests.RequestException, ValueError, KeyError, TypeError):
         pass
