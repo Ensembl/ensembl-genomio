@@ -51,7 +51,7 @@ class TrnaScanConverter(FeatureConverter):
         )
     command = "trnascan"
     program = "tRNAscan-SE"
-    """feature_collection_name = "ncrna_features" """
+    feature_collection_name = "ncrna_features"
 
     @classmethod
     def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
