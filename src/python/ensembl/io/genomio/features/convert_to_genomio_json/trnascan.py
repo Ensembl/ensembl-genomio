@@ -44,14 +44,14 @@ BASE_COMPLEMENTS = str.maketrans("ACGTUacgtu", "TGCAAtgcaa")
 class TrnaScanConverter(FeatureConverter):
     """Converter for tRNAscan-SE output."""
 
-    analysis_logic_name = "trnascan"
+    analysis_logic_name = "trnascan-se-2.0.12"
     analysis_display_label = "tRNA Models"
     analysis_description = (
         'tRNA models predicted with <a href="http://lowelab.ucsc.edu/tRNAscan-SE">tRNAscan-SE</a>' "(release 1.3.1)"
         )
     command = "trnascan"
     program = "tRNAscan-SE"
-    feature_collection_name = "ncrna_features"
+    ncrna_tool = "trnascan"
 
     @classmethod
     def add_parser(cls, subparsers: argparse._SubParsersAction) -> None:
@@ -76,11 +76,6 @@ class TrnaScanConverter(FeatureConverter):
     ) -> ParseFeaturesResult:
         """Parse tRNAscan-SE output."""
         return parse_output(input_path)
-
-    @classmethod
-    def additional_json_fields(cls) -> dict[str, object]:
-        """Add tRNAscan-specific metadata to the JSON document."""
-        return {"ncrna_tool": "trnascan"}
 
 @dataclass(frozen=True)
 class TrnaScanParsedRow:
