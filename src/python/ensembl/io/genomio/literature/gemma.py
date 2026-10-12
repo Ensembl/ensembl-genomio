@@ -716,8 +716,8 @@ def run_gemma_ploidy(
 
 def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
     """Fold a validated Gemma result into the rule+vector ensemble ploidy as a
-    third vote. Inferred (`suggested`) results are attached as a non-destructive
-    `gemma_suggestion`; explicit results can raise confidence on agreement, fill a
+    third vote. Inferred (`suggested`) ploidy is discarded, since an unstated level is
+    not evidence; explicit results can raise confidence on agreement, fill a
     missing level, or flag a conflict. Also backfills sex and cultivar when absent."""
     if not gemma:
         return ensemble
@@ -737,24 +737,9 @@ def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
 
     if suggested:
         # ── Gemma inferred (not explicitly stated) ──────────────────────────
-        # Never overwrite the ensemble result; attach as a suggestion only.
-        out["gemma_suggestion"] = gemma_note
-        if ensemble_level is None and gemma_level is not None:
-            # Nothing from rule/vector — show Gemma's inference as a low-confidence hint
-            out["gemma_suggestion"]["note"] = (
-                "No result from rule-based or vector search. "
-                "Gemma inferred this level from genomic context — treat as a hint, "
-                "not a confirmed answer."
-            )
-        elif ensemble_level is not None and gemma_level is not None and ensemble_level == gemma_level:
-            # Gemma agrees with ensemble via inference — small confidence nudge
-            out["confidence"] = min(round(ensemble.get("confidence", 0.5) + 0.05, 2), 0.95)
-            out["gemma_suggestion"]["note"] = "Gemma inferred the same level; adds soft support."
-        elif ensemble_level is not None and gemma_level is not None and ensemble_level != gemma_level:
-            out["gemma_suggestion"]["note"] = (
-                f"Gemma inferred level={gemma_level}, which conflicts with the ensemble "
-                f"result of level={ensemble_level}. Manual review recommended."
-            )
+        # Discard: no suggestion is reported, and the ensemble result is left as is.
+        if gemma_level is not None:
+            logger.info(f"  [gemma] inferred level={gemma_level} discarded (not stated in paper)")
     else:
         # ── Gemma explicitly confirmed ───────────────────────────────────────
         if ensemble_level is not None and gemma_level is not None and ensemble_level == gemma_level:

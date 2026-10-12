@@ -121,21 +121,17 @@ def _ploidy_recovered(result: dict) -> bool:
 def _is_correct_paper_for_accession(paper: dict, assembly: dict) -> bool:
     """Accession-level check before letting Gemma read a paper: only trust a paper
     that is genuinely tied to THIS assembly — linked by accession (directly linked
-    PMID / Entrez elink) or by its BioProject, or with corroborating assembly
-    metadata (the accession itself, or failing that the scientific name) actually
-    present in the paper text. This stops Gemma from confidently reading ploidy out
+    PMID / Entrez elink) or by its BioProject, or with the assembly accession itself
+    printed in the paper text. The scientific name alone is NOT enough: it is often
+    cited in unrelated papers. This stops Gemma from confidently reading ploidy out
     of an off-target paper."""
     if paper.get("retrieval_source") in ("linked_pmid", "elink", "bioproject") or paper.get(
         "is_reference_paper"
     ):
         return True
     paper_text = (paper.get("text_data", {}).get("text") or "").lower()
-    # Prefer the strongest signal: the assembly accession printed in the paper.
     accession = (assembly.get("assembly_accession") or "").split(".")[0].lower()
-    if accession and accession in paper_text:
-        return True
-    scientific_name = (assembly.get("scientific_name") or "").lower()
-    return bool(scientific_name) and scientific_name in paper_text
+    return bool(accession) and accession in paper_text
 
 
 # ============================================================
@@ -157,20 +153,12 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     logger.info("\n[Step 1/4] Fetching assembly metadata and papers ...")
     fetched = fetch_papers_for_assembly(accession, max_results=max_papers)
     assembly = fetched["assembly"]
+    # Only papers strictly linked to the accession/BioProject are used. Name / full-text
+    # hits are never promoted to a "suggestion": a scientific name can appear in the
+    # body of an unrelated paper (e.g. A. thaliana cited inside a Dioscorea tetraploid
+    # paper), and reporting nothing is better than a confident false positive.
     papers = fetched["papers"]
-    candidate_papers = fetched.get("candidate_papers", [])
     reference_paper = fetched.get("reference_paper")
-
-    # If the strict gate accepted no accession/BioProject-linked paper, fall back to
-    # the best candidate paper (found by name / full text) and treat its metadata as a
-    # SUGGESTION rather than a confirmed result. This keeps a literature-grounded answer
-    # (Gemma reads the whole paper; rule + vector still run) instead of dropping straight
-    # to GoaT. Confirmed only when a paper was strictly linked to the accession.
-    suggested = False
-    if not papers and candidate_papers:
-        logger.info("  No accession-linked paper; using the best candidate as a suggestion.")
-        papers = candidate_papers
-        suggested = True
 
     # Guard: NCBI returned no usable assembly metadata (stale / suppressed
     # accession). Without a scientific name we cannot search by name or trust
@@ -208,7 +196,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
         else:
             logger.info("  No qualifying paper and no GoaT reference — nothing to report.")
             ploidy = {"level": None, "status": "no_relevant_paper", "source": None}
-            status, error = "error", "no relevant paper"
+            status, error = "error", "No relevant papers found"
 
         result = {
             "assembly_accession": assembly.get("assembly_accession"),
@@ -222,7 +210,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
             "ploidy": ploidy,
             "cultivars": {"confirmed": [], "unconfirmed": []},
             "sex": {"value": "unknown"},
-            "paper": {"note": "No accession/BioProject-linked paper found"},
+            "paper": {"note": "No relevant papers found"},
             "papers_found": 0,
             "status": status,
         }
@@ -240,7 +228,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
             "assembly_accession": assembly.get("assembly_accession"),
             "status": "error",
             "error": "no usable paper",
-            "paper": {"note": "Not found relevant paper"},
+            "paper": {"note": "No relevant papers found"},
         }
 
     logger.info(f"  Text source: {best_paper['text_data']['source']}")
@@ -282,7 +270,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     if is_enabled() and not _is_correct_paper_for_accession(best_paper, assembly):
         logger.info(
             "  [gemma] skipped: the selected paper is not confidently tied to this "
-            "accession (no accession/BioProject link and scientific name absent from text)"
+            "accession (no accession/BioProject link and accession absent from text)"
         )
     elif is_enabled():
         gemma_passages = [{"text": text, "section": section} for section, text in parsed["sections"].items()]
@@ -323,14 +311,6 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     }
     final["papers_found"] = len(papers)
     final["reference_paper"] = reference_paper  # BioProject canonical paper (attached even if no ploidy)
-
-    # When no paper was strictly linked to the accession, the answer came from the
-    # best candidate paper — mark it as a suggestion (not a confirmed result) and
-    # temper the confidence, so curators can tell literature-confirmed from inferred.
-    if suggested and final["ploidy"].get("level") is not None:
-        final["ploidy"]["status"] = "suggested"
-        final["ploidy"]["source"] = "suggested_" + str(final["ploidy"].get("source") or "literature")
-        final["ploidy"]["confidence"] = round(final["ploidy"].get("confidence", 0.5) * 0.7, 2)
 
     # A result is only "success" if a ploidy level was actually recovered; a paper
     # that parsed fine but states no ploidy is flagged as an error, so single-accession

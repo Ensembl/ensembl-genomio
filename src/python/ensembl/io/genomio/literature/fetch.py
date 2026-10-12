@@ -522,15 +522,14 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
 
     # ---- strict acceptance gate (precision-first) ----
     # `papers` keeps only those tied to THIS assembly by its accession or BioProject
-    # (linked in NCBI, or the accession appears in the paper text) — the confirmed,
-    # literature-grounded set. `candidate_papers` keeps the full ranked list so the
-    # pipeline can fall back to the best candidate as a *suggestion* (or to GoaT)
-    # when nothing qualifies strictly.
+    # (linked in NCBI, or the accession appears in the paper text). Name-only matches
+    # are discarded rather than offered as suggestions, since they are the main source
+    # of false positives; the pipeline reports "No relevant papers found" instead.
     accepted = [paper for paper in enriched_papers if _paper_is_accession_linked(paper, accession)]
     if len(accepted) < len(enriched_papers):
         logger.info(
             f"      [strict] kept {len(accepted)}/{len(enriched_papers)} paper(s) "
-            f"linked to {accession} (accession/BioProject); the rest are suggestion-only"
+            f"linked to {accession} (accession/BioProject); the rest are discarded"
         )
 
     reference_paper = _extract_reference_paper(papers_found)
@@ -544,6 +543,5 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
     return {
         "assembly": assembly,
         "papers": accepted,
-        "candidate_papers": enriched_papers,
         "reference_paper": reference_paper,
     }
