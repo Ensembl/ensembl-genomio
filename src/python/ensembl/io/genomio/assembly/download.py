@@ -310,9 +310,9 @@ def retrieve_assembly_data(
         for increment in range(max_increment + 1):
             if increment > 0:
                 logging.info(f" Increment accession version once from {accession}")
-                version = int(accession[-1])
-                version += 1
-                accession = accession[:-1] + str(version)
+                accession_base, separator, version_text = accession.rpartition(".")
+                version = int(version_text) + 1
+                accession = f"{accession_base}{separator}{version}"
                 download_dir.mkdir(parents=True, exist_ok=True)
             ftp_url = "ftp.ncbi.nlm.nih.gov"
             ftp_instance = FTP()

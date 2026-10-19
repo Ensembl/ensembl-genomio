@@ -446,3 +446,29 @@ def test_retrieve_assembly_data(
         # Download is never called with the current examples
         mock_download_files.assert_not_called()
         mock_download_single_file.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("accession", "expected_accessions"),
+    [
+        ("GCA_000000001.19", ["GCA_000000001.19", "GCA_000000001.20"]),
+        ("GCA_000000001.99", ["GCA_000000001.99", "GCA_000000001.100"]),
+    ],
+)
+def test_retrieve_assembly_data_increments_multi_digit_version(
+    tmp_path: Path, accession: str, expected_accessions: list[str]
+) -> None:
+    """Retrying an accession should increment its complete version number."""
+    with (
+        patch("ensembl.io.genomio.assembly.download.FTP"),
+        patch(
+            "ensembl.io.genomio.assembly.download.get_files_selection", return_value={"report": "report.txt"}
+        ),
+        patch("ensembl.io.genomio.assembly.download.download_files"),
+        patch("ensembl.io.genomio.assembly.download.establish_ftp") as mock_establish_ftp,
+        patch("ensembl.io.genomio.assembly.download.md5_files", side_effect=[False, True]),
+    ):
+        retrieve_assembly_data(accession, tmp_path, max_increment=1)
+
+    accessions = [call.args[2] for call in mock_establish_ftp.call_args_list]
+    assert accessions == expected_accessions
