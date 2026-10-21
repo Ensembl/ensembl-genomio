@@ -24,6 +24,7 @@ __all__ = [
     "create_genomio_json",
     "file_last_modified_time",
     "format_parse_errors",
+    "main",
     "parse_token",
     "register_converter",
     "register_top_level_converter",
