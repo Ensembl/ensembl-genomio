@@ -245,18 +245,22 @@ class _DummyConverter(convert_to_genomio_json.FeatureConverter):
     @classmethod
     def parse_features(
         cls,
-        input_path: Path,
-        _options: convert_to_genomio_json.ConverterOptions | None = None,
+        config: convert_to_genomio_json.GenomioJsonConfig,
     ) -> convert_to_genomio_json.ParseFeaturesResult:
         """Return fixed parser output for document assembly tests."""
         return (
-            [{"seq_region": input_path.name}],
+            [{"seq_region": config.input_path.name}],
             cls.consensuses_by_key,
         )
 
 
 def test_converter_registration(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test generic registration helpers populate converter registries."""
+    """Test generic registration helpers populate converter registries.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+
+    """
     monkeypatch.setattr(base, "converters_by_logic_name", {})
     monkeypatch.setattr(base, "top_level_converters", [])
 
@@ -269,7 +273,12 @@ def test_converter_registration(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_equivalent_converter_replaces_registered_converter(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test equivalent converter classes replace existing registration entries."""
+    """Test equivalent converter classes replace existing registration entries.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+
+    """
     monkeypatch.setattr(base, "converters_by_logic_name", {})
     monkeypatch.setattr(base, "top_level_converters", [])
 
@@ -285,8 +294,99 @@ def test_equivalent_converter_replaces_registered_converter(monkeypatch: pytest.
     assert base.top_level_converters == [EquivalentConverter]
 
 
+@pytest.mark.parametrize(
+    ("provided_path", "expected_path"),
+    [
+        (Path("invalid.out"), Path("invalid.out")),
+        (None, Path("output.invalid_tool_output.txt")),
+    ],
+)
+def test_get_invalid_tool_output(
+    tmp_path: Path,
+    provided_path: Path | None,
+    expected_path: Path,
+) -> None:
+    """Test explicit and default invalid-tool-output paths.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture.
+        provided_path: Optional explicitly configured invalid-output path.
+        expected_path: Expected path returned for the selected case.
+
+    """
+    args = argparse.Namespace(
+        output=tmp_path / "output.json",
+        **({"invalid_tool_output": provided_path} if provided_path is not None else {}),
+    )
+
+    actual_path = base.get_invalid_tool_output(args)
+
+    if provided_path is None:
+        assert actual_path == tmp_path / expected_path
+    else:
+        assert actual_path == expected_path
+
+
+def test_handle_parsing_errors_returns_without_errors(tmp_path: Path) -> None:
+    """Test that no invalid-output file is written when parsing succeeds.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture.
+
+    """
+    config = convert_to_genomio_json.GenomioJsonConfig(
+        input_path=tmp_path / "input.out",
+        output_path=tmp_path / "output.json",
+        invalid_tool_output_path=tmp_path / "nested" / "invalid.out",
+        analysis_logic_name="dummy",
+        analysis_display_label="Dummy",
+        analysis_description="desc",
+        program="dummy",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+    )
+
+    base.handle_parsing_errors("dummy output", config, [])
+
+    assert not config.invalid_tool_output_path.exists()
+
+
+def test_handle_parsing_errors_writes_errors_in_non_strict_mode(tmp_path: Path) -> None:
+    """Test that tolerated parsing errors are written without raising.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture.
+
+    """
+    invalid_output_path = tmp_path / "nested" / "invalid.out"
+    config = convert_to_genomio_json.GenomioJsonConfig(
+        input_path=tmp_path / "input.out",
+        output_path=tmp_path / "output.json",
+        invalid_tool_output_path=invalid_output_path,
+        analysis_logic_name="dummy",
+        analysis_display_label="Dummy",
+        analysis_description="desc",
+        program="dummy",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=False,
+    )
+
+    base.handle_parsing_errors("dummy output", config, ["bad line"])
+
+    assert invalid_output_path.read_text(encoding="utf-8") == "bad line\n"
+
+
 def test_duplicate_converter_logic_names_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test converter registration rejects conflicting classes for one logic name."""
+    """Test converter registration rejects conflicting classes for one logic name.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+
+    """
     monkeypatch.setattr(base, "converters_by_logic_name", {})
 
     class ConflictingConverter(_DummyConverter):
@@ -333,7 +433,16 @@ def test_invalid_converters_rejected(
     converter_name: str,
     error_message: str,
 ) -> None:
-    """Test converter registration rejects abstract or unnamed converter classes."""
+    """Test converter registration rejects abstract or unnamed converter classes.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        converter_base: Base class used to construct the invalid converter.
+        analysis_logic_name: Analysis logic name for the invalid converter.
+        converter_name: Name assigned to the invalid converter class.
+        error_message: Expected registration error message.
+
+    """
     monkeypatch.setattr(base, "converters_by_logic_name", {})
     converter = type(converter_name, (converter_base,), {"analysis_logic_name": analysis_logic_name})
 
@@ -342,7 +451,12 @@ def test_invalid_converters_rejected(
 
 
 def test_duplicate_top_level_converter_commands_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test top-level converter registration rejects conflicting classes for one command."""
+    """Test top-level converter registration rejects conflicting classes for one command.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+
+    """
     monkeypatch.setattr(base, "top_level_converters", [])
 
     class ConflictingTopLevelConverter(convert_to_genomio_json.FeatureConverter):
@@ -384,7 +498,14 @@ def test_top_level_converters_without_commands_rejected(
     command: str | None,
     converter_name: str,
 ) -> None:
-    """Test top-level converter registration requires a non-blank CLI command."""
+    """Test top-level converter registration requires a non-blank CLI command.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        command: Command value used by the converter.
+        converter_name: Name assigned to the converter class.
+
+    """
     monkeypatch.setattr(base, "top_level_converters", [])
     converter = type(
         converter_name,
@@ -400,7 +521,12 @@ def test_top_level_converters_without_commands_rejected(
 
 
 def test_abstract_top_level_converter_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test top-level converter registration rejects an abstract class with a command."""
+    """Test top-level converter registration rejects an abstract class with a command.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+
+    """
     monkeypatch.setattr(base, "top_level_converters", [])
 
     abstract_converter = type(
@@ -428,7 +554,15 @@ def test_parse_args_common_arguments(
     tmp_path: Path,
     use_common_overrides: bool,
 ) -> None:
-    """Test CLI arguments shared by converter subcommands."""
+    """Test CLI arguments shared by converter subcommands.
+
+    Args:
+        convert_to_genomio_json_data_dir: Test data directory.
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Pytest temporary directory fixture.
+        use_common_overrides: Whether optional common arguments are supplied.
+
+    """
     program_version = "1.0"
     input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
@@ -474,13 +608,22 @@ def test_parse_args_common_arguments(
 @patch("ensembl.io.genomio.features.convert_to_genomio_json.base.create_genomio_json")
 def test_main_passes_common_config_fields(
     mock_create_genomio_json: Mock,
+    tmp_path: Path,
     convert_to_genomio_json_data_dir: Path,
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
 ) -> None:
-    """Test ``convert_to_genomio_json.main()`` passes common parsed config fields."""
+    """Test ``convert_to_genomio_json.main()`` passes common parsed config fields.
+
+    Args:
+        mock_create_genomio_json: Mocked JSON document creation function.
+        tmp_path: Pytest temporary directory fixture.
+        convert_to_genomio_json_data_dir: Test data directory.
+        monkeypatch: Pytest monkeypatch fixture.
+
+    """
     input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
+    invalid_tool_output_path = output_path.with_suffix(".invalid_tool_output.txt")
     monkeypatch.setattr(base, "top_level_converters", [_DummyConverter])
     monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
 
@@ -498,6 +641,7 @@ def test_main_passes_common_config_fields(
             "--source-provider",
             "Custom",
             "--is-primary",
+            "--strict",
         ]
     )
 
@@ -505,6 +649,7 @@ def test_main_passes_common_config_fields(
         config=convert_to_genomio_json.GenomioJsonConfig(
             input_path=input_path,
             output_path=output_path,
+            invalid_tool_output_path=invalid_tool_output_path,
             analysis_logic_name="dummy",
             analysis_display_label="Dummy",
             analysis_description="Dummy converter",
@@ -513,6 +658,7 @@ def test_main_passes_common_config_fields(
             source_provider="Custom",
             is_primary=True,
             program_parameters="params",
+            is_strict_mode=True,
         )
     )
 
@@ -524,7 +670,15 @@ def test_main_reraises_exceptions(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """Test the ``convert_to_genomio_json.main()`` function reraises exceptions."""
+    """Test the ``convert_to_genomio_json.main()`` function reraises exceptions.
+
+    Args:
+        mock_create_genomio_json: Mocked JSON document creation function.
+        convert_to_genomio_json_data_dir: Test data directory.
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Pytest temporary directory fixture.
+
+    """
     input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
     monkeypatch.setattr(base, "top_level_converters", [_DummyConverter])
@@ -580,10 +734,19 @@ def test_create_genomio_json_assembles_generic_document(
     consensuses_by_key: dict[str, convert_to_genomio_json.Consensus],
     expected_repeat_consensus: list[dict[str, str]] | None,
 ) -> None:
-    """Test JSON creation assembles parser output and generic metadata."""
+    """Test JSON creation assembles parser output and generic metadata.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Pytest temporary directory fixture.
+        consensuses_by_key: Consensus records returned by the parser.
+        expected_repeat_consensus: Expected serialized consensus records.
+
+    """
     input_path = tmp_path / "input.out"
     input_path.write_text("parser input", encoding="utf-8")
     output_path = tmp_path / "out.json"
+    invalid_tool_output_path = tmp_path / "invalid.out"
     monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
 
     _DummyConverter.consensuses_by_key = consensuses_by_key
@@ -591,6 +754,7 @@ def test_create_genomio_json_assembles_generic_document(
         convert_to_genomio_json.GenomioJsonConfig(
             input_path=input_path,
             output_path=output_path,
+            invalid_tool_output_path=invalid_tool_output_path,
             analysis_logic_name="dummy",
             analysis_display_label="Dummy",
             analysis_description="desc",
@@ -598,6 +762,7 @@ def test_create_genomio_json_assembles_generic_document(
             program_version="1.0",
             source_provider="Ensembl",
             is_primary=False,
+            is_strict_mode=True,
             program_parameters="-x",
         )
     )
@@ -613,15 +778,60 @@ def test_create_genomio_json_assembles_generic_document(
         assert doc["repeat_consensus"] == expected_repeat_consensus
 
 
+def test_create_genomio_json_assembles_ncrna_document(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test JSON creation stores ncrRNA features under the ncrRNA document fields.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Pytest temporary directory fixture.
+
+    """
+    input_path = tmp_path / "input.out"
+    input_path.write_text("parser input", encoding="utf-8")
+    output_path = tmp_path / "out.json"
+    monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
+    monkeypatch.setattr(_DummyConverter, "ncrna_tool", "dummy-ncrna")
+
+    convert_to_genomio_json.create_genomio_json(
+        convert_to_genomio_json.GenomioJsonConfig(
+            input_path=input_path,
+            output_path=output_path,
+            invalid_tool_output_path=tmp_path / "invalid.out",
+            analysis_logic_name="dummy",
+            analysis_display_label="Dummy",
+            analysis_description="desc",
+            program="dummy",
+            program_version="1.0",
+            source_provider="Ensembl",
+            is_primary=False,
+            is_strict_mode=True,
+        )
+    )
+
+    doc = json.loads(output_path.read_text(encoding="utf-8"))
+    assert doc["ncrna_tool"] == "dummy-ncrna"
+    assert doc["ncrna_features"] == [{"seq_region": "input.out"}]
+
+
 def test_create_genomio_json_rejects_unsupported_logic_name(
     convert_to_genomio_json_data_dir: Path, tmp_path: Path
 ) -> None:
-    """Test JSON creation rejects unsupported analysis logic names."""
+    """Test JSON creation rejects unsupported analysis logic names.
+
+    Args:
+        convert_to_genomio_json_data_dir: Test data directory.
+        tmp_path: Pytest temporary directory fixture.
+
+    """
     with pytest.raises(ValueError, match=r"Unsupported analysis logic name"):
         convert_to_genomio_json.create_genomio_json(
             convert_to_genomio_json.GenomioJsonConfig(
                 input_path=convert_to_genomio_json_data_dir / "create_json" / "basic.out",
                 output_path=tmp_path / "out.json",
+                invalid_tool_output_path=tmp_path / "invalid.out",
                 analysis_logic_name="unsupported",
                 analysis_display_label="label",
                 analysis_description="desc",
@@ -629,6 +839,7 @@ def test_create_genomio_json_rejects_unsupported_logic_name(
                 program_version="1.0",
                 source_provider="Ensembl",
                 is_primary=False,
+                is_strict_mode=True,
             )
         )
 
@@ -637,7 +848,13 @@ def test_create_genomio_json_omits_program_parameters_when_none(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """Test that program parameters are omitted when no value is provided."""
+    """Test that program parameters are omitted when no value is provided.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Pytest temporary directory fixture.
+
+    """
     input_path = tmp_path / "input.out"
     input_path.write_text("parser input", encoding="utf-8")
     output_path = tmp_path / "out.json"
@@ -647,6 +864,7 @@ def test_create_genomio_json_omits_program_parameters_when_none(
         convert_to_genomio_json.GenomioJsonConfig(
             input_path=input_path,
             output_path=output_path,
+            invalid_tool_output_path=tmp_path / "invalid.out",
             analysis_logic_name="dummy",
             analysis_display_label="Dummy",
             analysis_description="desc",
@@ -654,6 +872,7 @@ def test_create_genomio_json_omits_program_parameters_when_none(
             program_version="1.0",
             source_provider="Ensembl",
             is_primary=True,
+            is_strict_mode=True,
         )
     )
 

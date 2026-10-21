@@ -25,10 +25,10 @@ from pathlib import Path
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
-    ConverterOptions,
     FeatureConverter,
+    GenomioJsonConfig,
     ParseFeaturesResult,
-    format_parse_errors,
+    handle_parsing_errors,
     parse_token,
     register_converter,
     register_top_level_converter,
@@ -79,11 +79,10 @@ class RedConverter(FeatureConverter):
     @classmethod
     def parse_features(
         cls,
-        input_path: Path,
-        _options: ConverterOptions | None = None,
+        config: GenomioJsonConfig,
     ) -> ParseFeaturesResult:
         """Parse Red output."""
-        return parse_output(input_path)
+        return parse_output(config)
 
 
 @dataclass(frozen=True)
@@ -143,7 +142,7 @@ def parse_row(input_path: Path, line: str) -> RedParsedRow:
     )
 
 
-def parse_output(input_path: Path) -> ParseFeaturesResult:
+def parse_output(config: GenomioJsonConfig) -> ParseFeaturesResult:
     """Parse a Red .rpt file into repeat feature dictionaries and consensus records.
 
     Returns:
@@ -159,21 +158,20 @@ def parse_output(input_path: Path) -> ParseFeaturesResult:
     consensuses_by_key: dict[str, Consensus] = {RED_RPT_CONSENSUS_KEY: RED_RPT_CONSENSUS}
     errors: list[str] = []
 
-    with open_gz_file(input_path) as fh:
+    with open_gz_file(config.input_path) as fh:
         for raw_line in fh:
             line = raw_line.strip()
             if not line:
                 continue
 
             try:
-                parsed_row = parse_row(input_path, line)
+                parsed_row = parse_row(config.input_path, line)
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
 
             features.append(parsed_row.feature)
 
-    if errors:
-        raise ValueError(format_parse_errors("Red output", input_path, errors))
+    handle_parsing_errors("Red output", config, errors)
 
     return features, consensuses_by_key

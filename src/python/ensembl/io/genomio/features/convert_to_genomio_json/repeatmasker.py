@@ -33,8 +33,9 @@ from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
     ConverterOptions,
     FeatureConverter,
+    GenomioJsonConfig,
     ParseFeaturesResult,
-    format_parse_errors,
+    handle_parsing_errors,
     parse_token,
     register_converter,
     register_top_level_converter,
@@ -118,12 +119,10 @@ class RepeatMaskerCustomConverter(FeatureConverter):
     @classmethod
     def parse_features(
         cls,
-        input_path: Path,
-        options: ConverterOptions | None = None,
+        config: GenomioJsonConfig,
     ) -> ParseFeaturesResult:
         """Parse custom-library RepeatMasker output."""
-        repeatmasker_options = options if isinstance(options, RepeatMaskerOptions) else RepeatMaskerOptions()
-        return parse_output(input_path, repeatmasker_options.consensus_lib_path)
+        return parse_output(config)
 
 
 @register_converter
@@ -161,12 +160,10 @@ class RepeatMaskerRepbaseConverter(FeatureConverter):
     @classmethod
     def parse_features(
         cls,
-        input_path: Path,
-        options: ConverterOptions | None = None,
+        config: GenomioJsonConfig,
     ) -> ParseFeaturesResult:
         """Parse Repbase library RepeatMasker output."""
-        repeatmasker_options = options if isinstance(options, RepeatMaskerOptions) else RepeatMaskerOptions()
-        return parse_output(input_path, repeatmasker_options.consensus_lib_path)
+        return parse_output(config)
 
 
 @register_top_level_converter
@@ -388,7 +385,7 @@ def parse_row(input_path: Path, line: str) -> RepeatMaskerParsedRow:
     )
 
 
-def parse_output(input_path: Path, consensus_lib_path: Path | None) -> ParseFeaturesResult:
+def parse_output(config: GenomioJsonConfig) -> ParseFeaturesResult:
     """Parse a RepeatMasker .out file into repeat feature dictionaries and consensus records.
 
     If a RepeatMasker consensus library FASTA file is provided, consensus sequences will be
@@ -396,8 +393,8 @@ def parse_output(input_path: Path, consensus_lib_path: Path | None) -> ParseFeat
     Otherwise, an empty consensus dictionary will be returned.
 
     Args:
-        input_path: Path to the RepeatMasker .out file to parse.
-        consensus_lib_path: Optional path to a RepeatMasker consensus library FASTA file.
+        config: Configuration describing the input, output, analysis metadata, source metadata,
+            and converter-specific options.
 
     Returns:
         A tuple containing:
@@ -410,14 +407,19 @@ def parse_output(input_path: Path, consensus_lib_path: Path | None) -> ParseFeat
     """
     consensus_keys_by_triplet: dict[tuple[str, str, str], str] = {}
     consensuses_by_key: dict[str, Consensus] = {}
-    if consensus_lib_path is not None:
+    if isinstance(config.converter_options, RepeatMaskerOptions):
+        repeatmasker_options = config.converter_options
+    else:
+        repeatmasker_options = RepeatMaskerOptions()
+
+    if repeatmasker_options.consensus_lib_path is not None:
         consensus_keys_by_triplet, consensuses_by_key = parse_repeatmasker_consensus_library(
-            consensus_lib_path
+            repeatmasker_options.consensus_lib_path
         )
 
     features: list[dict] = []
     errors: list[str] = []
-    with open_gz_file(input_path) as fh:
+    with open_gz_file(config.input_path) as fh:
         for raw_line in fh:
             line = raw_line.strip()
             if not line:
@@ -434,7 +436,7 @@ def parse_output(input_path: Path, consensus_lib_path: Path | None) -> ParseFeat
                 continue
 
             try:
-                parsed_row = parse_row(input_path, line)
+                parsed_row = parse_row(config.input_path, line)
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
@@ -445,7 +447,6 @@ def parse_output(input_path: Path, consensus_lib_path: Path | None) -> ParseFeat
 
             features.append(parsed_row.feature)
 
-    if errors:
-        raise ValueError(format_parse_errors("RepeatMasker output", input_path, errors))
+    handle_parsing_errors("RepeatMasker output", config, errors)
 
     return features, consensuses_by_key

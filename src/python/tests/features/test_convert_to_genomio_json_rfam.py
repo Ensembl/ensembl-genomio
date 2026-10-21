@@ -20,6 +20,7 @@ from typing import ContextManager
 
 import pytest
 
+from ensembl.io.genomio.features import convert_to_genomio_json
 from ensembl.io.genomio.features.convert_to_genomio_json import rfam
 
 VALID_ROW = (
@@ -107,7 +108,14 @@ def test_parse_row(
     expectation: ContextManager[object],
     expected_feature: dict[str, object] | None,
 ) -> None:
-    """Test that ``parse_row`` parses valid rows and rejects malformed rows."""
+    """Test that ``parse_row`` parses valid rows and rejects malformed rows.
+
+    Args:
+        line: Rfam row to parse.
+        expectation: Expected success or exception context.
+        expected_feature: Expected parsed feature, when parsing succeeds.
+
+    """
     with expectation:
         parsed_row = rfam.parse_row(Path("input.tsv"), line)
 
@@ -148,17 +156,87 @@ def test_parse_output_success(
     expected_features: list[dict[str, object]],
     expected_consensuses: dict[str, object],
 ) -> None:
-    """Test that ``parse_output`` parses the header and one valid Rfam row."""
+    """Test that ``parse_output`` parses the header and one valid Rfam row.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture.
+        expected_features: Expected parsed feature records.
+        expected_consensuses: Expected consensus records.
+
+    """
     input_file = tmp_path / "rfam_hits.tsv"
     input_file.write_text(
         "seqname\tstart\tend\tstrand\ttrunc\tgc\tbias\tmdl_from\tmdl_to\tscore\tevalue\tmodel_name"
         f"\taccession\tbiotype\ttarget_description\n{VALID_ROW}\n",
         encoding="utf-8",
     )
-    features, consensuses_by_key = rfam.parse_output(input_file)
+    config=convert_to_genomio_json.GenomioJsonConfig(
+        input_path=input_file,
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
+    )
+    features, consensuses_by_key = rfam.parse_output(config)
 
     assert features == expected_features
     assert consensuses_by_key == expected_consensuses
+
+
+def test_rfam_converter_parse_features_delegates_to_parser(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test the Rfam converter delegates parsing using the complete config.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Pytest temporary directory fixture.
+
+    """
+    config = convert_to_genomio_json.GenomioJsonConfig(
+        input_path=tmp_path / "input.tsv",
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="rfam",
+        analysis_display_label="Rfam",
+        analysis_description="desc",
+        program="cmsearch",
+        program_version="1.0",
+        source_provider="Rfam",
+        is_primary=False,
+        is_strict_mode=True,
+    )
+    expected = ([{"seq_region": "chr1"}], {})
+    monkeypatch.setattr(rfam, "parse_output", lambda actual_config: expected)
+
+    assert rfam.RfamConverter.parse_features(config) == expected
+
+
+def test_parse_row_includes_target_accession_when_present() -> None:
+    """Test that a non-placeholder target accession is retained."""
+    row = VALID_ROW.replace("RF03308", "RF12345", 1)
+
+    parsed = rfam.parse_row(Path("input.tsv"), row)
+
+    assert parsed.feature["target_accession"] == "RF12345"
+
+
+def test_parse_row_omits_placeholder_target_accession() -> None:
+    """Test that the placeholder target accession is omitted."""
+    row = VALID_ROW.replace("RF03308", "-", 1)
+
+    parsed = rfam.parse_row(Path("input.tsv"), row)
+
+    assert "target_accession" not in parsed.feature
 
 
 @pytest.mark.parametrize(
@@ -184,9 +262,31 @@ def test_parse_output_success(
     ],
 )
 def test_parse_output_errors(tmp_path: Path, invalid_rows: list[str], error_pattern: str) -> None:
-    """Test that ``parse_output`` aggregates row errors with ``format_parse_errors``."""
+    """Test that ``parse_output`` aggregates row errors with ``format_parse_errors``.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture.
+        invalid_rows: Rfam rows containing parsing errors.
+        error_pattern: Expected aggregated error message pattern.
+
+    """
     input_file = tmp_path / "rfam_errors.tsv"
     input_file.write_text("\n".join(invalid_rows) + "\n", encoding="utf-8")
 
+    config=convert_to_genomio_json.GenomioJsonConfig(
+        input_path=input_file,
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
+    )
     with pytest.raises(ValueError, match=error_pattern):
-        rfam.parse_output(input_file)
+        rfam.parse_output(config)

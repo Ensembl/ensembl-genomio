@@ -338,6 +338,7 @@ def test_parse_row() -> None:
     ],
 )
 def test_parse_output_success(
+    tmp_path: Path,
     convert_to_genomio_json_data_dir: Path,
     filename: str,
     expected_features: list[dict[str, object]],
@@ -345,32 +346,62 @@ def test_parse_output_success(
     """Test successful parsing of RepeatMasker `.out` files.
 
     Args:
+        tmp_path: Pytest temporary directory fixture.
         convert_to_genomio_json_data_dir: Module's test data directory fixture.
         filename: Input RepeatMasker `.out` filename.
         expected_features: Expected parsed repeat feature dictionaries.
 
     """
-    out_path = convert_to_genomio_json_data_dir / filename
-    features, consensuses_by_key = repeatmasker.parse_output(
-        out_path,
-        consensus_lib_path=None,
+    config = convert_to_genomio_json.GenomioJsonConfig(
+        input_path=convert_to_genomio_json_data_dir / filename,
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
     )
+    features, consensuses_by_key = repeatmasker.parse_output(config)
 
     assert features == expected_features
     assert not consensuses_by_key
 
 
 def test_parse_output_adds_consensus_from_library(
+    tmp_path: Path,
     convert_to_genomio_json_data_dir: Path,
 ) -> None:
     """Test RepeatMasker parsing attaches consensus keys when a matching consensus library is provided.
 
     Args:
+        tmp_path: Pytest temporary directory fixture.
         convert_to_genomio_json_data_dir: Module's test data directory fixture.
 
     """
-    out_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
-    consensus_lib_path = convert_to_genomio_json_data_dir / "create_json" / "repeatmodeler_match.fa"
+    consensus_lib_path = convert_to_genomio_json_data_dir / "create_json" / "repeatmodeler_match.fa"   
+    rm_converter_options = repeatmasker.RepeatMaskerOptions(consensus_lib_path=consensus_lib_path)
+    config = convert_to_genomio_json.GenomioJsonConfig(
+        input_path=convert_to_genomio_json_data_dir / "create_json" / "basic.out",
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=rm_converter_options,
+    )
+    
     expected_consensus = convert_to_genomio_json.Consensus(
         name="Foo",
         repeat_class="SINE",
@@ -379,10 +410,7 @@ def test_parse_output_adds_consensus_from_library(
     )
     expected_consensus_key = expected_consensus.sha256_key()
 
-    features, consensuses_by_key = repeatmasker.parse_output(
-        out_path,
-        consensus_lib_path=consensus_lib_path,
-    )
+    features, consensuses_by_key = repeatmasker.parse_output(config)
 
     assert features == [
         {
@@ -466,19 +494,34 @@ def test_parse_output_adds_consensus_from_library(
     ],
 )
 def test_parse_output_errors(
-    convert_to_genomio_json_data_dir: Path, filename: str, error_pattern: str
+    tmp_path: Path, convert_to_genomio_json_data_dir: Path, filename: str, error_pattern: str
 ) -> None:
     """Test that malformed RepeatMasker `.out` rows raise errors.
 
     Args:
+        tmp_path: Pytest temporary directory fixture.
         convert_to_genomio_json_data_dir: Module's test data directory fixture.
         filename: Name of RepeatMasker `.out` file containing invalid data.
         error_pattern: Regex expected in the raised error message.
 
     """
-    out_path = convert_to_genomio_json_data_dir / filename
+    config = convert_to_genomio_json.GenomioJsonConfig(
+        input_path=convert_to_genomio_json_data_dir / filename,
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
+    )
     with pytest.raises(ValueError, match=error_pattern):
-        repeatmasker.parse_output(out_path, None)
+        repeatmasker.parse_output(config)
 
 
 @pytest.mark.parametrize(
@@ -497,6 +540,7 @@ def test_parse_output_errors(
     ],
 )
 def test_parse_output_collates_all_errors(
+    tmp_path: Path,
     convert_to_genomio_json_data_dir: Path,
     filename: str,
     expected_fragments: list[str],
@@ -504,18 +548,33 @@ def test_parse_output_collates_all_errors(
     """Test that malformed RepeatMasker parser rows are collated before raising.
 
     Args:
+        tmp_path: Pytest temporary directory fixture.
         convert_to_genomio_json_data_dir: Test data directory for convert-to-GenomIO JSON fixtures.
         filename: Input filename containing invalid data.
         expected_fragments: Expected substrings in the raised error message.
 
     """
-    input_path = convert_to_genomio_json_data_dir / filename
+    config = convert_to_genomio_json.GenomioJsonConfig(
+        input_path=convert_to_genomio_json_data_dir / filename,
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
+    )
 
     with pytest.raises(
         ValueError,
         match=r"^Found \d+ errors while parsing RepeatMasker output in .*:",
     ) as excinfo:
-        repeatmasker.parse_output(input_path, None)
+        repeatmasker.parse_output(config)
 
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:
@@ -533,10 +592,16 @@ def test_converter_builds_repeatmasker_options_from_args() -> None:
 
 
 def test_parse_args_repeatmasker_custom_metadata(
-    convert_to_genomio_json_data_dir: Path,
     tmp_path: Path,
+    convert_to_genomio_json_data_dir: Path,
 ) -> None:
-    """Test custom-library RepeatMasker parser metadata and tool-specific omissions."""
+    """Test custom-library RepeatMasker parser metadata and tool-specific omissions.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture.
+        convert_to_genomio_json_data_dir: RepeatMasker test data directory.
+
+    """
     args = parse_args(
         [
             "repeatmasker",
@@ -561,10 +626,16 @@ def test_parse_args_repeatmasker_custom_metadata(
 
 
 def test_parse_args_repeatmasker_repbase_metadata_and_consensus_lib(
-    convert_to_genomio_json_data_dir: Path,
     tmp_path: Path,
+    convert_to_genomio_json_data_dir: Path,
 ) -> None:
-    """Test Repbase RepeatMasker parser metadata and consensus-library option."""
+    """Test Repbase RepeatMasker parser metadata and consensus-library option.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture.
+        convert_to_genomio_json_data_dir: RepeatMasker test data directory.
+
+    """
     consensus_lib = convert_to_genomio_json_data_dir / "create_json" / "repeatmodeler_match.fa"
     args = parse_args(
         [
@@ -598,7 +669,14 @@ def test_main_passes_repeatmasker_consensus_lib_option(
     convert_to_genomio_json_data_dir: Path,
     tmp_path: Path,
 ) -> None:
-    """Test ``main()`` delegates RepeatMasker consensus-library options to the converter config."""
+    """Test ``main()`` delegates RepeatMasker consensus-library options to the converter config.
+
+    Args:
+        mock_create_genomio_json: Mocked JSON document creation function.
+        convert_to_genomio_json_data_dir: RepeatMasker test data directory.
+        tmp_path: Pytest temporary directory fixture.
+
+    """
     input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
     consensus_lib = convert_to_genomio_json_data_dir / "create_json" / "repeatmodeler_match.fa"
@@ -622,6 +700,7 @@ def test_main_passes_repeatmasker_consensus_lib_option(
         config=convert_to_genomio_json.GenomioJsonConfig(
             input_path=input_path,
             output_path=output_path,
+            invalid_tool_output_path=output_path.with_suffix(".invalid_tool_output.txt"),
             analysis_logic_name="repeatmask_repbase",
             analysis_display_label="Repeats: Repbase",
             analysis_description=(
@@ -633,6 +712,8 @@ def test_main_passes_repeatmasker_consensus_lib_option(
             program_version="4.1.7",
             source_provider="Ensembl",
             is_primary=False,
+            is_strict_mode=False,
+            program_parameters=None,
             converter_options=repeatmasker.RepeatMaskerOptions(consensus_lib_path=consensus_lib),
         )
     )
@@ -641,19 +722,39 @@ def test_main_passes_repeatmasker_consensus_lib_option(
 @patch("ensembl.io.genomio.features.convert_to_genomio_json.repeatmasker.parse_output")
 def test_repeatmasker_converter_parse_features_delegates_to_parser(
     mock_parse_output: Mock,
+    tmp_path: Path,
 ) -> None:
-    """Test RepeatMasker converters delegate to the RepeatMasker parser."""
-    input_path = Path("input.out")
-    consensus_lib_path = Path("consensus.fa")
-    options = repeatmasker.RepeatMaskerOptions(consensus_lib_path=consensus_lib_path)
+    """Test RepeatMasker converters delegate to the RepeatMasker parser.
+
+    Args:
+        mock_parse_output: Mocked RepeatMasker parser function.
+        tmp_path: Pytest temporary directory fixture.
+
+    """
+    options = repeatmasker.RepeatMaskerOptions(consensus_lib_path=Path("consensus.fa"))
+    config = convert_to_genomio_json.GenomioJsonConfig(
+        input_path=Path("input.out"),
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=options,
+    )
     expected: base.ParseFeaturesResult = ([{"seq_region": "chr1"}], {})
     mock_parse_output.return_value = expected
 
-    assert convert_to_genomio_json.RepeatMaskerCustomConverter.parse_features(input_path, options) == expected
+    assert convert_to_genomio_json.RepeatMaskerCustomConverter.parse_features(config) == expected
     assert (
-        convert_to_genomio_json.RepeatMaskerRepbaseConverter.parse_features(input_path, options) == expected
+        convert_to_genomio_json.RepeatMaskerRepbaseConverter.parse_features(config) == expected
     )
     assert mock_parse_output.call_args_list == [
-        call(input_path, consensus_lib_path),
-        call(input_path, consensus_lib_path),
+        call(config),
+        call(config),
     ]

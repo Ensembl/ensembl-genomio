@@ -26,10 +26,10 @@ import re
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
-    ConverterOptions,
     FeatureConverter,
+    GenomioJsonConfig,
     ParseFeaturesResult,
-    format_parse_errors,
+    handle_parsing_errors,
     parse_token,
     register_converter,
     register_top_level_converter,
@@ -73,11 +73,10 @@ class TRFConverter(FeatureConverter):
     @classmethod
     def parse_features(
         cls,
-        input_path: Path,
-        _options: ConverterOptions | None = None,
+        config: GenomioJsonConfig,
     ) -> ParseFeaturesResult:
         """Parse TRF output."""
-        return parse_output(input_path)
+        return parse_output(config)
 
 
 @dataclass(frozen=True)
@@ -250,7 +249,7 @@ def parse_data_row(
 
 
 # Ignore too many branches and too many statements ruff rules
-def parse_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912, PLR0915
+def parse_output(config: GenomioJsonConfig) -> ParseFeaturesResult:  # noqa: PLR0912, PLR0915
     """Parse a TRF .dat file into repeat feature dictionaries and consensus records.
 
     Coordinates are converted from TRF's sequence-relative coordinates to genomic
@@ -279,7 +278,7 @@ def parse_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912, PLR
     skipped_data_block_first_line: int | None = None
     skipped_data_block_entries = 0
 
-    with open_gz_file(input_path) as fh:
+    with open_gz_file(config.input_path) as fh:
         for line_number, raw_line in enumerate(fh, start=1):
             line = raw_line.strip()
             if not line:
@@ -290,7 +289,7 @@ def parse_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912, PLR
                 if skip_data_block_without_sequence:
                     errors.append(
                         missing_sequence_error(
-                            input_path,
+                            config.input_path,
                             skipped_data_block_entries,
                             skipped_data_block_first_line,
                         )
@@ -336,7 +335,7 @@ def parse_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912, PLR
 
             try:
                 parsed_row = parse_data_row(
-                    input_path,
+                    config.input_path,
                     line,
                     seq_region=seq_region,
                     window_start=window_start,
@@ -352,13 +351,12 @@ def parse_output(input_path: Path) -> ParseFeaturesResult:  # noqa: PLR0912, PLR
     if skip_data_block_without_sequence:
         errors.append(
             missing_sequence_error(
-                input_path,
+                config.input_path,
                 skipped_data_block_entries,
                 skipped_data_block_first_line,
             )
         )
 
-    if errors:
-        raise ValueError(format_parse_errors("TRF output", input_path, errors))
+    handle_parsing_errors("TRF output", config, errors)
 
     return features, consensuses_by_key

@@ -226,6 +226,7 @@ def test_parse_data_row(
     ],
 )
 def test_parse_output_success(
+    tmp_path: Path,
     convert_to_genomio_json_data_dir: Path,
     filename: str,
     expected_features: list[dict[str, object]],
@@ -234,15 +235,30 @@ def test_parse_output_success(
     """Test successful parsing of TRF `.dat` examples.
 
     Args:
+        tmp_path: Pytest temporary directory fixture.
         convert_to_genomio_json_data_dir: Module's test data directory fixture.
         filename: Input TRF `.dat` filename.
         expected_features: Expected parsed repeat feature dictionaries.
         expected_consensuses: Expected parsed consensus records.
 
     """
-    trf_path = convert_to_genomio_json_data_dir / filename
+    config=convert_to_genomio_json.GenomioJsonConfig(
+        input_path=convert_to_genomio_json_data_dir / filename,
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
+    )
 
-    features, consensuses_by_key = trf.parse_output(trf_path)
+    features, consensuses_by_key = trf.parse_output(config)
 
     assert features == expected_features
     assert consensuses_by_key == expected_consensuses
@@ -286,6 +302,7 @@ def test_parse_output_success(
     ],
 )
 def test_parse_output_collates_all_errors(
+    tmp_path: Path,
     convert_to_genomio_json_data_dir: Path,
     filename: str,
     expected_fragments: list[str],
@@ -293,18 +310,33 @@ def test_parse_output_collates_all_errors(
     """Test that malformed TRF parser rows are collated before raising.
 
     Args:
+        tmp_path: Pytest temporary directory fixture.
         convert_to_genomio_json_data_dir: Test data directory for convert-to-GenomIO JSON fixtures.
         filename: Input filename containing invalid data.
         expected_fragments: Expected substrings in the raised error message.
 
     """
-    input_path = convert_to_genomio_json_data_dir / filename
+    config=convert_to_genomio_json.GenomioJsonConfig(
+        input_path=convert_to_genomio_json_data_dir / filename,
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
+    )
 
     with pytest.raises(
         ValueError,
         match=r"^Found \d+ errors while parsing TRF output in .*:",
     ) as excinfo:
-        trf.parse_output(input_path)
+        trf.parse_output(config)
 
     error_message = str(excinfo.value)
     for expected_fragment in expected_fragments:
@@ -315,15 +347,33 @@ def test_parse_output_collates_all_errors(
 
 
 def test_trf_converter_parse_features_uses_tool_specific_parser(
+    tmp_path: Path,
     convert_to_genomio_json_data_dir: Path,
 ) -> None:
-    """Test TRF converter class calls the matching tool parser."""
-    input_path = convert_to_genomio_json_data_dir / "trf" / "success_plain_no_params.dat"
+    """Test TRF converter class calls the matching tool parser.
 
-    features, consensuses_by_key = convert_to_genomio_json.TRFConverter.parse_features(
-        input_path,
-        convert_to_genomio_json.ConverterOptions(),
+    Args:
+        tmp_path: Pytest temporary directory fixture.
+        convert_to_genomio_json_data_dir: TRF test data directory.
+
+    """
+    config=convert_to_genomio_json.GenomioJsonConfig(
+        input_path=convert_to_genomio_json_data_dir / "trf" / "success_plain_no_params.dat",
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
     )
+
+    features, consensuses_by_key = convert_to_genomio_json.TRFConverter.parse_features(config)
 
     assert features
     assert consensuses_by_key

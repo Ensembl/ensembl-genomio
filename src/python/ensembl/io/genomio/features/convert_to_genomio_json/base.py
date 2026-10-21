@@ -35,10 +35,12 @@ from abc import ABC, abstractmethod
 import argparse
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from email import errors
 import hashlib
 from inspect import isabstract
 import json
 import logging
+from logging import config
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 
@@ -94,6 +96,7 @@ class GenomioJsonConfig:
 
     input_path: Path
     output_path: Path
+    invalid_tool_output_path: Path
     analysis_logic_name: str
     analysis_display_label: str
     analysis_description: str
@@ -101,6 +104,7 @@ class GenomioJsonConfig:
     program_version: str
     source_provider: str
     is_primary: bool
+    is_strict_mode: bool = False
     program_parameters: str | None = None
     converter_options: ConverterOptions = field(default_factory=ConverterOptions)
 
@@ -139,6 +143,11 @@ class FeatureConverter(ABC):
             help="Input file to be converted.",
         )
         subparser.add_argument_dst_path("--output", metavar="JSON", required=True, help="Output JSON path.")
+        subparser.add_argument_dst_path(
+            "--invalid-tool-output",
+            default=argparse.SUPPRESS,
+            help="Path to write invalid tool output lines for debugging.",
+        )
         subparser.add_argument(
             "--program-version",
             required=True,
@@ -159,6 +168,11 @@ class FeatureConverter(ABC):
             action="store_true",
             help="Whether the source provider is the primary source for these features.",
         )
+        subparser.add_argument(
+            "--strict",
+            action="store_true",
+            help="Whether to use strict mode for feature parsing.",
+        )
         subparser.add_log_arguments()
 
     @classmethod
@@ -170,7 +184,7 @@ class FeatureConverter(ABC):
     @abstractmethod
     def parse_features(
         cls,
-        input_path: Path,
+        config: GenomioJsonConfig,
         options: ConverterOptions | None = None,
     ) -> ParseFeaturesResult:
         """Parse features and consensus records from a tool output file."""
@@ -206,6 +220,29 @@ def format_parse_errors(parser_name: str, input_path: Path, errors: list[str]) -
         f"- {error}" for error in errors
     )
 
+def handle_parsing_errors(
+        parser_name: str,
+        config: GenomioJsonConfig,
+        errors: list[str],
+    ) -> None:
+    """Write parsing errors to the invalid tool output file and raise an error if the threshold is exceeded.
+    
+    Args:
+        parser_name: Name of the parser for error messages.
+        config: Configuration for creating a GenomIO feature JSON document.
+        errors: List of error messages encountered during parsing.
+        parsed_feature_count: Number of successfully parsed features.
+
+    """
+    if not errors:
+        return    
+
+    config.invalid_tool_output_path.parent.mkdir(parents=True, exist_ok=True)
+    config.invalid_tool_output_path.write_text("\n".join(errors) + "\n", encoding="utf-8")
+
+    if config.is_strict_mode:
+        raise ValueError(format_parse_errors(parser_name, config.input_path, errors))
+
 
 def file_last_modified_time(file_path: Path) -> str:
     """Return the last modified time of the given file."""
@@ -217,6 +254,13 @@ def file_last_modified_time(file_path: Path) -> str:
         .isoformat()
         .replace("+00:00", "Z")
     )
+
+
+def get_invalid_tool_output(args: argparse.Namespace) -> Path:
+    invalid_tool_output = getattr(args, "invalid_tool_output", None)
+    if invalid_tool_output is None:
+        invalid_tool_output = args.output.with_suffix(".invalid_tool_output.txt")
+    return invalid_tool_output
 
 
 def validate_parsed_coordinates(
@@ -413,7 +457,7 @@ def create_genomio_json(config: GenomioJsonConfig) -> None:
         converter = converters_by_logic_name[config.analysis_logic_name]
     except KeyError:
         raise ValueError(f"Unsupported analysis logic name: {config.analysis_logic_name}") from None
-    features, consensuses_by_key = converter.parse_features(config.input_path, config.converter_options)
+    features, consensuses_by_key = converter.parse_features(config)
 
     analysis: dict[str, str] = {
         "run_date": file_last_modified_time(config.input_path),
@@ -474,6 +518,7 @@ def main(argv: list[str] | None = None) -> None:
             config=GenomioJsonConfig(
                 input_path=args.input,
                 output_path=args.output,
+                invalid_tool_output_path=get_invalid_tool_output(args),
                 analysis_logic_name=args.analysis_logic_name,
                 analysis_display_label=args.analysis_display_label,
                 analysis_description=args.analysis_description,
@@ -481,6 +526,7 @@ def main(argv: list[str] | None = None) -> None:
                 program_version=args.program_version,
                 source_provider=args.source_provider,
                 is_primary=args.is_primary,
+                is_strict_mode=args.strict,
                 program_parameters=getattr(args, "program_parameters", None),
                 converter_options=converter.options_from_args(args),
             )

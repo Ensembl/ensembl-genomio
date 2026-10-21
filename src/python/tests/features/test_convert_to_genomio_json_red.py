@@ -75,7 +75,23 @@ def test_parse_output_success(tmp_path: Path) -> None:
     expected_consensus = red.RED_RPT_CONSENSUS
     expected_consensus_key = expected_consensus.sha256_key()
 
-    features, consensuses_by_key = red.parse_output(rpt_path)
+    config=convert_to_genomio_json.GenomioJsonConfig(
+        input_path=rpt_path,
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
+    )
+
+    features, consensuses_by_key = red.parse_output(config)
 
     assert features == [
         {
@@ -109,6 +125,22 @@ def test_parse_output_collates_all_errors(tmp_path: Path) -> None:
     """
     rpt_path = tmp_path / "errors.rpt"
     rpt_path.write_text("chr1 start 20\nchr2 30 20\nchr3 40\n", encoding="utf-8")
+    config=convert_to_genomio_json.GenomioJsonConfig(
+        input_path=rpt_path,
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
+    )
+    
     with pytest.raises(
         ValueError,
         match=(
@@ -118,19 +150,39 @@ def test_parse_output_collates_all_errors(tmp_path: Path) -> None:
             r"- Expected 3 columns.*\Z"
         ),
     ):
-        red.parse_output(rpt_path)
+        red.parse_output(config)
 
 
 def test_red_converter_parse_features_uses_tool_specific_parser(
+    tmp_path: Path,
     convert_to_genomio_json_data_dir: Path,
 ) -> None:
-    """Test Red converter class calls the matching tool parser."""
+    """Test Red converter class calls the matching tool parser.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture.
+        convert_to_genomio_json_data_dir: Path to test data directory.
+    
+    """
     input_path = convert_to_genomio_json_data_dir / "red" / "success.rpt"
 
-    features, consensuses_by_key = convert_to_genomio_json.RedConverter.parse_features(
-        input_path,
-        convert_to_genomio_json.ConverterOptions(),
+    config=convert_to_genomio_json.GenomioJsonConfig(
+        input_path=input_path,
+        output_path=tmp_path / "out.json",
+        invalid_tool_output_path=tmp_path / "invalid.out",
+        analysis_logic_name="red",
+        analysis_display_label="RED",
+        analysis_description="Red repeat finder",
+        program="red",
+        program_version="1.0",
+        source_provider="Ensembl",
+        is_primary=False,
+        is_strict_mode=True,
+        program_parameters=None,
+        converter_options=convert_to_genomio_json.ConverterOptions(),
     )
+
+    features, consensuses_by_key = convert_to_genomio_json.RedConverter.parse_features(config)
 
     assert features
     assert consensuses_by_key

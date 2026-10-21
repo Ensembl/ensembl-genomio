@@ -21,10 +21,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
-    ConverterOptions,
     FeatureConverter,
+    GenomioJsonConfig,
     ParseFeaturesResult,
-    format_parse_errors,
+    handle_parsing_errors,
     parse_token,
     register_converter,
     register_top_level_converter,
@@ -68,10 +68,10 @@ class RfamConverter(FeatureConverter):
 
     @classmethod
     def parse_features(
-        cls, input_path: Path, _options: ConverterOptions | None = None
+        cls, config: GenomioJsonConfig
     ) -> ParseFeaturesResult:
         """Parse the Rfam hits TSV."""
-        return parse_output(input_path)
+        return parse_output(config)
 
 
 @dataclass(frozen=True)
@@ -137,23 +137,23 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
     return RfamParsedRow(feature)
 
 
-def parse_output(input_path: Path) -> ParseFeaturesResult:
+def parse_output(config: GenomioJsonConfig) -> ParseFeaturesResult:
     """Parse all Rfam hits TSV rows, collating malformed-row errors."""
     features: list[dict[str, object]] = []
     errors: list[str] = []
-    with open_gz_file(input_path) as fh:
+    with open_gz_file(config.input_path) as fh:
         for raw_line in fh:
             line = raw_line.strip()
             if line.lower().startswith("seqname"):
                 continue
             try:
-                parsed_row = parse_row(input_path, line)
+                parsed_row = parse_row(config.input_path, line)
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
 
             features.append(parsed_row.feature)
 
-    if errors:
-        raise ValueError(format_parse_errors("Rfam hits TSV", input_path, errors))
+    handle_parsing_errors("Rfam hits TSV", config, errors)
+    
     return features, {}
