@@ -75,7 +75,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         *,
         write_agp: bool,
         unique_file_names: bool,
-        remove_header_description: bool,
+        remove_header_descriptions: bool,
         max_files_per_directory: int | None = None,
         max_dirs_per_directory: int | None = None,
     ) -> None:
@@ -84,7 +84,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
         self.write_agp = write_agp
         self.agp_file: Path | None = out_dir / f"{self.basename}.agp" if self.write_agp else None
         self.unique_file_names = unique_file_names
-        self.remove_header_description = remove_header_description
+        self.remove_header_descriptions = remove_header_descriptions
         self.max_files_per_directory = max_files_per_directory
         self.max_dirs_per_directory = max_dirs_per_directory
         self.file_count = 0
@@ -214,7 +214,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
             RuntimeError: If the AGP file handle is not initialized when attempting to write an AGP line.
 
         """
-        if self.remove_header_description:
+        if self.remove_header_descriptions:
             record.description = record.id
         SeqIO.write(record, self._fh, "fasta")
         sequence = cast("Seq", record.seq)
@@ -354,7 +354,7 @@ def split_fasta(  # noqa: PLR0913 # pylint: disable=too-many-arguments
     delete_existing_files: bool = False,
     unique_file_names: bool = False,
     force_max_seq_length: bool = False,
-    remove_header_description: bool = False,
+    remove_header_descriptions: bool = False,
     max_seqs_per_file: int | None = None,
     max_seq_length_per_file: int | None = None,
     min_chunk_length: int | None = None,
@@ -387,7 +387,7 @@ def split_fasta(  # noqa: PLR0913 # pylint: disable=too-many-arguments
             unique across nested output directories.
         force_max_seq_length: If True, sequences longer than ``max_seq_length_per_file`` are split
             into chunks.
-        remove_header_description: If True, remove the description from the header of each sequence
+        remove_header_descriptions: If True, remove the description from the header of each sequence
             in the output files.
         max_seqs_per_file: Maximum number of sequences (records) per output FASTA file. If None, no
             record-count limit is applied.
@@ -419,7 +419,7 @@ def split_fasta(  # noqa: PLR0913 # pylint: disable=too-many-arguments
         out_dir=out_dir,
         write_agp=write_agp,
         unique_file_names=unique_file_names,
-        remove_header_description=remove_header_description,
+        remove_header_descriptions=remove_header_descriptions,
         max_files_per_directory=max_files_per_directory,
         max_dirs_per_directory=max_dirs_per_directory,
     )
@@ -558,7 +558,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--remove-header-description",
+        "--remove-header-descriptions",
         action="store_true",
         help="Remove the description from the header of each sequence in the output files.",
     )
@@ -585,7 +585,7 @@ def main(argv: list[str] | None = None) -> None:
             delete_existing_files=args.delete_existing_files,
             unique_file_names=args.unique_file_names,
             force_max_seq_length=args.force_max_seq_length,
-            remove_header_description=args.remove_header_description,
+            remove_header_descriptions=args.remove_header_descriptions,
             max_seqs_per_file=getattr(args, "max_seqs_per_file", None),
             max_seq_length_per_file=getattr(args, "max_seq_length_per_file", None),
             min_chunk_length=getattr(args, "min_chunk_length", None),
