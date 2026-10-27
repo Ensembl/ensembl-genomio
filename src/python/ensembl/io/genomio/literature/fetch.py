@@ -299,9 +299,9 @@ def _paper_is_accession_linked(paper: dict, accession: str) -> bool:
     ).lower()
     # Record any other assembly accession the paper cites (e.g. the GCF twin, or a
     # different version) so a curator can see we matched on a related-but-different id.
-    others = {m for m in re.findall(r"gc[af]_\d+(?:\.\d+)?", text) if m.split(".")[0] != acc_base}
-    if others:
-        paper["other_accessions_in_text"] = sorted(others)
+    other_accessions = {other_acc for other_acc in re.findall(r"gc[af]_\d+(?:\.\d+)?", text) if other_acc.split(".")[0] != acc_base}
+    if other_accessions:
+        paper["other_accessions_in_text"] = sorted(other_accessions)
     return acc_base in text
 
 
