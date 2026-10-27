@@ -21,4 +21,15 @@ number, cultivar/strain and sex via a rule + vector + optional-LLM ensemble.
 
 __all__ = ["run_batch", "run_pipeline"]
 
-from ensembl.io.genomio.literature.pipeline import run_batch, run_pipeline
+
+def __getattr__(name: str):
+    # Import from pipeline lazily (PEP 562) so that `import
+    # ensembl.io.genomio.literature` does not eagerly pull in the vector-search
+    # stack (rank-bm25 / sentence-transformers, which are optional `literature`
+    # extras) and does not create an __init__ <-> pipeline import cycle. The
+    # convenience `from ensembl.io.genomio.literature import run_pipeline` still works.
+    if name in __all__:
+        from ensembl.io.genomio.literature import pipeline
+
+        return getattr(pipeline, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

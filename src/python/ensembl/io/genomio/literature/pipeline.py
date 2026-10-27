@@ -17,11 +17,11 @@
 import argparse
 import json
 import logging
+import os
 
-from ensembl.io.genomio.literature import gemma
 from ensembl.io.genomio.literature.extract import extract_metadata
 from ensembl.io.genomio.literature.fetch import fetch_papers_for_assembly
-from ensembl.io.genomio.literature.gemma import combine_with_gemma
+from ensembl.io.genomio.literature.gemma import combine_with_gemma, is_enabled, run_gemma_ploidy
 from ensembl.io.genomio.literature.parse import parse_paper
 from ensembl.io.genomio.literature.search import run_vector_search
 
@@ -30,6 +30,12 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # Paper quality filter
 # ============================================================
+
+# Confidence attached to a GoaT species-level reference ploidy used as a fallback.
+# Deliberately moderate: GoaT is a curated species-level reference, not evidence read
+# from THIS assembly's paper, so it should rank below any paper-derived value while
+# staying above a pure guess.
+GOAT_REFERENCE_CONFIDENCE = 0.6
 
 EXCLUDE_KEYWORDS = [
     "chloroplast",
@@ -112,6 +118,26 @@ def _ploidy_recovered(result: dict) -> bool:
     return (result.get("ploidy") or {}).get("level") is not None
 
 
+def _is_correct_paper_for_accession(paper: dict, assembly: dict) -> bool:
+    """Accession-level check before letting Gemma read a paper: only trust a paper
+    that is genuinely tied to THIS assembly — linked by accession (directly linked
+    PMID / Entrez elink) or by its BioProject, or with corroborating assembly
+    metadata (the accession itself, or failing that the scientific name) actually
+    present in the paper text. This stops Gemma from confidently reading ploidy out
+    of an off-target paper."""
+    if paper.get("retrieval_source") in ("linked_pmid", "elink", "bioproject") or paper.get(
+        "is_reference_paper"
+    ):
+        return True
+    paper_text = (paper.get("text_data", {}).get("text") or "").lower()
+    # Prefer the strongest signal: the assembly accession printed in the paper.
+    accession = (assembly.get("assembly_accession") or "").split(".")[0].lower()
+    if accession and accession in paper_text:
+        return True
+    scientific_name = (assembly.get("scientific_name") or "").lower()
+    return bool(scientific_name) and scientific_name in paper_text
+
+
 # ============================================================
 # MAIN FUNCTION — run full pipeline for one assembly accession
 #           input:  assembly accession string
@@ -132,7 +158,19 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     fetched = fetch_papers_for_assembly(accession, max_results=max_papers)
     assembly = fetched["assembly"]
     papers = fetched["papers"]
+    candidate_papers = fetched.get("candidate_papers", [])
     reference_paper = fetched.get("reference_paper")
+
+    # If the strict gate accepted no accession/BioProject-linked paper, fall back to
+    # the best candidate paper (found by name / full text) and treat its metadata as a
+    # SUGGESTION rather than a confirmed result. This keeps a literature-grounded answer
+    # (Gemma reads the whole paper; rule + vector still run) instead of dropping straight
+    # to GoaT. Confirmed only when a paper was strictly linked to the accession.
+    suggested = False
+    if not papers and candidate_papers:
+        logger.info("  No accession-linked paper; using the best candidate as a suggestion.")
+        papers = candidate_papers
+        suggested = True
 
     # Guard: NCBI returned no usable assembly metadata (stale / suppressed
     # accession). Without a scientific name we cannot search by name or trust
@@ -145,12 +183,34 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
         )
         return {
             "assembly_accession": assembly.get("assembly_accession"),
+            "status": "error",
             "error": "no assembly metadata",
         }
 
     if not papers:
-        logger.info("  No relevant paper found. Returning assembly metadata only.")
-        return {
+        # Strict retrieval found no accession/BioProject-linked paper. Fall back to
+        # GoaT's species-level reference ploidy when available, so we still return a
+        # result (mentor: prioritise precision in literature retrieval, but use GoaT
+        # where present); otherwise report nothing found.
+        goat_level = assembly.get("reference_ploidy")
+        if goat_level is not None:
+            logger.info(f"  No qualifying paper — using GoaT reference ploidy ({goat_level}).")
+            ploidy = {
+                "level": goat_level,
+                "mechanism": None,
+                "status": "from_reference",
+                "source": "GoaT",
+                "method": "reference_taxon",
+                "confidence": GOAT_REFERENCE_CONFIDENCE,
+                "reference_check": {"goat_ploidy": goat_level, "agreement": "no_qualifying_paper"},
+            }
+            status, error = "success", None
+        else:
+            logger.info("  No qualifying paper and no GoaT reference — nothing to report.")
+            ploidy = {"level": None, "status": "no_relevant_paper", "source": None}
+            status, error = "error", "no relevant paper"
+
+        result = {
             "assembly_accession": assembly.get("assembly_accession"),
             "assembly_name": assembly.get("assembly_name"),
             "taxon_id": assembly.get("taxon_id"),
@@ -159,12 +219,16 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
                 "value": assembly.get("chromosome_number"),
                 "source": assembly.get("chromosome_source"),
             },
-            "ploidy": {"level": None, "status": "no_relevant_paper", "source": None},
+            "ploidy": ploidy,
             "cultivars": {"confirmed": [], "unconfirmed": []},
             "sex": {"value": "unknown"},
-            "paper": {"note": "Not found relevant paper"},
+            "paper": {"note": "No accession/BioProject-linked paper found"},
             "papers_found": 0,
+            "status": status,
         }
+        if error:
+            result["error"] = error
+        return result
 
     # Select best paper — prefer nuclear genome + fulltext
     logger.info(f"\n  Selecting best paper from {len(papers)} candidate(s) ...")
@@ -174,6 +238,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
         logger.info("  No usable paper found.")
         return {
             "assembly_accession": assembly.get("assembly_accession"),
+            "status": "error",
             "error": "no usable paper",
             "paper": {"note": "Not found relevant paper"},
         }
@@ -195,6 +260,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
             "assembly_accession": assembly.get("assembly_accession"),
             "assembly_name": assembly.get("assembly_name"),
             "taxon_id": assembly.get("taxon_id"),
+            "status": "error",
             "error": "no sections extracted",
         }
 
@@ -213,9 +279,14 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     #     retrieved vector chunks, so it forms an independent opinion even when the
     #     decisive ploidy sentence didn't make the vector-search cut. combine_with_gemma
     #     folds its result in as a third vote. No-op unless GEMMA_ENABLED=1.
-    if gemma.is_enabled():
+    if is_enabled() and not _is_correct_paper_for_accession(best_paper, assembly):
+        logger.info(
+            "  [gemma] skipped: the selected paper is not confidently tied to this "
+            "accession (no accession/BioProject link and scientific name absent from text)"
+        )
+    elif is_enabled():
         gemma_passages = [{"text": text, "section": section} for section, text in parsed["sections"].items()]
-        gemma_result = gemma.run_gemma_ploidy(
+        gemma_result = run_gemma_ploidy(
             final["species"]["value"],
             gemma_passages,
             accession=accession,
@@ -253,6 +324,21 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     final["papers_found"] = len(papers)
     final["reference_paper"] = reference_paper  # BioProject canonical paper (attached even if no ploidy)
 
+    # When no paper was strictly linked to the accession, the answer came from the
+    # best candidate paper — mark it as a suggestion (not a confirmed result) and
+    # temper the confidence, so curators can tell literature-confirmed from inferred.
+    if suggested and final["ploidy"].get("level") is not None:
+        final["ploidy"]["status"] = "suggested"
+        final["ploidy"]["source"] = "suggested_" + str(final["ploidy"].get("source") or "literature")
+        final["ploidy"]["confidence"] = round(final["ploidy"].get("confidence", 0.5) * 0.7, 2)
+
+    # A result is only "success" if a ploidy level was actually recovered; a paper
+    # that parsed fine but states no ploidy is flagged as an error, so single-accession
+    # (Nextflow) runs surface "nothing useful found" cleanly rather than as success.
+    final["status"] = "success" if _ploidy_recovered(final) else "error"
+    if final["status"] == "error":
+        final.setdefault("error", "no ploidy recovered")
+
     return final
 
 
@@ -273,12 +359,9 @@ def run_batch(accessions: list[str], max_papers: int = 5) -> list[dict]:
         logger.info(f"\n{'=' * 60}")
         logger.info(f"Batch progress: {i}/{total}")
         try:
+            # run_pipeline already stamps result["status"] based on whether a
+            # ploidy level was recovered; batch mode just handles hard failures.
             result = run_pipeline(accession, max_papers=max_papers)
-            if _ploidy_recovered(result):
-                result["status"] = "success"
-            else:
-                result["status"] = "error"
-                result.setdefault("error", "no ploidy recovered")
         except Exception as e:
             logger.info(f"  ERROR for {accession}: {e}")
             result = {
@@ -329,7 +412,17 @@ def main(argv: list[str] | None = None) -> None:
         "--output",
         help="Path to save results as JSON; printed to stdout if omitted",
     )
+    parser.add_argument(
+        "--gemma",
+        action="store_true",
+        help="Enable the optional local Gemma LLM layer (overrides auto-detection)",
+    )
     args = parser.parse_args(argv)
+
+    # A convenience switch for the same GEMMA_ENABLED env var is_enabled() already reads,
+    # so no plumbing through run_pipeline/run_batch is needed.
+    if args.gemma:
+        os.environ["GEMMA_ENABLED"] = "1"
 
     if args.accession:
         result = run_pipeline(args.accession, max_papers=args.max_papers)

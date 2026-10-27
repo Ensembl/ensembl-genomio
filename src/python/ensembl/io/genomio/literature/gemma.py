@@ -89,11 +89,14 @@ _DEFAULT_MODEL = str(_MODELS_DIR / "google_gemma-3-4b-it-Q4_K_M.gguf")
 BASE_URL = os.environ.get("GEMMA_BASE_URL", "http://localhost:8000/v1")
 MODEL = os.environ.get("GEMMA_MODEL", _DEFAULT_MODEL)
 TIMEOUT = int(os.environ.get("GEMMA_TIMEOUT", "300"))
-# Cap on passage text sent to the model. Raised so Gemma can read a full trusted
-# paper (not just the retrieved vector chunks); lower it for speed on the GGUF backend.
-MAX_CHARS = int(os.environ.get("GEMMA_MAX_CHARS", "30000"))
-# GGUF context window. Gemma-3-4B supports up to 128k; the default is large enough
-# to hold a full paper plus the system prompt and few-shot examples.
+# Cap on passage text sent to the model. Set high enough to hold a WHOLE trusted
+# paper (not just the retrieved vector chunks) — a typical full text is well under
+# this, so in practice nothing is truncated; ~100k chars fits inside the default
+# context below (a paper is read one accession at a time, so latency is acceptable).
+# Lower it for speed on the GGUF backend if needed.
+MAX_CHARS = int(os.environ.get("GEMMA_MAX_CHARS", "100000"))
+# GGUF context window. Gemma-3-4B supports up to 128k; the default holds a full
+# paper plus the system prompt and few-shot examples.
 N_CTX = int(os.environ.get("GEMMA_N_CTX", "32768"))
 N_THREADS = int(os.environ.get("GEMMA_N_THREADS", "32"))  # one NUMA node
 
