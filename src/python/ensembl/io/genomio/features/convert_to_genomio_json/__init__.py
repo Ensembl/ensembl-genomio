@@ -19,3 +19,4 @@ from .rfam import *
 from .red import *
 from .repeatmasker import *
 from .trf import *
+from .trnascan import *
