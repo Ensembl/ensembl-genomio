@@ -89,11 +89,14 @@ _DEFAULT_MODEL = str(_MODELS_DIR / "google_gemma-3-4b-it-Q4_K_M.gguf")
 BASE_URL = os.environ.get("GEMMA_BASE_URL", "http://localhost:8000/v1")
 MODEL = os.environ.get("GEMMA_MODEL", _DEFAULT_MODEL)
 TIMEOUT = int(os.environ.get("GEMMA_TIMEOUT", "300"))
-# Cap on passage text sent to the model. Raised so Gemma can read a full trusted
-# paper (not just the retrieved vector chunks); lower it for speed on the GGUF backend.
-MAX_CHARS = int(os.environ.get("GEMMA_MAX_CHARS", "30000"))
-# GGUF context window. Gemma-3-4B supports up to 128k; the default is large enough
-# to hold a full paper plus the system prompt and few-shot examples.
+# Cap on passage text sent to the model. Set high enough to hold a WHOLE trusted
+# paper (not just the retrieved vector chunks) — a typical full text is well under
+# this, so in practice nothing is truncated; ~100k chars fits inside the default
+# context below (a paper is read one accession at a time, so latency is acceptable).
+# Lower it for speed on the GGUF backend if needed.
+MAX_CHARS = int(os.environ.get("GEMMA_MAX_CHARS", "100000"))
+# GGUF context window. Gemma-3-4B supports up to 128k; the default holds a full
+# paper plus the system prompt and few-shot examples.
 N_CTX = int(os.environ.get("GEMMA_N_CTX", "32768"))
 N_THREADS = int(os.environ.get("GEMMA_N_THREADS", "32"))  # one NUMA node
 
@@ -713,8 +716,8 @@ def run_gemma_ploidy(
 
 def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
     """Fold a validated Gemma result into the rule+vector ensemble ploidy as a
-    third vote. Inferred (`suggested`) results are attached as a non-destructive
-    `gemma_suggestion`; explicit results can raise confidence on agreement, fill a
+    third vote. Inferred (`suggested`) ploidy is discarded, since an unstated level is
+    not evidence; explicit results can raise confidence on agreement, fill a
     missing level, or flag a conflict. Also backfills sex and cultivar when absent."""
     if not gemma:
         return ensemble
@@ -734,24 +737,9 @@ def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
 
     if suggested:
         # ── Gemma inferred (not explicitly stated) ──────────────────────────
-        # Never overwrite the ensemble result; attach as a suggestion only.
-        out["gemma_suggestion"] = gemma_note
-        if ensemble_level is None and gemma_level is not None:
-            # Nothing from rule/vector — show Gemma's inference as a low-confidence hint
-            out["gemma_suggestion"]["note"] = (
-                "No result from rule-based or vector search. "
-                "Gemma inferred this level from genomic context — treat as a hint, "
-                "not a confirmed answer."
-            )
-        elif ensemble_level is not None and gemma_level is not None and ensemble_level == gemma_level:
-            # Gemma agrees with ensemble via inference — small confidence nudge
-            out["confidence"] = min(round(ensemble.get("confidence", 0.5) + 0.05, 2), 0.95)
-            out["gemma_suggestion"]["note"] = "Gemma inferred the same level; adds soft support."
-        elif ensemble_level is not None and gemma_level is not None and ensemble_level != gemma_level:
-            out["gemma_suggestion"]["note"] = (
-                f"Gemma inferred level={gemma_level}, which conflicts with the ensemble "
-                f"result of level={ensemble_level}. Manual review recommended."
-            )
+        # Discard: no suggestion is reported, and the ensemble result is left as is.
+        if gemma_level is not None:
+            logger.info(f"  [gemma] inferred level={gemma_level} discarded (not stated in paper)")
     else:
         # ── Gemma explicitly confirmed ───────────────────────────────────────
         if ensemble_level is not None and gemma_level is not None and ensemble_level == gemma_level:

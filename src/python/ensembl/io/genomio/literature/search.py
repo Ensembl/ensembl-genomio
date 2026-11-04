@@ -26,7 +26,7 @@ from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 
 # Shared ploidy logic — keeps rule-based and vector stages consistent
-from ensembl.io.genomio.literature.extract import resolve_ploidy_fields, _LEVEL_LABEL
+from ensembl.io.genomio.literature.extract import ncbi_chromosome_count, resolve_ploidy_fields, _LEVEL_LABEL
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +219,7 @@ def search(
 SEX_KEYWORDS = ["female", "male", "XY", "ZW", "pistillate", "staminate", "dioecious"]
 
 
-def infer_ploidy(results: list) -> dict:
+def infer_ploidy(results: list, chromosome_count: int | None = None, names: list[str] | None = None) -> dict:
     """Ploidy (INSDC schema tuple) from retrieved chunks, using the SAME
     resolver as the rule-based stage (extract.resolve_ploidy_fields) so both
     stages apply identical ancestor-aware, compound-aware logic.
@@ -231,7 +231,7 @@ def infer_ploidy(results: list) -> dict:
             continue
         is_priority = any(p in result["section"].lower() for p in PRIORITY_SECTIONS)
         segments.append((result["text"], weight, is_priority))
-    return resolve_ploidy_fields(segments)
+    return resolve_ploidy_fields(segments, chromosome_count=chromosome_count, names=names)
 
 
 def infer_sex(results: list[dict]) -> dict:
@@ -347,7 +347,26 @@ def _build_ploidy_result(
 
 def ensemble_ploidy(rule_result: dict, vector_result: dict) -> dict:
     """Combine rule-based and vector ploidy on the `level` field, merging the
-    other schema elements (mechanism / irregular / derivation)."""
+    other schema elements (mechanism / irregular / derivation). The result's
+    `formula_backed` flag records whether a consistent `2n = Nx = M` formula
+    supports the chosen level (strong evidence for the pipeline's precision guard);
+    `anchored`, `haploid_mentions` and `priority_derivation` feed the same guard."""
+    result = _ensemble_ploidy_level(rule_result, vector_result)
+    sources = (rule_result, vector_result)
+    result["formula_backed"] = result["level"] is not None and any(
+        r.get("method") == "chromosome_formula" and r.get("level") == result["level"] for r in sources
+    )
+    result["anchored"] = result["level"] is not None and any(
+        r.get("anchored") and r.get("level") == result["level"] for r in sources
+    )
+    result["haploid_mentions"] = max(r.get("haploid_mentions", 0) for r in sources)
+    result["priority_derivation"] = rule_result.get("priority_derivation") or vector_result.get(
+        "priority_derivation"
+    )
+    return result
+
+
+def _ensemble_ploidy_level(rule_result: dict, vector_result: dict) -> dict:
     rule_level = rule_result.get("level")
     vector_level = vector_result.get("level")
     rule_conf = rule_result.get("confidence", 0.0)
@@ -485,7 +504,11 @@ def run_vector_search(parsed: dict, rule_result: dict) -> dict:
         vector_results[field] = results
 
     # Infer from search results
-    v_ploidy = infer_ploidy(vector_results["ploidy"])
+    v_ploidy = infer_ploidy(
+        vector_results["ploidy"],
+        chromosome_count=ncbi_chromosome_count(rule_result.get("chromosome_number")),
+        names=rule_result.get("target_names"),
+    )
     v_sex = infer_sex(vector_results["sex"])
     v_species = infer_species(vector_results["species"])
     v_strain = infer_strain(vector_results["strain"])

@@ -17,11 +17,11 @@
 import argparse
 import json
 import logging
+import os
 
-from ensembl.io.genomio.literature import gemma
 from ensembl.io.genomio.literature.extract import extract_metadata
 from ensembl.io.genomio.literature.fetch import fetch_papers_for_assembly
-from ensembl.io.genomio.literature.gemma import combine_with_gemma
+from ensembl.io.genomio.literature.gemma import combine_with_gemma, is_enabled, run_gemma_ploidy
 from ensembl.io.genomio.literature.parse import parse_paper
 from ensembl.io.genomio.literature.search import run_vector_search
 
@@ -30,6 +30,16 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # Paper quality filter
 # ============================================================
+
+# Confidence attached to a GoaT species-level reference ploidy used as a fallback.
+# Deliberately moderate: GoaT is a curated species-level reference, not evidence read
+# from THIS assembly's paper, so it should rank below any paper-derived value while
+# staying above a pure guess.
+GOAT_REFERENCE_CONFIDENCE = 0.6
+
+# Minimum confidence for reporting a paper-derived ploidy level that is not backed
+# by a chromosome formula; below it the level is withheld (see _precision_guard).
+MIN_PAPER_CONFIDENCE = 0.5
 
 EXCLUDE_KEYWORDS = [
     "chloroplast",
@@ -104,12 +114,98 @@ def _goat_agreement(paper_level: int | None, goat_ploidy: int | None) -> dict:
     return {"goat_ploidy": goat_ploidy, "agreement": agreement}
 
 
+def _precision_guard(ploidy: dict, assembly: dict) -> dict:
+    """Withhold a paper-derived ploidy level whose evidence is weak or contested.
+
+    A level other than 2 is always withheld when the title / abstract describes the
+    line as a doubled monoploid or dihaploid (which are diploid). Otherwise, without
+    strong evidence (a chromosome formula consistent with the assembly, or a 3-way
+    consensus with Gemma), a level is withheld when the methods conflict, no
+    supporting mention names the target organism nearby, a diploid call is
+    contradicted by organism-level "haploid" mentions, its confidence is below
+    MIN_PAPER_CONFIDENCE, or it disagrees with GoaT's direct species-level value.
+    A withheld level is replaced by the GoaT reference when one exists (except for a
+    derivation conflict), otherwise reported as null; the withheld value is kept for
+    curators."""
+    level = ploidy.get("level")
+    if level is None or ploidy.get("status") != "found_in_paper":
+        return ploidy
+
+    reference_check = ploidy.get("reference_check") or {}
+    strong = ploidy.get("formula_backed") or ploidy.get("method") == "consensus_3way"
+    if ploidy.get("priority_derivation") in ("doubled_monoploid", "dihaploid") and level != 2:
+        reason = "derivation_conflict"
+    elif strong:
+        return ploidy
+    elif "conflict" in str(ploidy.get("method") or ""):
+        reason = "conflicting_evidence"
+    elif ploidy.get("anchored") is False:
+        reason = "not_anchored_to_target"
+    elif level == 2 and ploidy.get("haploid_mentions", 0) > 0:
+        reason = "haploid_counter_evidence"
+    elif (ploidy.get("confidence") or 0.0) < MIN_PAPER_CONFIDENCE:
+        reason = "weak_evidence"
+    elif reference_check.get("agreement") == "disagree":
+        reason = "disagrees_with_reference"
+    else:
+        return ploidy
+
+    logger.info(f"  [guard] withholding paper ploidy {level} ({reason})")
+    withheld = {
+        "level": level,
+        "confidence": ploidy.get("confidence"),
+        "method": ploidy.get("method"),
+        "evidence": ploidy.get("evidence"),
+        "reason": reason,
+    }
+    # A doubled monoploid / dihaploid line differs from its species by construction,
+    # so GoaT's species-level value cannot stand in for it.
+    goat_level = assembly.get("reference_ploidy") if reason != "derivation_conflict" else None
+    if goat_level is not None:
+        return {
+            "level": goat_level,
+            "mechanism": None,
+            "tuple": [goat_level, None, False, None],
+            "status": "from_reference",
+            "source": "GoaT",
+            "method": "reference_taxon",
+            "confidence": GOAT_REFERENCE_CONFIDENCE,
+            "reference_check": {"goat_ploidy": goat_level, "agreement": reason},
+            "withheld_paper_ploidy": withheld,
+        }
+    return {
+        "level": None,
+        "mechanism": None,
+        "tuple": [None, None, False, None],
+        "status": "withheld",
+        "source": None,
+        "reference_check": reference_check,
+        "withheld_paper_ploidy": withheld,
+    }
+
+
 def _ploidy_recovered(result: dict) -> bool:
     """A batch result counts as useful only if a ploidy level was actually
     recovered: a paper that parsed fine but states no ploidy is not a success."""
     if result.get("error"):
         return False
     return (result.get("ploidy") or {}).get("level") is not None
+
+
+def _is_correct_paper_for_accession(paper: dict, assembly: dict) -> bool:
+    """Accession-level check before letting Gemma read a paper: only trust a paper
+    that is genuinely tied to THIS assembly — linked by accession (directly linked
+    PMID / Entrez elink) or by its BioProject, or with the assembly accession itself
+    printed in the paper text. The scientific name alone is NOT enough: it is often
+    cited in unrelated papers. This stops Gemma from confidently reading ploidy out
+    of an off-target paper."""
+    if paper.get("retrieval_source") in ("linked_pmid", "elink", "bioproject") or paper.get(
+        "is_reference_paper"
+    ):
+        return True
+    paper_text = (paper.get("text_data", {}).get("text") or "").lower()
+    accession = (assembly.get("assembly_accession") or "").split(".")[0].lower()
+    return bool(accession) and accession in paper_text
 
 
 # ============================================================
@@ -131,6 +227,10 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     logger.info("\n[Step 1/4] Fetching assembly metadata and papers ...")
     fetched = fetch_papers_for_assembly(accession, max_results=max_papers)
     assembly = fetched["assembly"]
+    # Only papers strictly linked to the accession/BioProject are used. Name / full-text
+    # hits are never promoted to a "suggestion": a scientific name can appear in the
+    # body of an unrelated paper (e.g. A. thaliana cited inside a Dioscorea tetraploid
+    # paper), and reporting nothing is better than a confident false positive.
     papers = fetched["papers"]
     reference_paper = fetched.get("reference_paper")
 
@@ -145,12 +245,34 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
         )
         return {
             "assembly_accession": assembly.get("assembly_accession"),
+            "status": "error",
             "error": "no assembly metadata",
         }
 
     if not papers:
-        logger.info("  No relevant paper found. Returning assembly metadata only.")
-        return {
+        # Strict retrieval found no accession/BioProject-linked paper. Fall back to
+        # GoaT's species-level reference ploidy when available, so we still return a
+        # result (mentor: prioritise precision in literature retrieval, but use GoaT
+        # where present); otherwise report nothing found.
+        goat_level = assembly.get("reference_ploidy")
+        if goat_level is not None:
+            logger.info(f"  No qualifying paper — using GoaT reference ploidy ({goat_level}).")
+            ploidy = {
+                "level": goat_level,
+                "mechanism": None,
+                "status": "from_reference",
+                "source": "GoaT",
+                "method": "reference_taxon",
+                "confidence": GOAT_REFERENCE_CONFIDENCE,
+                "reference_check": {"goat_ploidy": goat_level, "agreement": "no_qualifying_paper"},
+            }
+            status, error = "success", None
+        else:
+            logger.info("  No qualifying paper and no GoaT reference — nothing to report.")
+            ploidy = {"level": None, "status": "no_relevant_paper", "source": None}
+            status, error = "error", "No relevant papers found"
+
+        result = {
             "assembly_accession": assembly.get("assembly_accession"),
             "assembly_name": assembly.get("assembly_name"),
             "taxon_id": assembly.get("taxon_id"),
@@ -159,12 +281,16 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
                 "value": assembly.get("chromosome_number"),
                 "source": assembly.get("chromosome_source"),
             },
-            "ploidy": {"level": None, "status": "no_relevant_paper", "source": None},
+            "ploidy": ploidy,
             "cultivars": {"confirmed": [], "unconfirmed": []},
             "sex": {"value": "unknown"},
-            "paper": {"note": "Not found relevant paper"},
+            "paper": {"note": "No relevant papers found"},
             "papers_found": 0,
+            "status": status,
         }
+        if error:
+            result["error"] = error
+        return result
 
     # Select best paper — prefer nuclear genome + fulltext
     logger.info(f"\n  Selecting best paper from {len(papers)} candidate(s) ...")
@@ -174,8 +300,9 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
         logger.info("  No usable paper found.")
         return {
             "assembly_accession": assembly.get("assembly_accession"),
+            "status": "error",
             "error": "no usable paper",
-            "paper": {"note": "Not found relevant paper"},
+            "paper": {"note": "No relevant papers found"},
         }
 
     logger.info(f"  Text source: {best_paper['text_data']['source']}")
@@ -195,6 +322,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
             "assembly_accession": assembly.get("assembly_accession"),
             "assembly_name": assembly.get("assembly_name"),
             "taxon_id": assembly.get("taxon_id"),
+            "status": "error",
             "error": "no sections extracted",
         }
 
@@ -213,9 +341,14 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     #     retrieved vector chunks, so it forms an independent opinion even when the
     #     decisive ploidy sentence didn't make the vector-search cut. combine_with_gemma
     #     folds its result in as a third vote. No-op unless GEMMA_ENABLED=1.
-    if gemma.is_enabled():
+    if is_enabled() and not _is_correct_paper_for_accession(best_paper, assembly):
+        logger.info(
+            "  [gemma] skipped: the selected paper is not confidently tied to this "
+            "accession (no accession/BioProject link and accession absent from text)"
+        )
+    elif is_enabled():
         gemma_passages = [{"text": text, "section": section} for section, text in parsed["sections"].items()]
-        gemma_result = gemma.run_gemma_ploidy(
+        gemma_result = run_gemma_ploidy(
             final["species"]["value"],
             gemma_passages,
             accession=accession,
@@ -238,6 +371,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
             f"  [validate] paper ploidy {final['ploidy'].get('level')} disagrees with "
             f"GoaT reference {assembly.get('reference_ploidy')}"
         )
+    final["ploidy"] = _precision_guard(final["ploidy"], assembly)
 
     # Add paper-level metadata to final output
     final["paper"] = {
@@ -252,6 +386,13 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
     }
     final["papers_found"] = len(papers)
     final["reference_paper"] = reference_paper  # BioProject canonical paper (attached even if no ploidy)
+
+    # A result is only "success" if a ploidy level was actually recovered; a paper
+    # that parsed fine but states no ploidy is flagged as an error, so single-accession
+    # (Nextflow) runs surface "nothing useful found" cleanly rather than as success.
+    final["status"] = "success" if _ploidy_recovered(final) else "error"
+    if final["status"] == "error":
+        final.setdefault("error", "no ploidy recovered")
 
     return final
 
@@ -273,12 +414,9 @@ def run_batch(accessions: list[str], max_papers: int = 5) -> list[dict]:
         logger.info(f"\n{'=' * 60}")
         logger.info(f"Batch progress: {i}/{total}")
         try:
+            # run_pipeline already stamps result["status"] based on whether a
+            # ploidy level was recovered; batch mode just handles hard failures.
             result = run_pipeline(accession, max_papers=max_papers)
-            if _ploidy_recovered(result):
-                result["status"] = "success"
-            else:
-                result["status"] = "error"
-                result.setdefault("error", "no ploidy recovered")
         except Exception as e:
             logger.info(f"  ERROR for {accession}: {e}")
             result = {
@@ -329,7 +467,17 @@ def main(argv: list[str] | None = None) -> None:
         "--output",
         help="Path to save results as JSON; printed to stdout if omitted",
     )
+    parser.add_argument(
+        "--gemma",
+        action="store_true",
+        help="Enable the optional local Gemma LLM layer (overrides auto-detection)",
+    )
     args = parser.parse_args(argv)
+
+    # A convenience switch for the same GEMMA_ENABLED env var is_enabled() already reads,
+    # so no plumbing through run_pipeline/run_batch is needed.
+    if args.gemma:
+        os.environ["GEMMA_ENABLED"] = "1"
 
     if args.accession:
         result = run_pipeline(args.accession, max_papers=args.max_papers)
