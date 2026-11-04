@@ -13,7 +13,7 @@
 # limitations under the License.
 
 variables:
-  PYTHON_IMAGE: python:3.10
+  PYTHON_IMAGE: python:3.12
   RUN_DIR: ./cicd/runtime
 
 default:
