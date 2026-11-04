@@ -179,6 +179,7 @@ class TestOutputWriter:
             out_dir=out_dir,
             write_agp=write_agp,
             unique_file_names=unique_file_names,
+            preserve_header_descriptions=False,
             max_files_per_directory=max_files,
             max_dirs_per_directory=max_dirs,
         )
@@ -224,6 +225,7 @@ class TestOutputWriter:
                 out_dir=tmp_path,
                 write_agp=write_agp,
                 unique_file_names=False,
+                preserve_header_descriptions=False,
             )
 
     def test_create_agp_file_no_path(self, tmp_path: Path) -> None:
@@ -238,6 +240,7 @@ class TestOutputWriter:
             out_dir=tmp_path,
             write_agp=False,
             unique_file_names=False,
+            preserve_header_descriptions=False,
         )
 
         writer.agp_file = None
@@ -256,7 +259,11 @@ class TestOutputWriter:
         """
         out_dir = tmp_path / "out"
         writer = split.OutputWriter(
-            fasta_file=Path("in.fa"), out_dir=out_dir, write_agp=False, unique_file_names=False
+            fasta_file=Path("in.fa"),
+            out_dir=out_dir,
+            write_agp=False,
+            unique_file_names=False,
+            preserve_header_descriptions=False,
         )
         writer.open_new_file()
         writer.close()
@@ -348,7 +355,11 @@ class TestOutputWriter:
         """
         out_dir = tmp_path / "out"
         writer = split.OutputWriter(
-            fasta_file=Path("in.fa"), out_dir=out_dir, write_agp=write_agp, unique_file_names=False
+            fasta_file=Path("in.fa"),
+            out_dir=out_dir,
+            write_agp=write_agp,
+            unique_file_names=False,
+            preserve_header_descriptions=True,
         )
         assert writer.record_count == 0
         assert writer.file_len == 0
@@ -385,6 +396,32 @@ class TestOutputWriter:
                         f"{out_record.id}\t1\t{len(out_record.seq)}\t+"
                     )
                     assert agp_line == expected_line
+
+
+@pytest.mark.parametrize(
+    ("preserve_header_descriptions", "expected_description"),
+    [
+        pytest.param(False, "seq1", id="Remove description"),
+        pytest.param(True, "seq1 test sequence", id="Keep description"),
+    ],
+)
+def test_write_record_header_description(
+    tmp_path: Path, *, preserve_header_descriptions: bool, expected_description: str
+) -> None:
+    """Test whether ``write_record()`` removes a FASTA header description."""
+    out_dir = tmp_path / "out"
+    writer = split.OutputWriter(
+        fasta_file=Path("in.fa"),
+        out_dir=out_dir,
+        write_agp=False,
+        unique_file_names=False,
+        preserve_header_descriptions=preserve_header_descriptions,
+    )
+    writer.write_record(SeqRecord(Seq("ACGT"), id="seq1", description="test sequence"))
+    writer.close()
+
+    out_record = SeqIO.read(out_dir / "1" / "in.1.fa", "fasta")
+    assert out_record.description == expected_description
 
 
 @pytest.mark.parametrize(
@@ -429,6 +466,7 @@ def test_write_whole_record(
         out_dir=out_dir,
         write_agp=write_agp,
         unique_file_names=False,
+        preserve_header_descriptions=False,
     )
 
     record = next(SeqIO.parse(data_dir / "input.fa", "fasta"))
@@ -592,6 +630,7 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
                     "write_agp": False,
                     "delete_existing_files": False,
                     "unique_file_names": False,
+                    "preserve_header_descriptions": False,
                     "force_max_seq_length": False,
                     "log_level": "WARNING",
                 },
@@ -607,6 +646,7 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
                 "--write-agp",
                 "--delete-existing-files",
                 "--unique-file-names",
+                "--preserve-header-descriptions",
                 "--force-max-seq-length",
                 "--max-seqs-per-file",
                 "1",
@@ -626,6 +666,7 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
                     "write_agp": True,
                     "delete_existing_files": True,
                     "unique_file_names": True,
+                    "preserve_header_descriptions": True,
                     "force_max_seq_length": True,
                     "max_seqs_per_file": 1,
                     "max_seq_length_per_file": 1,
@@ -682,6 +723,7 @@ def test_main(mock_split_fasta: Mock, tmp_path: Path) -> None:
         delete_existing_files=False,
         unique_file_names=False,
         force_max_seq_length=False,
+        preserve_header_descriptions=False,
         max_seqs_per_file=None,
         max_seq_length_per_file=None,
         min_chunk_length=None,
