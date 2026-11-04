@@ -75,7 +75,7 @@ def test_parse_output_success(tmp_path: Path) -> None:
     expected_consensus = red.RED_RPT_CONSENSUS
     expected_consensus_key = expected_consensus.sha256_key()
 
-    config=convert_to_genomio_json.GenomioJsonConfig(
+    config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=rpt_path,
         output_path=tmp_path / "out.json",
         invalid_tool_output_path=tmp_path / "invalid.out",
@@ -125,7 +125,7 @@ def test_parse_output_collates_all_errors(tmp_path: Path) -> None:
     """
     rpt_path = tmp_path / "errors.rpt"
     rpt_path.write_text("chr1 start 20\nchr2 30 20\nchr3 40\n", encoding="utf-8")
-    config=convert_to_genomio_json.GenomioJsonConfig(
+    config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=rpt_path,
         output_path=tmp_path / "out.json",
         invalid_tool_output_path=tmp_path / "invalid.out",
@@ -140,7 +140,7 @@ def test_parse_output_collates_all_errors(tmp_path: Path) -> None:
         program_parameters=None,
         converter_options=convert_to_genomio_json.ConverterOptions(),
     )
-    
+
     with pytest.raises(
         ValueError,
         match=(
@@ -162,11 +162,11 @@ def test_red_converter_parse_features_uses_tool_specific_parser(
     Args:
         tmp_path: Pytest temporary directory fixture.
         convert_to_genomio_json_data_dir: Path to test data directory.
-    
+
     """
     input_path = convert_to_genomio_json_data_dir / "red" / "success.rpt"
 
-    config=convert_to_genomio_json.GenomioJsonConfig(
+    config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=input_path,
         output_path=tmp_path / "out.json",
         invalid_tool_output_path=tmp_path / "invalid.out",

@@ -25,6 +25,7 @@ from pathlib import Path
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
+    ConverterOptions,
     FeatureConverter,
     GenomioJsonConfig,
     ParseFeaturesResult,
@@ -80,6 +81,7 @@ class RedConverter(FeatureConverter):
     def parse_features(
         cls,
         config: GenomioJsonConfig,
+        _options: ConverterOptions | None = None,
     ) -> ParseFeaturesResult:
         """Parse Red output."""
         return parse_output(config)

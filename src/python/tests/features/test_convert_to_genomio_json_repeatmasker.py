@@ -384,7 +384,7 @@ def test_parse_output_adds_consensus_from_library(
         convert_to_genomio_json_data_dir: Module's test data directory fixture.
 
     """
-    consensus_lib_path = convert_to_genomio_json_data_dir / "create_json" / "repeatmodeler_match.fa"   
+    consensus_lib_path = convert_to_genomio_json_data_dir / "create_json" / "repeatmodeler_match.fa"
     rm_converter_options = repeatmasker.RepeatMaskerOptions(consensus_lib_path=consensus_lib_path)
     config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=convert_to_genomio_json_data_dir / "create_json" / "basic.out",
@@ -401,7 +401,7 @@ def test_parse_output_adds_consensus_from_library(
         program_parameters=None,
         converter_options=rm_converter_options,
     )
-    
+
     expected_consensus = convert_to_genomio_json.Consensus(
         name="Foo",
         repeat_class="SINE",
@@ -751,9 +751,7 @@ def test_repeatmasker_converter_parse_features_delegates_to_parser(
     mock_parse_output.return_value = expected
 
     assert convert_to_genomio_json.RepeatMaskerCustomConverter.parse_features(config) == expected
-    assert (
-        convert_to_genomio_json.RepeatMaskerRepbaseConverter.parse_features(config) == expected
-    )
+    assert convert_to_genomio_json.RepeatMaskerRepbaseConverter.parse_features(config) == expected
     assert mock_parse_output.call_args_list == [
         call(config),
         call(config),

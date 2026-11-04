@@ -246,6 +246,7 @@ class _DummyConverter(convert_to_genomio_json.FeatureConverter):
     def parse_features(
         cls,
         config: convert_to_genomio_json.GenomioJsonConfig,
+        options: convert_to_genomio_json.ConverterOptions | None = None,
     ) -> convert_to_genomio_json.ParseFeaturesResult:
         """Return fixed parser output for document assembly tests."""
         return (
@@ -471,12 +472,12 @@ def test_duplicate_top_level_converter_commands_rejected(monkeypatch: pytest.Mon
         @classmethod
         def parse_features(
             cls,
-            input_path: Path,
-            _options: convert_to_genomio_json.ConverterOptions | None = None,
+            config: convert_to_genomio_json.GenomioJsonConfig,
+            options: convert_to_genomio_json.ConverterOptions | None = None,
         ) -> convert_to_genomio_json.ParseFeaturesResult:
             """Return fixed parser output for document assembly tests."""
             return (
-                [{"seq_region": input_path.name}],
+                [{"seq_region": config.input_path.name}],
                 {},
             )
 

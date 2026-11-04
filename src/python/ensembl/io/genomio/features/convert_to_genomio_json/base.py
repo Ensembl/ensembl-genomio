@@ -36,12 +36,10 @@ from abc import ABC, abstractmethod
 import argparse
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from email import errors
 import hashlib
 from inspect import isabstract
 import json
 import logging
-from logging import config
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 
@@ -92,7 +90,7 @@ class ConverterOptions:
 
 
 @dataclass(frozen=True)
-class GenomioJsonConfig:
+class GenomioJsonConfig:  # pylint: disable=too-many-instance-attributes
     """Configuration for creating a GenomIO feature JSON document."""
 
     input_path: Path
@@ -221,13 +219,14 @@ def format_parse_errors(parser_name: str, input_path: Path, errors: list[str]) -
         f"- {error}" for error in errors
     )
 
+
 def handle_parsing_errors(
-        parser_name: str,
-        config: GenomioJsonConfig,
-        errors: list[str],
-    ) -> None:
+    parser_name: str,
+    config: GenomioJsonConfig,
+    errors: list[str],
+) -> None:
     """Write parsing errors to the invalid tool output file and raise an error if the threshold is exceeded.
-    
+
     Args:
         parser_name: Name of the parser for error messages.
         config: Configuration for creating a GenomIO feature JSON document.
@@ -236,7 +235,7 @@ def handle_parsing_errors(
 
     """
     if not errors:
-        return    
+        return
 
     config.invalid_tool_output_path.parent.mkdir(parents=True, exist_ok=True)
     config.invalid_tool_output_path.write_text("\n".join(errors) + "\n", encoding="utf-8")
@@ -258,6 +257,7 @@ def file_last_modified_time(file_path: Path) -> str:
 
 
 def get_invalid_tool_output(args: argparse.Namespace) -> Path:
+    """Get the path for writing invalid tool output lines."""
     invalid_tool_output = getattr(args, "invalid_tool_output", None)
     if invalid_tool_output is None:
         invalid_tool_output = args.output.with_suffix(".invalid_tool_output.txt")

@@ -120,6 +120,7 @@ class RepeatMaskerCustomConverter(FeatureConverter):
     def parse_features(
         cls,
         config: GenomioJsonConfig,
+        _options: ConverterOptions | None = None,
     ) -> ParseFeaturesResult:
         """Parse custom-library RepeatMasker output."""
         return parse_output(config)
@@ -161,6 +162,7 @@ class RepeatMaskerRepbaseConverter(FeatureConverter):
     def parse_features(
         cls,
         config: GenomioJsonConfig,
+        _options: ConverterOptions | None = None,
     ) -> ParseFeaturesResult:
         """Parse Repbase library RepeatMasker output."""
         return parse_output(config)

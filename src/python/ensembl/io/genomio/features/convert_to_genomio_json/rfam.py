@@ -22,6 +22,7 @@ from pathlib import Path
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     FeatureConverter,
+    ConverterOptions,
     GenomioJsonConfig,
     ParseFeaturesResult,
     handle_parsing_errors,
@@ -68,7 +69,7 @@ class RfamConverter(FeatureConverter):
 
     @classmethod
     def parse_features(
-        cls, config: GenomioJsonConfig
+        cls, config: GenomioJsonConfig, _options: ConverterOptions | None = None
     ) -> ParseFeaturesResult:
         """Parse the Rfam hits TSV."""
         return parse_output(config)
@@ -100,8 +101,9 @@ def parse_row(input_path: Path, line: str) -> RfamParsedRow:
     model_end_parse = parse_token(int, model_end, "model_end", line, input_path)
     seq_start_parse = parse_token(int, seq_start, "seq_region_start", line, input_path)
     seq_end_parse = parse_token(int, seq_end, "seq_region_end", line, input_path)
-    seq_region_start, seq_region_end = min(seq_start_parse, seq_end_parse), max(
-        seq_start_parse, seq_end_parse
+    seq_region_start, seq_region_end = (
+        min(seq_start_parse, seq_end_parse),
+        max(seq_start_parse, seq_end_parse),
     )
     gc_parse = parse_token(float, gc, "gc", line, input_path)
     bias_parse = parse_token(float, bias, "bias", line, input_path)
@@ -155,5 +157,5 @@ def parse_output(config: GenomioJsonConfig) -> ParseFeaturesResult:
             features.append(parsed_row.feature)
 
     handle_parsing_errors("Rfam hits TSV", config, errors)
-    
+
     return features, {}

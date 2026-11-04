@@ -242,7 +242,7 @@ def test_parse_output_success(
         expected_consensuses: Expected parsed consensus records.
 
     """
-    config=convert_to_genomio_json.GenomioJsonConfig(
+    config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=convert_to_genomio_json_data_dir / filename,
         output_path=tmp_path / "out.json",
         invalid_tool_output_path=tmp_path / "invalid.out",
@@ -316,7 +316,7 @@ def test_parse_output_collates_all_errors(
         expected_fragments: Expected substrings in the raised error message.
 
     """
-    config=convert_to_genomio_json.GenomioJsonConfig(
+    config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=convert_to_genomio_json_data_dir / filename,
         output_path=tmp_path / "out.json",
         invalid_tool_output_path=tmp_path / "invalid.out",
@@ -357,7 +357,7 @@ def test_trf_converter_parse_features_uses_tool_specific_parser(
         convert_to_genomio_json_data_dir: TRF test data directory.
 
     """
-    config=convert_to_genomio_json.GenomioJsonConfig(
+    config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=convert_to_genomio_json_data_dir / "trf" / "success_plain_no_params.dat",
         output_path=tmp_path / "out.json",
         invalid_tool_output_path=tmp_path / "invalid.out",

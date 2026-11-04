@@ -170,7 +170,7 @@ def test_parse_output_success(
         f"\taccession\tbiotype\ttarget_description\n{VALID_ROW}\n",
         encoding="utf-8",
     )
-    config=convert_to_genomio_json.GenomioJsonConfig(
+    config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=input_file,
         output_path=tmp_path / "out.json",
         invalid_tool_output_path=tmp_path / "invalid.out",
@@ -215,7 +215,7 @@ def test_rfam_converter_parse_features_delegates_to_parser(
         is_primary=False,
         is_strict_mode=True,
     )
-    expected = ([{"seq_region": "chr1"}], {})
+    expected: convert_to_genomio_json.ParseFeaturesResult = ([{"seq_region": "chr1"}], {})
     monkeypatch.setattr(rfam, "parse_output", lambda actual_config: expected)
 
     assert rfam.RfamConverter.parse_features(config) == expected
@@ -273,7 +273,7 @@ def test_parse_output_errors(tmp_path: Path, invalid_rows: list[str], error_patt
     input_file = tmp_path / "rfam_errors.tsv"
     input_file.write_text("\n".join(invalid_rows) + "\n", encoding="utf-8")
 
-    config=convert_to_genomio_json.GenomioJsonConfig(
+    config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=input_file,
         output_path=tmp_path / "out.json",
         invalid_tool_output_path=tmp_path / "invalid.out",

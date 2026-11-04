@@ -26,6 +26,7 @@ import re
 
 from ensembl.io.genomio.features.convert_to_genomio_json.base import (
     Consensus,
+    ConverterOptions,
     FeatureConverter,
     GenomioJsonConfig,
     ParseFeaturesResult,
@@ -74,6 +75,7 @@ class TRFConverter(FeatureConverter):
     def parse_features(
         cls,
         config: GenomioJsonConfig,
+        _options: ConverterOptions | None = None,
     ) -> ParseFeaturesResult:
         """Parse TRF output."""
         return parse_output(config)
@@ -249,7 +251,7 @@ def parse_data_row(
 
 
 # Ignore too many branches and too many statements ruff rules
-def parse_output(config: GenomioJsonConfig) -> ParseFeaturesResult:  # noqa: PLR0912, PLR0915
+def parse_output(config: GenomioJsonConfig) -> ParseFeaturesResult:  # noqa: PLR0915
     """Parse a TRF .dat file into repeat feature dictionaries and consensus records.
 
     Coordinates are converted from TRF's sequence-relative coordinates to genomic
