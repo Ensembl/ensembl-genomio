@@ -20,7 +20,7 @@ name = "ensembl-genomio"
 dynamic = [
     "version",
 ]
-requires-python = ">= 3.10"
+requires-python = ">= 3.12"
 description = "Ensembl GenomIO -- turn basic genomic data into formatted Ensembl core databases"
 readme = "README.md"
 authors = [
@@ -43,8 +43,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -173,7 +171,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 110
-target-version = ["py310"]
+target-version = ["py312"]
 
 [tool.pylint.main]
 max-line-length = 110
