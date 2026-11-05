@@ -39,14 +39,15 @@ class TestFormattedFilesGenerator:
     prefix = "TEST"
 
     @pytest.fixture(scope="class", autouse=True)
+    @classmethod
     def formatted_files_generator(
-        self, data_dir: Path, tmp_path_factory: pytest.TempPathFactory
+        cls, data_dir: Path, tmp_path_factory: pytest.TempPathFactory
     ) -> FormattedFilesGenerator:
         """Call the function `FormattedFilesGenerator` with set parameters."""
-        gb_file = self.gb_file
+        gb_file = cls.gb_file
         gb_file_path = data_dir / gb_file
         temp = tmp_path_factory.mktemp("temp")
-        return FormattedFilesGenerator(self.prod_name, gb_file_path, self.prefix, out_dir=temp)
+        return FormattedFilesGenerator(cls.prod_name, gb_file_path, cls.prefix, out_dir=temp)
 
     @pytest.mark.dependency(name="parse_record")
     @pytest.mark.parametrize(
