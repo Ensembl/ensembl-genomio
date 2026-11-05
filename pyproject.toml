@@ -76,7 +76,7 @@ cicd = [
     "deepdiff >= 9.1.0",
     "genbadge[coverage]",
     "mypy >= 1.2.0",
-    "pylint >= 3.0.2",
+    "pylint >= 4.1.3",
     "pytest >= 9.1.1",
     "pytest-datadir",
     "pytest-dependency",
