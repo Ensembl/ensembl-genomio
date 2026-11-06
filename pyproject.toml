@@ -58,6 +58,7 @@ dependencies = [
     "ensembl-utils >= 0.5.1",
     "jsonschema >= 4.6.0",
     "intervaltree >= 3.1.0",
+    "ijson >= 3.2.0",
     "mysql-connector-python >= 26.7.0",
     "python-redmine >= 2.3.0",
     "requests >= 2.28.0",
@@ -121,6 +122,7 @@ fasta_recombine = "ensembl.io.genomio.fasta.recombine:main"
 fasta_split = "ensembl.io.genomio.fasta.split:main"
 fasta_stats = "ensembl.io.genomio.fasta.stats:main"
 # Features
+features_load = "ensembl.io.genomio.features.load.core_load:main"
 features_combine_json = "ensembl.io.genomio.features.combine_json:main"
 features_convert_to_genomio_json = "ensembl.io.genomio.features.convert_to_genomio_json.base:main"
 # GenBank
