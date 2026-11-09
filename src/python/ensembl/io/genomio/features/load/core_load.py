@@ -57,6 +57,18 @@ MAX_ATTRIB_TYPE_CODE_LENGTH = 20
 MAX_NCRNA_HIT_NAME_LENGTH = 40
 
 
+def _normalise_database_url(database_url: URL) -> URL:
+    """Select the installed MySQL driver for a bare MySQL URL.
+
+    Explicit SQLAlchemy driver choices are preserved. The project depends on
+    ``mysql-connector-python``, while SQLAlchemy's bare ``mysql`` URL selects
+    the ``MySQLdb`` driver by default.
+    """
+    if database_url.drivername == "mysql":
+        return database_url.set(drivername="mysql+mysqlconnector")
+    return database_url
+
+
 class FeatureRow(TypedDict):
     """Values stored in a dna_align_feature row."""
 
@@ -666,7 +678,7 @@ def load_features(
     if kind == "ncrna":
         tool = cast("str", _read_value(input_path, "ncrna_tool"))
 
-    database = DBConnectionLite(database_url, reflect=False)
+    database = DBConnectionLite(_normalise_database_url(database_url), reflect=False)
     with _consensus_index() as key_index, database.session_scope() as session:
         seq_region_ids: dict[str, int] = {}
         analysis_id = _get_or_create_analysis(session, analysis)

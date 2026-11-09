@@ -28,7 +28,7 @@ from types import SimpleNamespace
 from typing import cast
 
 import pytest
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, make_url, select
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
@@ -49,7 +49,11 @@ JsonValue = core_load.JsonValue
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [("+", 1), ("-", -1), (".", 0)],
+    [
+        pytest.param("+", 1, id="positive strand"),
+        pytest.param("-", -1, id="negative strand"),
+        pytest.param(".", 0, id="no strand")
+    ],
 )
 def test_normalise_strand(value: str, expected: int) -> None:
     """GenomIO strand values map to Ensembl integer values.
@@ -63,7 +67,13 @@ def test_normalise_strand(value: str, expected: int) -> None:
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [("text", "text"), (True, "true"), (False, "false"), (1, "1"), (2.5, "2.5")],
+    [
+        pytest.param("text", "text", id="string value"),
+        pytest.param(True, "true", id="boolean true"),
+        pytest.param(False, "false", id="boolean false"),
+        pytest.param(1, "1", id="integer value"),
+        pytest.param(2.5, "2.5", id="float value"),
+    ],
 )
 def test_attribute_scalar_to_text(value: object, expected: str) -> None:
     """Scalar ncRNA attributes are serialized as database text.
@@ -123,20 +133,23 @@ def test_ncrna_row_uses_cmscan_model_coordinates_and_attributes() -> None:
 @pytest.mark.parametrize(
     ("tool", "feature", "expected_name"),
     [
-        (
+        pytest.param(
             "trnascan",
             {"display_label": "tRNA-Phe", "isotype": "Phe"},
             "tRNA-Phe",
+            id="trnascan with display label"
         ),
-        (
+        pytest.param(
             "trnascan",
             {"isotype": "Phe"},
             "Phe",
+            id="trnascan with isotype"
         ),
-        (
+        pytest.param(
             "mirbase",
             {"mirna_name": "ath-miR156a", "mirna_type": "hairpin"},
             "ath-miR156a",
+            id="mirbase with mirna name"
         ),
     ],
 )
@@ -279,7 +292,15 @@ def test_parse_args_uses_required_command_line_connection_values(tmp_path: Path)
     assert args.skip_validation is True
 
 
-@pytest.mark.parametrize("missing", ["--db_host", "--db_port", "--db_user", "--db_database"])
+@pytest.mark.parametrize(
+    ("missing"),
+    [
+        pytest.param("--db_host", id="missing db host"),
+        pytest.param("--db_port", id="missing db port"),
+        pytest.param("--db_user", id="missing db user"),
+        pytest.param("--db_database", id="missing db database")
+    ]
+)
 def test_parse_args_requires_each_connection_parameter(missing: str, tmp_path: Path) -> None:
     """Each required connection option is rejected when omitted.
 
@@ -440,7 +461,14 @@ def test_get_or_create_analysis_reuses_matching_metadata(parent_session: Session
     assert parent_session.query(AnalysisDescription).count() == 1
 
 
-@pytest.mark.parametrize("field", ["program", "description", "display_label"])
+@pytest.mark.parametrize(
+    ("field"),
+    [
+        pytest.param("program", id="program"),
+        pytest.param("description", id="description"),
+        pytest.param("display_label", id="display_label")
+    ]
+)
 def test_get_or_create_analysis_rejects_conflicting_metadata(parent_session: Session, field: str) -> None:
     """Conflicting analysis metadata is rejected rather than updated.
 
@@ -822,8 +850,8 @@ def test_iter_items_reads_array_incrementally(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("document", "expected"),
     [
-        (_repeat_document(0), "repeat"),
-        (
+        pytest.param(_repeat_document(0), "repeat", id="repeat document"),
+        pytest.param(
             {
                 "analysis": _analysis_payload("cmscan_logic"),
                 "ncrna_tool": "cmscan",
@@ -831,6 +859,7 @@ def test_iter_items_reads_array_incrementally(tmp_path: Path) -> None:
                 "ncrna_features": [],
             },
             "ncrna",
+            id="ncrna document",
         ),
     ],
 )
@@ -862,6 +891,26 @@ def test_load_features_rejects_nonpositive_batch_size(tmp_path: Path) -> None:
             URL.create("mysql", "user", "pw", "host", 3306, "db"),
             batch_size=0,
         )
+
+
+@pytest.mark.parametrize(
+    ("database_url"),
+    [
+        pytest.param("mysql://user:pass@localhost/db", id="mysql url"),
+        pytest.param("mysql+mysqlconnector://user:pass@localhost/db", id="mysqlconnector url")
+    ],
+)
+def test_normalise_database_url(database_url):
+    """Return correct URL for mysqlconector driver.
+        
+    Args:
+        database_url: Input database URL.
+    """
+    url = make_url(database_url)
+
+    result = core_load._normalise_database_url(url)
+
+    assert result.drivername == "mysql+mysqlconnector"
 
 
 def test_lookup_consensus_id_finds_and_rejects_keys() -> None:
