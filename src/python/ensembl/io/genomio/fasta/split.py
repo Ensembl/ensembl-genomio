@@ -215,7 +215,7 @@ class OutputWriter:  # pylint: disable=too-many-instance-attributes
 
         """
         if not self.preserve_header_descriptions:
-            record.description = record.id
+            record.description = record.id if record.id is not None else ""
         SeqIO.write(record, self._fh, "fasta")
         sequence = cast("Seq", record.seq)
         self.record_count += 1
