@@ -1,6 +1,6 @@
 # Installation
 
-This Python library only requires Python 3.10+ to work. Earlier Python versions are not supported.
+This Python library requires Python 3.12 or newer. Earlier Python versions are not supported.
 
 ## Basic installation
 

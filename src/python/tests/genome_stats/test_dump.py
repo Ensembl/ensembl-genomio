@@ -117,15 +117,16 @@ class TestStatsGenerator:
     genome_stats: dict[str, Any]
 
     @pytest.fixture(scope="class", autouse=True)
-    def setup(self, data_dir: Path) -> None:
+    @classmethod
+    def setup(cls, data_dir: Path) -> None:
         """Load the required fixtures and values as class attributes.
 
         Args:
             data_dir: Module's test data directory fixture.
 
         """
-        type(self).stats_gen = dump.StatsGenerator(MockSession())
-        type(self).genome_stats = get_json(data_dir / "genome_stats.json")
+        cls.stats_gen = dump.StatsGenerator(MockSession())
+        cls.genome_stats = get_json(data_dir / "genome_stats.json")
 
     @pytest.mark.parametrize(
         ("stats", "output"),
