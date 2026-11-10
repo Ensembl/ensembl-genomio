@@ -141,7 +141,8 @@
         "seq_region_end",
         "seq_region_strand",
         "repeat_start",
-        "repeat_end"
+        "repeat_end",
+        "repeat_consensus"
       ],
       "properties": {
         "seq_region": {
@@ -179,7 +180,7 @@
       "description": "Repeat-load document (load_repeat): a single analysis+source with repeat_features and optional repeat_consensus.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["analysis", "source", "repeat_features"],
+      "required": ["analysis", "source", "repeat_consensus", "repeat_features"],
       "properties": {
         "analysis": {
           "$ref": "#/definitions/analysis",
