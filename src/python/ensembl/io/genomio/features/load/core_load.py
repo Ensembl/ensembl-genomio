@@ -213,24 +213,6 @@ def _parse_run_date(value: str) -> datetime:
     return parsed.astimezone(timezone.utc).replace(tzinfo=None)
 
 
-def _synthetic_consensus(logic_name: str) -> dict[str, str]:
-    """Return the consensus required for a feature without a JSON reference.
-
-    Args:
-        logic_name: Owning analysis logic name.
-
-    Returns:
-        Synthetic repeat name, class, type, and ``N`` consensus values.
-
-    """
-    return {
-        "repeat_name": logic_name,
-        "repeat_class": logic_name,
-        "repeat_type": logic_name,
-        "repeat_consensus": "N",
-    }
-
-
 def _repeat_row(
     feature: Mapping[str, JsonValue],
     analysis_id: int,
@@ -577,20 +559,11 @@ def _lookup_consensus_id(key_index: sqlite3.Connection, key: str) -> int:
     return int(row[0])
 
 
-def _synthetic_consensus_entry(logic_name: str) -> dict[str, str]:
-    """Add an internal key to the consensus used for unreferenced repeats."""
-    return {
-        "repeat_consensus_key": "__genomio_missing_consensus__",
-        **_synthetic_consensus(logic_name),
-    }
-
-
 def _iter_repeat_rows(
     session: Session,
     input_path: Path,
     *,
     analysis_id: int,
-    logic_name: str,
     key_index: sqlite3.Connection,
     seq_region_ids: dict[str, int],
 ) -> Iterator[tuple[Mapping[str, object], None]]:
@@ -608,17 +581,10 @@ def _iter_repeat_rows(
         Repeat feature values paired with ``None`` attribute values.
 
     """
-    synthetic_consensus_id: int | None = None
     for feature in _iter_items(input_path, "repeat_features"):
         seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), seq_region_ids)
         consensus_key = feature.get("repeat_consensus")
-        if consensus_key is None:
-            if synthetic_consensus_id is None:
-                synthetic = _synthetic_consensus_entry(logic_name)
-                synthetic_consensus_id = _get_or_create_consensus(session, synthetic, key_index)
-            consensus_id = synthetic_consensus_id
-        else:
-            consensus_id = _lookup_consensus_id(key_index, str(consensus_key))
+        consensus_id = _lookup_consensus_id(key_index, str(consensus_key))
         yield _repeat_row(feature, analysis_id, seq_region_id, consensus_id), None
 
 
@@ -692,7 +658,6 @@ def load_features(
                 session=session,
                 input_path=input_path,
                 analysis_id=analysis_id,
-                logic_name=str(analysis["logic_name"]),
                 key_index=key_index,
                 seq_region_ids=seq_region_ids,
             )

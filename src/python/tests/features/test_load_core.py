@@ -207,16 +207,6 @@ def test_parse_run_date_normalises_z_and_offset_values() -> None:
     assert core_load._parse_run_date("2026-02-18T00:00:00") == datetime(2026, 2, 18)
 
 
-def test_synthetic_consensus_uses_analysis_logic_name() -> None:
-    """Missing repeat consensus gets the agreed synthetic values."""
-    assert core_load._synthetic_consensus("repeat_logic") == {
-        "repeat_name": "repeat_logic",
-        "repeat_class": "repeat_logic",
-        "repeat_type": "repeat_logic",
-        "repeat_consensus": "N",
-    }
-
-
 def test_repeat_row_maps_core_columns() -> None:
     """Repeat fields map to the repeat_feature columns."""
     feature: dict[str, JsonValue] = {
@@ -781,6 +771,7 @@ def _repeat_document(feature_count: int = 2) -> dict[str, JsonValue]:
     return {
         "analysis": _analysis_payload(),
         "source": {"source_provider": "Ensembl"},
+        "repeat_consensus": [_consensus_payload()],
         "repeat_features": [
             {
                 "seq_region": "chr1",
@@ -789,6 +780,7 @@ def _repeat_document(feature_count: int = 2) -> dict[str, JsonValue]:
                 "seq_region_strand": "+",
                 "repeat_start": 1,
                 "repeat_end": 10,
+                "repeat_consensus": "a" * 64,
             }
             for index in range(feature_count)
         ],
@@ -945,6 +937,11 @@ def test_load_features_validates_and_commits_batches(monkeypatch: pytest.MonkeyP
     ) -> int:
         """Record a simulated consensus row."""
         consensus_calls.append(dict(consensus))
+        _key_index.execute(
+            "INSERT INTO consensus_key(key, consensus_id, payload) VALUES (?, ?, ?)",
+            (str(consensus["repeat_consensus_key"]), 11, "{}"),
+        )
+        _key_index.commit()
         return 11
 
     monkeypatch.setattr(core_load, "schema_validator", record_validation)
@@ -976,6 +973,7 @@ def test_load_features_can_skip_validation(tmp_path: Path) -> None:
     validator.setattr(core_load, "schema_validator", lambda *args, **kwargs: pytest.fail("validated"))
     validator.setattr(core_load, "DBConnectionLite", lambda url, reflect=False: database)
     validator.setattr(core_load, "_get_or_create_analysis", lambda session, analysis: 7)
+    validator.setattr(core_load, "_get_or_create_consensus", lambda *_args: 11)
     validator.setattr(core_load, "_resolve_seq_region_id", lambda session, name, seq_region_ids: 1)
     try:
         core_load.load_features(
@@ -998,7 +996,19 @@ def test_load_features_rolls_back_active_batch_on_error(
     database = _RecordingDatabase(session)
     monkeypatch.setattr(core_load, "DBConnectionLite", lambda url, reflect=False: database)
     monkeypatch.setattr(core_load, "_get_or_create_analysis", lambda session, analysis: 7)
-    monkeypatch.setattr(core_load, "_get_or_create_consensus", lambda session, consensus, key_index: 11)
+
+    def record_consensus(
+        _session: object, consensus: dict[str, object], key_index: sqlite3.Connection
+    ) -> int:
+        """Index a simulated consensus row for feature lookup."""
+        key_index.execute(
+            "INSERT INTO consensus_key(key, consensus_id, payload) VALUES (?, ?, ?)",
+            (str(consensus["repeat_consensus_key"]), 11, "{}"),
+        )
+        key_index.commit()
+        return 11
+
+    monkeypatch.setattr(core_load, "_get_or_create_consensus", record_consensus)
     monkeypatch.setattr(core_load, "_resolve_seq_region_id", lambda session, name, seq_region_ids: 1)
     monkeypatch.setattr(
         core_load,
