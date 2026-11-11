@@ -20,6 +20,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
 import logging
+from os import name
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -37,16 +38,17 @@ from ensembl.core.models import (
     AttribType,
     DNAAlignFeatureAttrib,
     DnaAlignFeature,
+    ExternalDb,
     RepeatConsensus,
     RepeatFeature,
     SeqRegion,
 )
 
 import ensembl.io.genomio
-from ensembl.io.genomio.database import DBConnectionLite
 from ensembl.io.genomio.schemas.json.validate import schema_validator
 
 from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.database import DBConnection, get_analysis_description
 from ensembl.utils.logging import init_logging_with_args
 
 __all__ = ["load_features", "main", "parse_args"]
@@ -57,19 +59,7 @@ MAX_ATTRIB_TYPE_CODE_LENGTH = 20
 MAX_NCRNA_HIT_NAME_LENGTH = 40
 
 
-def _normalise_database_url(database_url: URL) -> URL:
-    """Select the installed MySQL driver for a bare MySQL URL.
-
-    Explicit SQLAlchemy driver choices are preserved. The project depends on
-    ``mysql-connector-python``, while SQLAlchemy's bare ``mysql`` URL selects
-    the ``MySQLdb`` driver by default.
-    """
-    if database_url.drivername == "mysql":
-        return database_url.set(drivername="mysql+mysqlconnector")
-    return database_url
-
-
-class FeatureRow(TypedDict):
+class DnaAlignFeatureRow(TypedDict):
     """Values stored in a dna_align_feature row."""
 
     seq_region_id: int
@@ -88,6 +78,20 @@ class FeatureRow(TypedDict):
     external_db_id: int | None
     hcoverage: float | None
     align_type: str
+
+
+class RepeatFeatureRow(TypedDict):
+    """Values stored in a repeat_feature row."""
+
+    seq_region_id: int
+    seq_region_start: int
+    seq_region_end: int
+    seq_region_strand: int
+    repeat_start: int
+    repeat_end: int
+    repeat_consensus_id: int
+    analysis_id: int
+    score: float | None
 
 
 def _normalise_strand(strand: str) -> int:
@@ -133,7 +137,8 @@ def _ncrna_row(
     tool: str,
     seq_region_id: int,
     analysis_id: int,
-) -> tuple[FeatureRow, dict[str, str]]:
+    external_db_id: int | None,
+) -> tuple[DnaAlignFeatureRow, dict[str, str]]:
     """Map one schema ncRNA object to a row and its feature attributes.
 
     Args:
@@ -141,6 +146,7 @@ def _ncrna_row(
         tool: Producing tool, used to select hit-name and coordinate rules.
         seq_region_id: Database identifier resolved from ``feature["seq_region"]``.
         analysis_id: Database identifier for the owning analysis.
+        external_db_id: Database identifier for the external database, or None if not applicable.
 
     Returns:
         The ``dna_align_feature`` values and serialized attribute values.
@@ -156,6 +162,11 @@ def _ncrna_row(
     else:
         hit_start = 1
         hit_end = genomic_length
+
+    if tool == "trnascan":
+        cigar_line = f"{genomic_length}M"
+    else:
+        cigar_line = None
 
     direct_fields = {
         "seq_region",
@@ -173,7 +184,7 @@ def _ncrna_row(
         key: _attribute_scalar_to_text(value) for key, value in feature.items() if key not in direct_fields
     }
     attributes["ncrna_tool"] = tool
-    row: FeatureRow = {
+    row: DnaAlignFeatureRow = {
         "seq_region_id": seq_region_id,
         "seq_region_start": cast("int", feature["seq_region_start"]),
         "seq_region_end": cast("int", feature["seq_region_end"]),
@@ -186,8 +197,8 @@ def _ncrna_row(
         "score": float(cast("int | float", feature["score"])) if "score" in feature else None,
         "evalue": float(cast("int | float", feature["evalue"])) if "evalue" in feature else None,
         "perc_ident": None,
-        "cigar_line": None,
-        "external_db_id": None,
+        "cigar_line": cigar_line,
+        "external_db_id": external_db_id,
         "hcoverage": None,
         "align_type": "ensembl",
     }
@@ -218,7 +229,7 @@ def _repeat_row(
     analysis_id: int,
     seq_region_id: int,
     consensus_id: int,
-) -> dict[str, object]:
+) -> RepeatFeatureRow:
     """Map one schema repeat object to a ``repeat_feature`` row.
 
     Args:
@@ -231,7 +242,7 @@ def _repeat_row(
         Values for one ``repeat_feature`` insert.
 
     """
-    return {
+    row: RepeatFeatureRow = {
         "seq_region_id": seq_region_id,
         "seq_region_start": cast("int", feature["seq_region_start"]),
         "seq_region_end": cast("int", feature["seq_region_end"]),
@@ -242,6 +253,8 @@ def _repeat_row(
         "analysis_id": analysis_id,
         "score": float(cast("int | float", feature["score"])) if "score" in feature else None,
     }
+
+    return row
 
 
 def _analysis_values(analysis: Mapping[str, JsonValue]) -> dict[str, object]:
@@ -265,49 +278,36 @@ def _analysis_values(analysis: Mapping[str, JsonValue]) -> dict[str, object]:
     }
 
 
-def _get_or_create_analysis(session: Session, analysis: Mapping[str, JsonValue]) -> int:
+def _get_or_create_analysis(session: Session, analysis: Mapping[str, JsonValue], prod_url: URL) -> int:
     """Create or verify the analysis and its description.
 
     Args:
         session: Active core database session.
         analysis: Validated analysis metadata from the input document.
+        prod_url: URL for the production database.
 
     Returns:
         The existing or newly created analysis ID.
 
-    Raises:
-        ValueError: If existing analysis metadata conflicts with the input.
-
     """
     values = _analysis_values(analysis)
     existing = session.scalar(select(Analysis).where(Analysis.logic_name == values["logic_name"]))
-    if existing is None:
-        created = Analysis(**values)
-        session.add(created)
-        session.flush()
-        session.add(
-            AnalysisDescription(
-                analysis_id=created.analysis_id,
-                description=str(analysis["description"]),
-                display_label=str(analysis["display_label"]),
-            )
-        )
-        session.flush()
-        return int(created.analysis_id)
+    if existing is not None:
+        return int(existing.analysis_id)
 
-    description = session.scalar(
-        select(AnalysisDescription).where(AnalysisDescription.analysis_id == existing.analysis_id)
+    prod_description = get_analysis_description(str(values["logic_name"]), prod_url)
+    created = Analysis(**values)
+    session.add(created)
+    session.flush()
+    session.add(
+        AnalysisDescription(
+            analysis_id=created.analysis_id,
+            description=prod_description.description,
+            display_label=prod_description.display_label,
+        )
     )
-    for field, expected in values.items():
-        if getattr(existing, field) != expected:
-            raise ValueError(f"Analysis {values['logic_name']} conflicts in field {field}")
-    if description is None:
-        raise ValueError(f"Analysis {values['logic_name']} has no analysis_description row")
-    if description.description != analysis["description"]:
-        raise ValueError(f"Analysis {values['logic_name']} conflicts in field description")
-    if description.display_label != analysis["display_label"]:
-        raise ValueError(f"Analysis {values['logic_name']} conflicts in field display_label")
-    return int(existing.analysis_id)
+    session.flush()
+    return int(created.analysis_id)
 
 
 @contextmanager
@@ -404,7 +404,7 @@ def _resolve_seq_region_id(session: Session, name: str, seq_region_ids: dict[str
 
     Args:
         session: Active core database session.
-        name: Exact sequence-region name from the input document.
+        name: Sequence region name.
         seq_region_ids: Per-load sequence-region name to ID cache.
 
     Returns:
@@ -424,6 +424,33 @@ def _resolve_seq_region_id(session: Session, name: str, seq_region_ids: dict[str
     seq_region_id = int(rows[0].seq_region_id)
     seq_region_ids[name] = seq_region_id
     return seq_region_id
+
+
+def _resolve_external_db_id(session: Session, db_name: str, external_db_ids: dict[str, int]) -> int:
+    """Resolve and cache one exact external database name to its database ID.
+
+    Args:
+        session: Active core database session.
+        name: External database name.
+        external_db_ids: Per-load external database name to ID cache.
+
+    Returns:
+        The unique matching external database ID.
+
+    Raises:
+        ValueError: If no unique external database matches ``name``.
+
+    """
+    if db_name in external_db_ids:
+        return external_db_ids[db_name]
+    rows = session.scalars(select(ExternalDb).where(ExternalDb.db_name == db_name)).all()
+    if not rows:
+        raise ValueError(f"External database not found: {db_name}")
+    if len(rows) > 1:
+        raise ValueError(f"External database name is ambiguous: {db_name}")
+    external_db_id = int(rows[0].external_db_id)
+    external_db_ids[db_name] = external_db_id
+    return external_db_id
 
 
 def _get_or_create_attrib_type(session: Session, code: str) -> int:
@@ -594,6 +621,7 @@ def _iter_ncrna_rows(
     tool: str,
     analysis_id: int,
     seq_region_ids: dict[str, int],
+    external_db_ids: dict[str, int],
 ) -> Iterator[tuple[Mapping[str, object], dict[str, str]]]:
     """Yield mapped ncRNA rows and their attribute values.
 
@@ -610,14 +638,16 @@ def _iter_ncrna_rows(
     """
     for feature in _iter_items(input_path, "ncrna_features"):
         seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), seq_region_ids)
-        values, attributes = _ncrna_row(feature, tool, seq_region_id, analysis_id)
+        external_db_id = _resolve_external_db_id(session, str(feature[""]), external_db_ids)
+        values, attributes = _ncrna_row(feature, tool, seq_region_id, analysis_id, external_db_id)
         yield values, attributes
 
 
 def load_features(
     input_path: Path,
-    database_url: URL,
     *,
+    core_url: URL,
+    prod_url: URL,
     skip_validation: bool = False,
     batch_size: int = 1000,
 ) -> None:
@@ -644,10 +674,10 @@ def load_features(
     if kind == "ncrna":
         tool = cast("str", _read_value(input_path, "ncrna_tool"))
 
-    database = DBConnectionLite(_normalise_database_url(database_url), reflect=False)
+    database = DBConnection(core_url, reflect=False)
     with _consensus_index() as key_index, database.session_scope() as session:
         seq_region_ids: dict[str, int] = {}
-        analysis_id = _get_or_create_analysis(session, analysis)
+        analysis_id = _get_or_create_analysis(session, analysis, prod_url)
         rows: Iterator[tuple[Mapping[str, object], None | dict[str, str]]]
         if kind == "repeat":
             for consensus in _iter_items(input_path, "repeat_consensus"):
@@ -662,12 +692,14 @@ def load_features(
                 seq_region_ids=seq_region_ids,
             )
         else:
+            external_db_ids: dict[str, int] = {}
             rows = _iter_ncrna_rows(
                 session=session,
                 input_path=input_path,
                 tool=tool,
                 analysis_id=analysis_id,
                 seq_region_ids=seq_region_ids,
+                external_db_ids=external_db_ids,
             )
 
         feature_count = 0
@@ -684,7 +716,7 @@ def load_features(
             session.commit()
 
 
-def parse_args(arg_list: list[str] | None = None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse CLI arguments using required command-line database values.
 
     Args:
@@ -695,8 +727,8 @@ def parse_args(arg_list: list[str] | None = None) -> argparse.Namespace:
 
     """
     parser = ArgumentParser(description="Load GenomIO features into an Ensembl core database.")
-    parser.add_argument_src_path("--input_file", required=True, help="load_features JSON document")
-    parser.add_argument("--skip-validation", action="store_true", help="skip JSON schema validation")
+    parser.add_argument_src_path("--input_file", required=True, help="load_features JSON document.")
+    parser.add_argument("--skip-validation", action="store_true", help="skip JSON schema validation.")
     parser.add_numeric_argument(
         "--batch-size",
         type=int,
@@ -704,20 +736,42 @@ def parse_args(arg_list: list[str] | None = None) -> argparse.Namespace:
         default=1000,
         help="number of features to commit per batch",
     )
-    parser.add_server_arguments(prefix="db_", include_database=True)
+    parser.add_server_arguments(
+        prefix="core_",
+        include_database=True,
+        help="Core database connection for loading features.",
+    )
+    parser.add_server_arguments(
+        prefix="prod_",
+        include_database=True,
+        help="Production database connection for retrieving analysis metadata.",
+    )
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
-    return parser.parse_args(arg_list)
 
-
-def main() -> None:
-    """Run the features loader CLI."""
-    args = parse_args()
+    args = parser.parse_args(argv)
     init_logging_with_args(args)
+    return args
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Run the features loader CLI.
+
+    Args:
+        argv: Optional list of command-line arguments; defaults to the process command line.
+
+    """
+    args = parse_args(argv)
     logging.info("Loading features into %s", args.db_url.render_as_string(hide_password=True))
-    load_features(
-        args.input_file,
-        args.db_url,
-        skip_validation=args.skip_validation,
-        batch_size=args.batch_size,
-    )
+
+    try:
+        load_features(
+            args.input_file,
+            core_url=args.core_url.set(drivername="mysql+mysqlconnector"),
+            prod_url=args.prod_url.set(drivername="mysql+mysqlconnector"),
+            skip_validation=args.skip_validation,
+            batch_size=args.batch_size,
+        )
+    except Exception:
+        logging.exception(f"Error occurred while loading features from {args.input_file}")
+        raise

@@ -14,6 +14,4 @@
 # limitations under the License.
 """Load GenomIO feature JSON documents into Ensembl core databases."""
 
-from . import core_load
-
-__all__ = ["core_load"]
+from .core_load import *
