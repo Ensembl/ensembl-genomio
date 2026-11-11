@@ -224,9 +224,6 @@ def test_find_level_mentions(text: str, count: int | None, names: list[str], exp
         pytest.param(
             "Peanut arose from an allopolyploid ancestor. Today, peanut is an allotetraploid crop.",
             "allopolyploid",
-            marks=pytest.mark.xfail(
-                strict=True, reason="extract.py:388 only checks the first match of a pattern"
-            ),
             id="Later organism-level mention",
         ),
     ],
@@ -445,7 +442,6 @@ def test_ncbi_chromosome_count(chromosome_number: dict | None, expected: int | N
         pytest.param(
             {"Methods": ("The k-mer size used for estimation = 21 bp.", 0.8)},
             (None, None),
-            marks=pytest.mark.xfail(strict=True, reason="extract.py:606 'n = N' has no word boundary"),
             id="Equation in prose",
         ),
     ],
@@ -477,9 +473,6 @@ def test_extract_chromosome_number(sections: dict, expected: tuple) -> None:
         pytest.param(
             "The cv. Nipponbare was sequenced.",
             ["Nipponbare"],
-            marks=pytest.mark.xfail(
-                strict=True, reason="extract.py:644 'cv.' pattern swallows the following words"
-            ),
             id="Abbreviated cultivar mid-sentence",
         ),
     ],
@@ -508,9 +501,6 @@ def test_extract_cultivars(text: str, expected: list[str]) -> None:
         pytest.param(
             {"Methods": ("The maternal haplotype was assembled.", 0.8)},
             ("unknown", None),
-            marks=pytest.mark.xfail(
-                strict=True, reason="extract.py:717 reports maternal/paternal as the sex"
-            ),
             id="Haplotype parent is not a sex",
         ),
     ],
@@ -548,7 +538,6 @@ def test_extract_sex(sections: dict, expected: tuple) -> None:
             "The genome of Malus domestica is presented.",
             {},
             "Malus domestica",
-            marks=pytest.mark.xfail(strict=True, reason="extract.py:748 matches any capitalised word pair"),
             id="Binomial after prose",
         ),
     ],

@@ -714,11 +714,15 @@ def run_gemma_ploidy(
     return None
 
 
+# Fields of a validated Gemma result that describe the sample, not its ploidy.
+_NON_PLOIDY_KEYS = ("sex", "strain_cultivar")
+
+
 def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
     """Fold a validated Gemma result into the rule+vector ensemble ploidy as a
     third vote. Inferred (`suggested`) ploidy is discarded, since an unstated level is
     not evidence; explicit results can raise confidence on agreement, fill a
-    missing level, or flag a conflict. Also backfills sex and cultivar when absent."""
+    missing level, or flag a conflict. Sex and cultivar are handled by `backfill_from_gemma`."""
     if not gemma:
         return ensemble
 
@@ -758,7 +762,7 @@ def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
 
         elif ensemble_level is None and gemma_level is not None:
             # Rule/vector found nothing; Gemma found an explicit statement
-            out = dict(gemma)
+            out = {key: value for key, value in gemma.items() if key not in _NON_PLOIDY_KEYS}
             out["method"] = "gemma_only"
             out["confidence"] = round(gemma.get("confidence", 0.7) * 0.9, 2)
 
@@ -768,19 +772,29 @@ def combine_with_gemma(ensemble: dict, gemma: dict | None) -> dict:
             out["confidence"] = round(ensemble.get("confidence", 0.5) * 0.8, 2)
             out["gemma"] = gemma_note
 
-    # ── Apply sex from Gemma if ensemble has unknown ────────────────────────
+    return out
+
+
+def backfill_from_gemma(record: dict, gemma: dict | None) -> dict:
+    """Fill the final record's sex and cultivar from a validated Gemma result.
+
+    Gemma's sex is used only when the rule + vector ensemble left it unknown, and its
+    strain/cultivar is added as unconfirmed unless already listed. Returns a new record."""
+    if not gemma:
+        return record
+
+    out = dict(record)
     g_sex = gemma.get("sex")
     if g_sex and g_sex not in ("unknown", "not_applicable"):
-        if out.get("sex", {}).get("value") in (None, "unknown"):
+        if (out.get("sex") or {}).get("value") in (None, "unknown"):
             out["sex"] = {"value": g_sex, "method": "gemma", "confidence": 0.65}
 
-    # ── Add Gemma cultivar/strain if not already in the list ────────────────
     g_cultivar = gemma.get("strain_cultivar")
     if g_cultivar:
-        cultivars = out.get("cultivars") or {}
-        confirmed = cultivars.get("confirmed", []) or []
-        unconfirmed = cultivars.get("unconfirmed", []) or []
+        cultivars = dict(out.get("cultivars") or {})
+        confirmed = cultivars.get("confirmed") or []
+        unconfirmed = list(cultivars.get("unconfirmed") or [])
         if g_cultivar not in confirmed and g_cultivar not in unconfirmed:
-            out.setdefault("cultivars", {}).setdefault("unconfirmed", []).append(g_cultivar)
-
+            cultivars["unconfirmed"] = unconfirmed + [g_cultivar]
+            out["cultivars"] = cultivars
     return out

@@ -244,10 +244,10 @@ def infer_sex(results: list[dict]) -> dict:
             continue
         text_lower = result["text"].lower()
         for keyword in SEX_KEYWORDS:
-            if re.search(r"\b" + re.escape(keyword.lower()) + r"\b", text_lower):
-                idx = text_lower.find(keyword.lower())
-                start = max(0, idx - 60)
-                end = min(len(result["text"]), idx + 60)
+            match = re.search(r"\b" + re.escape(keyword.lower()) + r"\b", text_lower)
+            if match:
+                start = max(0, match.start() - 60)
+                end = min(len(result["text"]), match.start() + 60)
                 return {
                     "value": keyword,
                     "section": result["section"],

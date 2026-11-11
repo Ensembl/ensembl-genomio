@@ -309,6 +309,14 @@ def test_fetch_bioproject_reference_papers(
     ]
 
 
+# Shape of the "articleids" list in a real PMC esummary record (PMC6175935).
+ARTICLE_IDS = [
+    {"idtype": "pmid", "value": "30297696"},
+    {"idtype": "pmcid", "value": "PMC6175935"},
+    {"idtype": "doi", "value": "10.1038/s41598-018-33344-8"},
+]
+
+
 @pytest.mark.parametrize(
     ("side_effect", "expected"),
     [
@@ -322,19 +330,19 @@ def test_fetch_bioproject_reference_papers(
         pytest.param(
             [
                 {"esearchresult": {"idlist": ["1", "2"]}},
-                {"result": {"1": {"title": "Peanut genome"}, "2": {}}},
+                {"result": {"1": {"title": "Peanut genome", "articleids": ARTICLE_IDS}, "2": {}}},
             ],
             [
                 {
                     "title": "Peanut genome",
                     "pmcid": "PMC1",
-                    "pmid": "",
-                    "doi": "",
+                    "pmid": "30297696",
+                    "doi": "10.1038/s41598-018-33344-8",
                     "abstractText": "",
                     "source": "ncbi_entrez",
                 }
             ],
-            id="Summaries converted, empty skipped",
+            id="Summaries converted, IDs read from articleids, empty skipped",
         ),
     ],
 )
@@ -352,27 +360,3 @@ def test_search_ncbi_entrez(mock_json: MagicMock, side_effect: Any, expected: li
     assert ncbi.search_ncbi_entrez("Arachis hypogaea", max_results=2) == expected
     term = mock_json.call_args_list[0].args[1]["term"]
     assert term == '"Arachis hypogaea" AND "genome assembly" AND "open access"[filter]'
-
-
-@pytest.mark.xfail(
-    strict=True, reason="PMC esummary puts PMID and DOI under 'articleids', not as top-level keys"
-)
-@patch("ensembl.io.genomio.literature.ncbi.entrez_json")
-def test_search_ncbi_entrez_article_ids(mock_json: MagicMock) -> None:
-    """Test :func:`ncbi.search_ncbi_entrez` reads PMID and DOI from a real-shaped PMC esummary record.
-
-    Args:
-        mock_json: Patched `entrez_json()`.
-
-    """
-    summary = {
-        "title": "A genome paper",
-        "articleids": [
-            {"idtype": "pmid", "value": "30297696"},
-            {"idtype": "pmcid", "value": "PMC6175935"},
-            {"idtype": "doi", "value": "10.1038/s41598-018-33344-8"},
-        ],
-    }
-    mock_json.side_effect = [{"esearchresult": {"idlist": ["6175935"]}}, {"result": {"6175935": summary}}]
-    paper = ncbi.search_ncbi_entrez("Arachis hypogaea")[0]
-    assert (paper["pmid"], paper["doi"]) == ("30297696", "10.1038/s41598-018-33344-8")

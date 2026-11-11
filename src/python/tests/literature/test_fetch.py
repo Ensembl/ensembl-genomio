@@ -141,9 +141,10 @@ def test_has_usable_fulltext(papers: list[dict], expected: bool) -> None:
 
 
 @pytest.mark.parametrize(
-    ("side_effect", "expected"),
+    ("name", "side_effect", "expected"),
     [
         pytest.param(
+            "Arachis hypogaea",
             [
                 MagicMock(
                     **{
@@ -182,36 +183,25 @@ def test_has_usable_fulltext(papers: list[dict], expected: bool) -> None:
             ],
             id="Genus filter, IDs mapped, capped",
         ),
-        pytest.param(requests.ConnectionError("down"), [], id="Request error"),
+        pytest.param("Arachis hypogaea", requests.ConnectionError("down"), [], id="Request error"),
+        pytest.param(
+            "", [MagicMock(**{"json.return_value": {"data": [{"title": "Any"}]}})], [], id="No name"
+        ),
     ],
 )
 @patch("ensembl.io.genomio.literature.fetch.requests.get")
-def test_search_semantic_scholar(mock_get: MagicMock, side_effect: Any, expected: list) -> None:
+def test_search_semantic_scholar(mock_get: MagicMock, name: str, side_effect: Any, expected: list) -> None:
     """Test :func:`fetch.search_semantic_scholar`.
 
     Args:
         mock_get: Patched `requests.get()`.
+        name: Scientific name to search for.
         side_effect: Response returned, or exception raised, by the request.
         expected: Expected paper records.
 
     """
     mock_get.side_effect = side_effect
-    assert fetch.search_semantic_scholar("Arachis hypogaea", max_results=2) == expected
-
-
-@pytest.mark.xfail(strict=True, raises=IndexError, reason="fetch.py:252 indexes ''.split()[0]")
-@patch("ensembl.io.genomio.literature.fetch.requests.get")
-def test_search_semantic_scholar_without_name(mock_get: MagicMock) -> None:
-    """Test :func:`fetch.search_semantic_scholar` returns [] without a scientific name, as documented.
-
-    Reachable from `fetch_papers_for_assembly` when an assembly has a taxon ID but no scientific name.
-
-    Args:
-        mock_get: Patched `requests.get()`.
-
-    """
-    mock_get.return_value.json.return_value = {"data": [{"title": "Any paper", "externalIds": {}}]}
-    assert not fetch.search_semantic_scholar("")
+    assert fetch.search_semantic_scholar(name, max_results=2) == expected
 
 
 @patch("ensembl.io.genomio.literature.fetch.score_paper_candidate")
@@ -483,7 +473,11 @@ PREPARED = [{"id": "keep", "ok": True}, {"id": "drop", "ok": False}]
             {"papers": [{"id": "keep", "ok": True}], "reference_paper": {"title": "Ref"}},
             id="Only accession-linked papers kept",
         ),
-        pytest.param({"assembly_accession": ACCESSION}, {"papers": []}, id="No name or taxon, no search"),
+        pytest.param(
+            {"assembly_accession": ACCESSION},
+            {"papers": [], "reference_paper": None},
+            id="No name or taxon, no search",
+        ),
     ],
 )
 @patch(
@@ -502,17 +496,8 @@ def test_fetch_papers_for_assembly(mock_enrich: MagicMock, assembly: dict, expec
     Args:
         mock_enrich: Patched `enrich_assembly_metadata()`.
         assembly: Enriched assembly metadata.
-        expected: Expected papers (and reference paper).
+        expected: Expected papers and reference paper.
 
     """
     mock_enrich.return_value = assembly
-    result = fetch.fetch_papers_for_assembly(ACCESSION)
-    assert {"assembly": assembly, **expected}.items() <= result.items()
-
-
-@pytest.mark.xfail(strict=True, reason="fetch.py:539 early return omits the 'reference_paper' key")
-@patch("ensembl.io.genomio.literature.fetch.enrich_assembly_metadata", lambda assembly: assembly)
-@patch("ensembl.io.genomio.literature.fetch.fetch_assembly_metadata", lambda accession: {})
-def test_fetch_papers_for_assembly_shape_without_names() -> None:
-    """Test :func:`fetch.fetch_papers_for_assembly` always returns the documented keys."""
-    assert set(fetch.fetch_papers_for_assembly(ACCESSION)) == {"assembly", "papers", "reference_paper"}
+    assert fetch.fetch_papers_for_assembly(ACCESSION) == {"assembly": assembly, **expected}

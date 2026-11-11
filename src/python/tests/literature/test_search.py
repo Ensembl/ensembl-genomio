@@ -220,7 +220,6 @@ def test_infer_sex(results: list[dict], expected: dict) -> None:
     assert search.infer_sex(results) == expected
 
 
-@pytest.mark.xfail(strict=True, reason="search.py:248 finds the context with str.find(), not the regex match")
 def test_infer_sex_context_surrounds_match() -> None:
     """Test :func:`search.infer_sex` returns context around the matched word, not an earlier substring."""
     text = (

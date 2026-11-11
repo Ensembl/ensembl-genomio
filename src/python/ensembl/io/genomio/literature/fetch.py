@@ -229,7 +229,9 @@ def has_usable_fulltext(papers: list[dict]) -> bool:
 def search_semantic_scholar(scientific_name: str, max_results: int = 5) -> list:
     """Last-resort search: query Semantic Scholar for genome-assembly papers by
     scientific name, keeping only genus-relevant hits. Returns Europe-PMC-shaped
-    records ([] on failure)."""
+    records ([] on failure or without a scientific name)."""
+    if not scientific_name.strip():
+        return []
     logger.info(f"  [Semantic Scholar] Searching for {scientific_name} ...")
 
     url = "https://api.semanticscholar.org/graph/v1/paper/search"
@@ -540,7 +542,7 @@ def fetch_papers_for_assembly(accession: str, max_results: int = 5) -> dict:
     # into an empty query and return unrelated papers. Skip retrieval entirely.
     if not scientific_name and not taxon_id:
         logger.info("      No NCBI scientific_name / taxon_id — skipping paper retrieval.")
-        return {"assembly": assembly, "papers": []}
+        return {"assembly": assembly, "papers": [], "reference_paper": None}
 
     candidates = _gather_paper_candidates(accession, assembly, identifiers, max_results)
     candidates = _confirm_fulltext_candidates(candidates, scientific_name)
