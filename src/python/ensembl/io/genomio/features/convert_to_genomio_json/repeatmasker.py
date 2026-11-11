@@ -90,11 +90,6 @@ class RepeatMaskerCustomConverter(FeatureConverter):
     """Converter for RepeatMasker output generated with a custom library."""
 
     analysis_logic_name = "repeatmask_customlib"
-    analysis_display_label = "Repeats: Custom library"
-    analysis_description = (
-        'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>,'
-        " using a custom library of <em>ab initio</em> repeat profiles for this species."
-    )
     program = "RepeatMasker"
 
     @classmethod
@@ -105,11 +100,7 @@ class RepeatMaskerCustomConverter(FeatureConverter):
             help="Convert RepeatMasker output generated using a custom library.",
         )
         _add_repeatmasker_common_args(custom_parser)
-        custom_parser.set_defaults(
-            analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label=cls.analysis_display_label,
-            analysis_description=cls.analysis_description,
-        )
+        custom_parser.set_defaults(analysis_logic_name=cls.analysis_logic_name)
 
     @classmethod
     def options_from_args(cls, args: argparse.Namespace) -> RepeatMaskerOptions:
@@ -131,12 +122,6 @@ class RepeatMaskerRepbaseConverter(FeatureConverter):
     """Converter for RepeatMasker output generated with Repbase."""
 
     analysis_logic_name = "repeatmask_repbase"
-    analysis_display_label = "Repeats: Repbase"
-    analysis_description = (
-        'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker</a>,'
-        ' using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> library of '
-        "repeat profiles."
-    )
     program = "RepeatMasker"
 
     @classmethod
@@ -147,11 +132,7 @@ class RepeatMaskerRepbaseConverter(FeatureConverter):
             help="Convert RepeatMasker output generated using Repbase.",
         )
         _add_repeatmasker_common_args(repbase_parser)
-        repbase_parser.set_defaults(
-            analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label=cls.analysis_display_label,
-            analysis_description=cls.analysis_description,
-        )
+        repbase_parser.set_defaults(analysis_logic_name=cls.analysis_logic_name)
 
     @classmethod
     def options_from_args(cls, args: argparse.Namespace) -> RepeatMaskerOptions:

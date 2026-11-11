@@ -279,6 +279,11 @@
           "maxLength": 255,
           "description": "Optional display label for the feature."
         },
+        "description": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Optional description for the feature."
+        },
         "score": {
           "type": "number",
           "description": "Primary score from the tool (Infernal bitscore, tRNAscan score, etc.)."

@@ -475,9 +475,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     Returns:
         Parsed argparse namespace with validated options and logging configuration applied.
 
-    Raises:
-        ValueError: If ``--min-chunk-length`` is provided without ``--max-seq-length-per-file``.
-
     """
     parser = ArgumentParser(description=__doc__)
     parser.add_argument_src_path(
@@ -567,7 +564,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     args = parser.parse_args(argv)
     if hasattr(args, "min_chunk_length") and not hasattr(args, "max_seq_length_per_file"):
-        raise ValueError("--min-chunk-length requires --max-seq-length-per-file")
+        parser.error("--min-chunk-length requires --max-seq-length-per-file")
 
     init_logging_with_args(args)
 
