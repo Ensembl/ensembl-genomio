@@ -385,13 +385,13 @@ def detect_mechanism(text: str, window: int = 22) -> Optional[str]:
     """Return the most specific organism-level polyploidy mechanism, or None."""
     best, best_rank = None, -1
     for name, rx, rank in _MECH_PATTERNS:
-        match = rx.search(text)
-        if not match:
-            continue
-        context = text[max(0, match.start() - window) : match.end() + window]
-        if _MECH_ANCESTOR_RE.search(context):
-            continue  # the term itself qualifies an ancestor, not the organism
-        if rank > best_rank:
+        # A term that qualifies an ancestor ("allopolyploid ancestor") is skipped, but a
+        # later mention of the same term may still describe the organism itself.
+        describes_organism = any(
+            not _MECH_ANCESTOR_RE.search(text[max(0, match.start() - window) : match.end() + window])
+            for match in rx.finditer(text)
+        )
+        if describes_organism and rank > best_rank:
             best, best_rank = name, rank
     return best
 
@@ -603,7 +603,7 @@ CONTEXT_WINDOW = 50
 CHROMOSOME_PATTERNS = [
     r"2n\s*=\s*\d+x\s*=\s*(\d+)",  # 2n = 4x = 52  -> 52 (total count)
     r"2n\s*=\s*(\d+)",  # 2n = 48
-    r"n\s*=\s*(\d+)",  # n = 24 (haploid)
+    r"\bn\s*=\s*(\d+)",  # n = 24 (haploid); not the "n" ending a word ("estimation = 21")
     r"(\d+)\s+chromosome",  # 48 chromosomes
     r"chromosome\s+number\s+(?:of\s+)?(\d+)",
 ]
@@ -641,7 +641,7 @@ def extract_chromosome_number(weighted_sections: dict) -> dict:
 
 CULTIVAR_PATTERNS = [
     r"(?i:cultivar)\s+['\u2018\u2019\"]([^'\u2018\u2019\"]+)['\u2018\u2019\"]",
-    r"(?i:cv)\.\s*['\u2018\u2019\"]?([A-Z][a-zA-Z\s]+)",
+    r"(?i:cv)\.\s*['\u2018\u2019\"]?([A-Z][\w\-]*(?: [A-Z0-9][\w\-]*){0,2})",
     r"['\u2018\u2019]([A-Z][a-zA-Z\s]{2,25})['\u2018\u2019]",
     r"(?i:cultivar)[:\s]+([A-Z][\w\-]*(?: [A-Z0-9][\w\-]*){0,2})",
     r"(?i:strain)[:\s]+([A-Z][\w\-]*(?: [A-Z0-9][\w\-]*){0,2})",
@@ -714,7 +714,6 @@ def extract_cultivars(filtered_text: str) -> list:
 SEX_PATTERNS = [
     r"(female|male)\s+(individual|specimen|plant|animal|organism)",
     r"sex[:\s]+(male|female|hermaphrodite)",
-    r"(maternal|paternal)\s+",
 ]
 
 
@@ -740,6 +739,21 @@ def extract_sex(weighted_sections: dict) -> dict:
 # ============================================================
 
 
+# Capitalised sentence words that pattern 2 would otherwise read as a genus ("The genome").
+_NOT_A_GENUS = frozenset(
+    "the this these those that there here its our their we it in on of for from with by as at to "
+    "after during using while when both each all most some such and but however".split()
+)
+
+
+def _first_binomial(pattern: str, text: str) -> Optional[str]:
+    """Return the first match of `pattern` whose first word can be a genus, or None."""
+    for match in re.finditer(pattern, text):
+        if match.group(1).split()[0].lower() not in _NOT_A_GENUS:
+            return match.group(1)
+    return None
+
+
 def extract_species(sections: dict, weighted_sections: dict) -> Optional[str]:
     """Extract a binomial species name from text, preferring the abstract then
     high-weight sections; returns "unknown" if no binomial is found. Used only as
@@ -749,24 +763,20 @@ def extract_species(sections: dict, weighted_sections: dict) -> Optional[str]:
 
     abstract = sections.get("Abstract", "")
     for pat in [pattern1, pattern2]:
-        m = re.search(pat, abstract)
-        if m:
-            return m.group(1)
+        name = _first_binomial(pat, abstract)
+        if name:
+            return name
 
     for sec_name, (text, weight) in weighted_sections.items():
         if weight < 1.5:
             continue
         for pat in [pattern1, pattern2]:
-            m = re.search(pat, text)
-            if m:
-                return m.group(1)
+            name = _first_binomial(pat, text)
+            if name:
+                return name
 
     filtered = " ".join(t for _, (t, w) in weighted_sections.items() if w > 0)
-    m = re.search(pattern2, filtered)
-    if m:
-        return m.group(1)
-
-    return "unknown"
+    return _first_binomial(pattern2, filtered) or "unknown"
 
 
 # ============================================================

@@ -631,7 +631,13 @@ ENSEMBLE = {
         ),
         pytest.param(
             {**ENSEMBLE, "level": None},
-            {"level": 6, "confidence": 0.78, "source": "gemma_confirmed", "sex": "unknown"},
+            {
+                "level": 6,
+                "confidence": 0.78,
+                "source": "gemma_confirmed",
+                "sex": "female",
+                "strain_cultivar": "x",
+            },
             {"level": 6, "method": "gemma_only", "confidence": 0.7, "source": "gemma_confirmed"},
             id="Gemma fills a missing level",
         ),
@@ -645,29 +651,10 @@ ENSEMBLE = {
             },
             id="Conflict flagged",
         ),
-        pytest.param(
-            {
-                **ENSEMBLE,
-                "sex": {"value": "unknown"},
-                "cultivars": {"confirmed": ["TM-1"], "unconfirmed": ["x"]},
-            },
-            {"level": None, "sex": "female", "strain_cultivar": "Tifrunner"},
-            {
-                "sex": {"value": "female", "method": "gemma", "confidence": 0.65},
-                "cultivars": {"confirmed": ["TM-1"], "unconfirmed": ["x", "Tifrunner"]},
-            },
-            id="Sex and cultivar backfilled",
-        ),
-        pytest.param(
-            {**ENSEMBLE, "sex": {"value": "male"}, "cultivars": {"confirmed": ["TM-1"]}},
-            {"level": None, "sex": "female", "strain_cultivar": "TM-1"},
-            {"sex": {"value": "male"}, "cultivars": {"confirmed": ["TM-1"]}},
-            id="Known sex and cultivar kept",
-        ),
     ],
 )
 def test_combine_with_gemma(ensemble: dict, answer: dict | None, expected: dict) -> None:
-    """Test :func:`gemma.combine_with_gemma`.
+    """Test :func:`gemma.combine_with_gemma` combines the ploidy only, never Gemma's sex or cultivar.
 
     Args:
         ensemble: Rule + vector ensemble ploidy result.
@@ -675,18 +662,45 @@ def test_combine_with_gemma(ensemble: dict, answer: dict | None, expected: dict)
         expected: Fields expected in the combined result.
 
     """
-    assert expected.items() <= gemma.combine_with_gemma(dict(ensemble), answer).items()
+    result = gemma.combine_with_gemma(dict(ensemble), answer)
+    assert expected.items() <= result.items()
+    assert "sex" not in result and "strain_cultivar" not in result
 
 
-@pytest.mark.xfail(strict=True, raises=AttributeError, reason="gemma.py:774 calls .get() on the string sex")
-def test_combine_with_gemma_fills_level_and_sex() -> None:
-    """Test :func:`gemma.combine_with_gemma` when Gemma alone finds the level and also reports a sex.
+RECORD = {"sex": {"value": "unknown"}, "cultivars": {"confirmed": ["TM-1"], "unconfirmed": ["x"]}}
 
-    The ``gemma_only`` branch copies the validated result, whose ``sex`` is a plain string.
+
+@pytest.mark.parametrize(
+    ("record", "answer", "expected"),
+    [
+        pytest.param(RECORD, None, RECORD, id="No Gemma result"),
+        pytest.param(
+            RECORD,
+            {"sex": "female", "strain_cultivar": "Tifrunner"},
+            {
+                "sex": {"value": "female", "method": "gemma", "confidence": 0.65},
+                "cultivars": {"confirmed": ["TM-1"], "unconfirmed": ["x", "Tifrunner"]},
+            },
+            id="Sex and cultivar backfilled",
+        ),
+        pytest.param(
+            {"sex": {"value": "male"}, "cultivars": {"confirmed": ["TM-1"]}},
+            {"sex": "female", "strain_cultivar": "TM-1"},
+            {"sex": {"value": "male"}, "cultivars": {"confirmed": ["TM-1"]}},
+            id="Known sex and cultivar kept",
+        ),
+        pytest.param({}, {"sex": "unknown"}, {}, id="Gemma has no sex either"),
+    ],
+)
+def test_backfill_from_gemma(record: dict, answer: dict | None, expected: dict) -> None:
+    """Test :func:`gemma.backfill_from_gemma` fills only what the record is missing, without changing it.
+
+    Args:
+        record: Final pipeline record.
+        answer: Validated Gemma result, if any.
+        expected: Expected record.
 
     """
-    answer = gemma._validate(
-        {"ploidy_level": 4, "stated_explicitly": True, "evidence_quotes": [QUOTE], "sex": "female"}, PASSAGES
-    )
-    result = gemma.combine_with_gemma({**ENSEMBLE, "level": None}, answer)
-    assert (result["level"], result["method"]) == (4, "gemma_only")
+    before = json.dumps(record)
+    assert gemma.backfill_from_gemma(record, answer) == expected
+    assert json.dumps(record) == before

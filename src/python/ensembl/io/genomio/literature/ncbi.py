@@ -237,12 +237,16 @@ def search_ncbi_entrez(scientific_name: str, max_results: int = 5) -> list:
         if not summary:
             continue
         pmcid = f"PMC{pmc_id}"
+        # PMC esummary lists the PMID and DOI under "articleids", not as top-level keys.
+        article_ids = {
+            item.get("idtype"): item.get("value", "") for item in summary.get("articleids", []) or []
+        }
         papers.append(
             {
                 "title": summary.get("title", ""),
                 "pmcid": pmcid,
-                "pmid": summary.get("pmid", ""),
-                "doi": summary.get("doi", ""),
+                "pmid": article_ids.get("pmid", ""),
+                "doi": article_ids.get("doi", ""),
                 "abstractText": "",
                 "source": "ncbi_entrez",
             }

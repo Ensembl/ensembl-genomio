@@ -21,7 +21,12 @@ import os
 
 from ensembl.io.genomio.literature.extract import extract_metadata
 from ensembl.io.genomio.literature.fetch import fetch_papers_for_assembly
-from ensembl.io.genomio.literature.gemma import combine_with_gemma, is_enabled, run_gemma_ploidy
+from ensembl.io.genomio.literature.gemma import (
+    backfill_from_gemma,
+    combine_with_gemma,
+    is_enabled,
+    run_gemma_ploidy,
+)
 from ensembl.io.genomio.literature.parse import parse_paper
 from ensembl.io.genomio.literature.search import run_vector_search
 
@@ -355,6 +360,7 @@ def run_pipeline(accession: str, max_papers: int = 5) -> dict:
         )
         if gemma_result is not None:
             final["ploidy"] = combine_with_gemma(final["ploidy"], gemma_result)
+            final = backfill_from_gemma(final, gemma_result)
             logger.info(
                 f"  [gemma] combined -> level={final['ploidy']['level']} "
                 f"(method: {final['ploidy']['method']})"

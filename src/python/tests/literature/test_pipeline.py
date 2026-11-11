@@ -389,7 +389,6 @@ def test_run_pipeline(
     assert (final["ploidy"].get("gemma") == "read") == gemma_called
 
 
-@pytest.mark.xfail(strict=True, reason="pipeline.py:357 passes only final['ploidy'] to combine_with_gemma")
 @patch("ensembl.io.genomio.literature.pipeline.is_enabled", lambda: True)
 @patch("ensembl.io.genomio.literature.pipeline.extract_metadata", MagicMock())
 @patch("ensembl.io.genomio.literature.pipeline.run_gemma_ploidy")
@@ -400,8 +399,6 @@ def test_run_pipeline_gemma_backfills_sex_and_cultivar(
     mock_fetch: MagicMock, mock_parse: MagicMock, mock_vector: MagicMock, mock_gemma: MagicMock
 ) -> None:
     """Test :func:`pipeline.run_pipeline` puts Gemma's sex and cultivar into the final record.
-
-    `combine_with_gemma` is documented to backfill sex and cultivar when they are missing.
 
     Args:
         mock_fetch: Patched `fetch_papers_for_assembly()`.
