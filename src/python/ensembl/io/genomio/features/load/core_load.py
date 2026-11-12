@@ -45,10 +45,11 @@ from ensembl.core.models import (
 )
 
 import ensembl.io.genomio
+from ensembl.io.genomio.database import get_analysis_description
 from ensembl.io.genomio.schemas.json.validate import schema_validator
 
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.database import DBConnection, get_analysis_description
+from ensembl.utils.database import DBConnection
 from ensembl.utils.logging import init_logging_with_args
 
 __all__ = ["load_features", "main", "parse_args"]
