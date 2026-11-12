@@ -28,6 +28,7 @@ from typing import TypedDict, cast
 
 
 import ijson
+from python.ensembl.io.genomio.database.analysis import get_production_analysis_description
 from sqlalchemy import select
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
@@ -45,7 +46,7 @@ from ensembl.core.models import (
 )
 
 import ensembl.io.genomio
-from ensembl.io.genomio.database import get_analysis_description
+from ensembl.io.genomio.database import get_production_analysis_description
 from ensembl.io.genomio.schemas.json.validate import schema_validator
 
 from ensembl.utils.argparse import ArgumentParser
@@ -296,7 +297,9 @@ def _get_or_create_analysis(session: Session, analysis: Mapping[str, JsonValue],
     if existing is not None:
         return int(existing.analysis_id)
 
-    prod_analysis_description_values = get_analysis_description(str(values["logic_name"]), prod_url)
+    prod_analysis_description_values = get_production_analysis_description(
+        str(values["logic_name"]), prod_url
+    )
     created = Analysis(**values)
     session.add(created)
     session.flush()
