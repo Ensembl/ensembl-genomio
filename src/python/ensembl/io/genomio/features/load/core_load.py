@@ -28,7 +28,6 @@ from typing import TypedDict, cast
 
 
 import ijson
-from python.ensembl.io.genomio.database.analysis import get_production_analysis_description
 from sqlalchemy import select
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
