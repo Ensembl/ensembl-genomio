@@ -23,7 +23,7 @@ from ensembl.core.models import Analysis, AnalysisDescription
 
 from ensembl.utils.database import DBConnection
 
-__all__ = ["get_analysis_description"]
+__all__ = ["get_production_analysis_description"]
 
 
 class AnalysisDescriptionData(TypedDict):
@@ -33,7 +33,7 @@ class AnalysisDescriptionData(TypedDict):
     web_data: str | None
 
 
-def get_analysis_description(
+def get_production_analysis_description(
     logic_name: str,
     prod_url: URL,
 ) -> AnalysisDescriptionData:
@@ -56,8 +56,9 @@ def get_analysis_description(
         result = (
             session.execute(
                 text("""
-                    SELECT description, display_label, displayable, web_data
-                    FROM analysis_description
+                    SELECT ad.description, ad.display_label, ad.displayable, wd.data as web_data
+                    FROM analysis_description ad
+                    LEFT JOIN web_data wd ON ad.web_data_id = wd.web_data_id
                     WHERE logic_name = :logic_name
                 """),
                 {"logic_name": logic_name},

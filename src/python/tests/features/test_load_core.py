@@ -52,7 +52,7 @@ JsonValue = core_load.JsonValue
     [
         pytest.param("+", 1, id="positive strand"),
         pytest.param("-", -1, id="negative strand"),
-        pytest.param(".", 0, id="no strand")
+        pytest.param(".", 0, id="no strand"),
     ],
 )
 def test_normalise_strand(value: str, expected: int) -> None:
@@ -137,19 +137,14 @@ def test_ncrna_row_uses_cmscan_model_coordinates_and_attributes() -> None:
             "trnascan",
             {"display_label": "tRNA-Phe", "isotype": "Phe"},
             "tRNA-Phe",
-            id="trnascan with display label"
+            id="trnascan with display label",
         ),
-        pytest.param(
-            "trnascan",
-            {"isotype": "Phe"},
-            "Phe",
-            id="trnascan with isotype"
-        ),
+        pytest.param("trnascan", {"isotype": "Phe"}, "Phe", id="trnascan with isotype"),
         pytest.param(
             "mirbase",
             {"mirna_name": "ath-miR156a", "mirna_type": "hairpin"},
             "ath-miR156a",
-            id="mirbase with mirna name"
+            id="mirbase with mirna name",
         ),
     ],
 )
@@ -288,8 +283,8 @@ def test_parse_args_uses_required_command_line_connection_values(tmp_path: Path)
         pytest.param("--db_host", id="missing db host"),
         pytest.param("--db_port", id="missing db port"),
         pytest.param("--db_user", id="missing db user"),
-        pytest.param("--db_database", id="missing db database")
-    ]
+        pytest.param("--db_database", id="missing db database"),
+    ],
 )
 def test_parse_args_requires_each_connection_parameter(missing: str, tmp_path: Path) -> None:
     """Each required connection option is rejected when omitted.
@@ -456,8 +451,8 @@ def test_get_or_create_analysis_reuses_matching_metadata(parent_session: Session
     [
         pytest.param("program", id="program"),
         pytest.param("description", id="description"),
-        pytest.param("display_label", id="display_label")
-    ]
+        pytest.param("display_label", id="display_label"),
+    ],
 )
 def test_get_or_create_analysis_rejects_conflicting_metadata(parent_session: Session, field: str) -> None:
     """Conflicting analysis metadata is rejected rather than updated.
@@ -889,12 +884,12 @@ def test_load_features_rejects_nonpositive_batch_size(tmp_path: Path) -> None:
     ("database_url"),
     [
         pytest.param("mysql://user:pass@localhost/db", id="mysql url"),
-        pytest.param("mysql+mysqlconnector://user:pass@localhost/db", id="mysqlconnector url")
+        pytest.param("mysql+mysqlconnector://user:pass@localhost/db", id="mysqlconnector url"),
     ],
 )
 def test_normalise_database_url(database_url):
     """Return correct URL for mysqlconector driver.
-        
+
     Args:
         database_url: Input database URL.
     """
