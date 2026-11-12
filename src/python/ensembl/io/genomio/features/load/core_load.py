@@ -100,13 +100,6 @@ def _normalise_strand(strand: str) -> int:
     return {"+": 1, "-": -1, ".": 0}[strand]
 
 
-def _attribute_scalar_to_text(value: object) -> str:
-    """Convert a schema scalar to the text required by attribute values."""
-    if isinstance(value, bool):
-        return str(value).lower()
-    return str(value)
-
-
 def _ncrna_hit_name(feature: Mapping[str, JsonValue], tool: str) -> str:
     """Select and validate the Ensembl hit name for an ncRNA feature.
 
@@ -133,13 +126,67 @@ def _ncrna_hit_name(feature: Mapping[str, JsonValue], tool: str) -> str:
     return name
 
 
+def _get_ncrna_attributes(
+    session: Session, feature: Mapping[str, JsonValue], tool: str, attrib_type_ids: dict[str, int]
+) -> dict[int, str]:
+    """Return the attribute values for one ncRNA feature.
+
+    Args:
+        feature: One validated ncRNA feature object.
+        tool: Producing tool that determines the source field.
+        attrib_type_ids: Mapping of attribute codes to core IDs.
+
+    Returns:
+        A mapping of core attribute type IDs to their text values.
+
+    """
+    attributes: dict[int, str] = {}
+    if tool == "cmscan":
+        if feature.get("target_accession") is not None:
+            attributes[_resolve_attrib_type_id(session, "rfam_accession", attrib_type_ids)] = str(
+                feature["target_accession"]
+            )
+        attributes[_resolve_attrib_type_id(session, "rna_gene_biotype", attrib_type_ids)] = str(
+            feature["biotype"]
+        )
+        if feature.get("description") is not None:
+            attributes[_resolve_attrib_type_id(session, "description", attrib_type_ids)] = str(
+                feature["description"]
+            )
+        if feature.get("bias") is not None:
+            attributes[_resolve_attrib_type_id(session, "cmscan_bias", attrib_type_ids)] = str(
+                feature["bias"]
+            )
+        if feature.get("gc") is not None:
+            attributes[_resolve_attrib_type_id(session, "cmscan_gc", attrib_type_ids)] = str(feature["gc"])
+        if feature.get("truncation") is not None:
+            attributes[_resolve_attrib_type_id(session, "cmscan_truncated", attrib_type_ids)] = str(
+                feature["truncation"]
+            )
+        significant_value = 1 if feature["is_significant"] else 0
+        attributes[_resolve_attrib_type_id(session, "cmscan_significant", attrib_type_ids)] = str(
+            significant_value
+        )
+    elif tool == "trnascan":
+        attributes[_resolve_attrib_type_id(session, "rna_gene_biotype", attrib_type_ids)] = str(
+            feature["biotype"]
+        )
+        description = f"tRNA-{str(feature["isotype"])} for anticodon {str(feature["anticodon"])}"
+        attributes[_resolve_attrib_type_id(session, "description", attrib_type_ids)] = description
+
+    return attributes
+
+
 def _ncrna_row(
+    session: Session,
     feature: Mapping[str, JsonValue],
     tool: str,
+    *,
     seq_region_id: int,
     analysis_id: int,
     external_db_id: int | None,
-) -> tuple[DnaAlignFeatureRow, dict[str, str]]:
+    attrib_type_ids: dict[str, int],
+) -> tuple[DnaAlignFeatureRow, dict[int, str]]:
     """Map one schema ncRNA object to a row and its feature attributes.
 
     Args:
@@ -169,22 +216,8 @@ def _ncrna_row(
     else:
         cigar_line = None
 
-    direct_fields = {
-        "seq_region",
-        "seq_region_start",
-        "seq_region_end",
-        "seq_region_strand",
-        "score",
-        "evalue",
-        "target_name",
-        "mirna_name",
-        "model_start",
-        "model_end",
-    }
-    attributes = {
-        key: _attribute_scalar_to_text(value) for key, value in feature.items() if key not in direct_fields
-    }
-    attributes["ncrna_tool"] = tool
+    attributes = _get_ncrna_attributes(session, feature, tool, attrib_type_ids)
+
     row: DnaAlignFeatureRow = {
         "seq_region_id": seq_region_id,
         "seq_region_start": cast("int", feature["seq_region_start"]),
@@ -458,30 +491,31 @@ def _resolve_external_db_id(session: Session, db_name: str, external_db_ids: dic
     return external_db_id
 
 
-def _get_or_create_attrib_type(session: Session, code: str) -> int:
-    """Return the core attribute type ID for one ncRNA field name.
+def _resolve_attrib_type_id(session: Session, code: str, attrib_type_ids: dict[str, int]) -> int:
+    """Resolve and cache one exact attribute type code to its database ID.
 
     Args:
         session: Active core database session.
-        code: Attribute code, limited by the core column to {MAX_ATTRIB_TYPE_CODE_LENGTH} characters.
+        code: Attribute type code.
+        attrib_type_ids: Per-load attribute type code to ID cache.
 
     Returns:
-        The existing or newly created attribute type ID.
+        The unique matching attribute type ID.
 
     Raises:
-        ValueError: If ``code`` exceeds the core column length.
+        ValueError: If no unique attribute type matches ``code``.
 
     """
-    if len(code) > MAX_ATTRIB_TYPE_CODE_LENGTH:
-        raise ValueError(
-            f"Attribute type code is longer than {MAX_ATTRIB_TYPE_CODE_LENGTH} characters: {code}"
-        )
-    existing = session.scalar(select(AttribType).where(AttribType.code == code))
-    if existing is None:
-        existing = AttribType(code=code, name=code, description="GenomIO ncRNA feature attribute")
-        session.add(existing)
-        session.flush()
-    return int(existing.attrib_type_id)
+    if code in attrib_type_ids:
+        return attrib_type_ids[code]
+    rows = session.scalars(select(AttribType).where(AttribType.code == code)).all()
+    if not rows:
+        raise ValueError(f"Attribute type not found: {code}")
+    if len(rows) > 1:
+        raise ValueError(f"Attribute type code is ambiguous: {code}")
+    attrib_type_id = int(rows[0].attrib_type_id)
+    attrib_type_ids[code] = attrib_type_id
+    return attrib_type_id
 
 
 def _insert_repeat_feature(session: Session, values: Mapping[str, object]) -> None:
@@ -499,24 +533,24 @@ def _insert_repeat_feature(session: Session, values: Mapping[str, object]) -> No
 def _insert_ncrna_feature(
     session: Session,
     values: Mapping[str, object],
-    attributes: Mapping[str, str],
+    attributes: Mapping[int, str],
 ) -> None:
     """Insert one ncRNA alignment and its source attributes.
 
     Args:
         session: Active core database session.
         values: ``dna_align_feature`` column values.
-        attributes: Attribute code/value pairs to store with the feature.
+        attributes: Attribute type ID/value pairs to store with the feature.
 
     """
     feature = DnaAlignFeature(**values)
     session.add(feature)
     session.flush()
-    for code, value in attributes.items():
+    for attrib_type_id, value in attributes.items():
         session.add(
             DNAAlignFeatureAttrib(
                 dna_align_feature_id=feature.dna_align_feature_id,
-                attrib_type_id=_get_or_create_attrib_type(session, code),
+                attrib_type_id=attrib_type_id,
                 value=value,
             )
         )
@@ -626,8 +660,9 @@ def _iter_ncrna_rows(
     tool: str,
     analysis_id: int,
     seq_region_ids: dict[str, int],
+    attrib_type_ids: dict[str, int],
     external_db_ids: dict[str, int],
-) -> Iterator[tuple[Mapping[str, object], dict[str, str]]]:
+) -> Iterator[tuple[Mapping[str, object], dict[int, str]]]:
     """Yield mapped ncRNA rows and their attribute values.
 
     Args:
@@ -644,7 +679,15 @@ def _iter_ncrna_rows(
     for feature in _iter_items(input_path, "ncrna_features"):
         seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), seq_region_ids)
         external_db_id = _resolve_external_db_id(session, str(feature[""]), external_db_ids)
-        values, attributes = _ncrna_row(feature, tool, seq_region_id, analysis_id, external_db_id)
+        values, attributes = _ncrna_row(
+            session,
+            feature,
+            tool,
+            seq_region_id=seq_region_id,
+            analysis_id=analysis_id,
+            external_db_id=external_db_id,
+            attrib_type_ids=attrib_type_ids,
+        )
         yield values, attributes
 
 
@@ -683,7 +726,7 @@ def load_features(
     with _consensus_index() as key_index, database.session_scope() as session:
         seq_region_ids: dict[str, int] = {}
         analysis_id = _get_or_create_analysis(session, analysis, prod_url)
-        rows: Iterator[tuple[Mapping[str, object], None | dict[str, str]]]
+        rows: Iterator[tuple[Mapping[str, object], None | dict[int, str]]]
         if kind == "repeat":
             for consensus in _iter_items(input_path, "repeat_consensus"):
                 _get_or_create_consensus(session, consensus, key_index)
@@ -698,12 +741,14 @@ def load_features(
             )
         else:
             external_db_ids: dict[str, int] = {}
+            attrib_type_ids: dict[str, int] = {}
             rows = _iter_ncrna_rows(
                 session=session,
                 input_path=input_path,
                 tool=tool,
                 analysis_id=analysis_id,
                 seq_region_ids=seq_region_ids,
+                attrib_type_ids=attrib_type_ids,
                 external_db_ids=external_db_ids,
             )
 
