@@ -767,7 +767,7 @@ def main(argv: list[str] | None = None) -> None:
 
     """
     args = parse_args(argv)
-    logging.info("Loading features into %s", args.db_url.render_as_string(hide_password=True))
+    logging.info("Loading features into %s", args.core_url.render_as_string(hide_password=True))
 
     try:
         load_features(
