@@ -573,9 +573,11 @@ def main(argv: list[str] | None = None) -> None:
         converter = converters_by_logic_name[args.analysis_logic_name]
 
         if hasattr(args, "prod_database"):
-            analysis_description, analysis_display_label = get_analysis_description(
+            production_analysis_description = get_analysis_description(
                 args.analysis_logic_name, args.prod_url.set(drivername="mysql+mysqlconnector")
             )
+            analysis_description = production_analysis_description["description"]
+            analysis_display_label = production_analysis_description["display_label"]
         else:
             analysis_description = args.analysis_description
             analysis_display_label = args.analysis_display_label
@@ -587,7 +589,7 @@ def main(argv: list[str] | None = None) -> None:
                 invalid_tool_output_path=get_invalid_tool_output(args),
                 analysis_logic_name=args.analysis_logic_name,
                 analysis_display_label=analysis_display_label,
-                analysis_description=analysis_description,
+                analysis_description=analysis_description or analysis_display_label,
                 program=args.program,
                 program_version=args.program_version,
                 source_provider=args.source_provider,
