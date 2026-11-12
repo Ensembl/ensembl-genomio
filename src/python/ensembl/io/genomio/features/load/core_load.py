@@ -199,12 +199,18 @@ def _ncrna_row(
 
     """
     genomic_length = cast("int", feature["seq_region_end"]) - cast("int", feature["seq_region_start"]) + 1
+    hit_start = 1
+    hit_end = genomic_length
+    hit_strand = 1
     if tool == "cmscan":
-        hit_start = cast("int", feature.get("model_start") or 1)
-        hit_end = cast("int", feature.get("model_end") or genomic_length)
-    else:
-        hit_start = 1
-        hit_end = genomic_length
+        if feature.get("model_start") is not None:
+            hit_start = cast("int", feature.get("model_start"))
+            hit_end = cast("int", feature.get("model_end"))
+
+        if feature.get("model_strand") is not None:
+            hit_strand = _normalise_strand(str(feature["model_strand"]))
+        else:
+            hit_strand = -1 if hit_start > hit_end else 1
 
     if tool == "trnascan":
         cigar_line = f"{genomic_length}M"
@@ -220,7 +226,7 @@ def _ncrna_row(
         "seq_region_strand": _normalise_strand(str(feature["seq_region_strand"])),
         "hit_start": hit_start,
         "hit_end": hit_end,
-        "hit_strand": 1,
+        "hit_strand": hit_strand,
         "hit_name": _ncrna_hit_name(feature, tool),
         "analysis_id": analysis_id,
         "score": float(cast("int | float", feature["score"])) if "score" in feature else None,
@@ -648,7 +654,19 @@ def _iter_ncrna_rows(
     """
     for feature in _iter_items(input_path, "ncrna_features"):
         seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), seq_region_ids)
-        external_db_id = _resolve_external_db_id(session, str(feature[""]), external_db_ids)
+
+        if tool == "cmscan":
+            external_db_name = "RFAM"
+        elif tool == "trnascan":
+            external_db_name = "TRNASCAN_SE"
+        elif tool == "mirbase":
+            external_db_name = "miRBase"
+        else:
+            external_db_name = None
+
+        if external_db_name is not None:
+            external_db_id = _resolve_external_db_id(session, external_db_name, external_db_ids)
+
         values, attributes = _ncrna_row(
             session,
             feature,
