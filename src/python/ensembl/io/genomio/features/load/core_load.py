@@ -15,15 +15,10 @@
 """Load GenomIO repeat and ncRNA feature JSON into an Ensembl core database."""
 
 import argparse
-from collections.abc import Generator, Iterator, Mapping
-from contextlib import contextmanager
+from collections.abc import Iterator, Mapping
 from datetime import datetime, timezone
-import json
 import logging
-from os import name
 from pathlib import Path
-import sqlite3
-import tempfile
 from typing import TypedDict, cast
 
 
@@ -348,26 +343,6 @@ def _get_or_create_analysis(session: Session, analysis: Mapping[str, JsonValue],
     return int(created.analysis_id)
 
 
-@contextmanager
-def _consensus_index() -> Generator[sqlite3.Connection, None, None]:
-    """Create and remove a temporary disk-backed consensus key index.
-
-    Yields:
-        A SQLite connection containing the input-key to core-ID index.
-
-    """
-    with tempfile.TemporaryDirectory(prefix="genomio-consensus-") as directory:
-        connection = sqlite3.connect(Path(directory) / "index.sqlite3")
-        connection.execute(
-            "CREATE TABLE consensus_key "
-            "(key TEXT PRIMARY KEY, consensus_id INTEGER NOT NULL, payload TEXT NOT NULL)"
-        )
-        try:
-            yield connection
-        finally:
-            connection.close()
-
-
 def _consensus_values(consensus: Mapping[str, JsonValue]) -> dict[str, object]:
     """Return values persisted in ``repeat_consensus``.
 
@@ -386,17 +361,17 @@ def _consensus_values(consensus: Mapping[str, JsonValue]) -> dict[str, object]:
     }
 
 
-def _get_or_create_consensus(
+def _get_or_create_repeat_consensus_id(
     session: Session,
     consensus: Mapping[str, JsonValue],
-    key_index: sqlite3.Connection,
+    consensus_ids: dict[str, int],
 ) -> int:
-    """Create or reuse a repeat consensus and index its JSON key.
+    """Create or retrieve a repeat consesus entry and return its ID.
 
     Args:
         session: Active core database session.
         consensus: Repeat consensus object containing its input key.
-        key_index: Temporary disk-backed input-key index.
+        consensus_ids: Per-load consensus key to ID cache.
 
     Returns:
         The existing or newly created repeat consensus ID.
@@ -406,15 +381,11 @@ def _get_or_create_consensus(
 
     """
     key = str(consensus["repeat_consensus_key"])
+
+    if consensus_ids.get(key) is not None:
+        return consensus_ids[key]
+
     values = _consensus_values(consensus)
-    payload = json.dumps(values, sort_keys=True, separators=(",", ":"))
-    indexed = key_index.execute(
-        "SELECT consensus_id, payload FROM consensus_key WHERE key = ?", (key,)
-    ).fetchone()
-    if indexed is not None:
-        if indexed[1] != payload:
-            raise ValueError(f"Repeat consensus key {key} has conflicting consensus data")
-        return int(indexed[0])
 
     filters = [
         (
@@ -425,16 +396,16 @@ def _get_or_create_consensus(
         for field, value in values.items()
     ]
     existing = session.scalar(select(RepeatConsensus).where(*filters))
+
     if existing is None:
         existing = RepeatConsensus(**values)
         session.add(existing)
         session.flush()
-    key_index.execute(
-        "INSERT INTO consensus_key(key, consensus_id, payload) VALUES (?, ?, ?)",
-        (key, int(existing.repeat_consensus_id), payload),
-    )
-    key_index.commit()
-    return int(existing.repeat_consensus_id)
+
+    consensus_id = int(existing.repeat_consensus_id)
+    consensus_ids[key] = consensus_id
+
+    return consensus_id
 
 
 def _resolve_seq_region_id(session: Session, name: str, seq_region_ids: dict[str, int]) -> int:
@@ -605,11 +576,11 @@ def _document_kind(input_path: Path) -> str:
     return "repeat" if "repeat_features" in feature_keys else "ncrna"
 
 
-def _lookup_consensus_id(key_index: sqlite3.Connection, key: str) -> int:
-    """Resolve a consensus key from the disk-backed index.
+def _get_repeat_consensus_id(consensus_ids: dict[str, int], key: str) -> int:
+    """Retrieve a repeat consensus ID from the cache.
 
     Args:
-        key_index: Temporary consensus-key SQLite connection.
+        consensus_ids: Repeat consensus key to ID cache.
         key: Input repeat consensus key.
 
     Returns:
@@ -619,10 +590,9 @@ def _lookup_consensus_id(key_index: sqlite3.Connection, key: str) -> int:
         ValueError: If ``key`` has not been loaded.
 
     """
-    row = key_index.execute("SELECT consensus_id FROM consensus_key WHERE key = ?", (key,)).fetchone()
-    if row is None:
+    if consensus_ids.get(key) is None:
         raise ValueError(f"Repeat consensus key not found: {key}")
-    return int(row[0])
+    return consensus_ids[key]
 
 
 def _iter_repeat_rows(
@@ -630,7 +600,7 @@ def _iter_repeat_rows(
     input_path: Path,
     *,
     analysis_id: int,
-    key_index: sqlite3.Connection,
+    consensus_ids: dict[str, int],
     seq_region_ids: dict[str, int],
 ) -> Iterator[tuple[Mapping[str, object], None]]:
     """Yield mapped repeat rows while resolving their consensus IDs.
@@ -650,7 +620,7 @@ def _iter_repeat_rows(
     for feature in _iter_items(input_path, "repeat_features"):
         seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), seq_region_ids)
         consensus_key = feature.get("repeat_consensus")
-        consensus_id = _lookup_consensus_id(key_index, str(consensus_key))
+        consensus_id = _get_repeat_consensus_id(consensus_ids, str(consensus_key))
         yield _repeat_row(feature, analysis_id, seq_region_id, consensus_id), None
 
 
@@ -723,20 +693,21 @@ def load_features(
         tool = cast("str", _read_value(input_path, "ncrna_tool"))
 
     database = DBConnection(core_url, reflect=False)
-    with _consensus_index() as key_index, database.session_scope() as session:
+    with database.session_scope() as session:
         seq_region_ids: dict[str, int] = {}
+        consensus_ids: dict[str, int] = {}
         analysis_id = _get_or_create_analysis(session, analysis, prod_url)
         rows: Iterator[tuple[Mapping[str, object], None | dict[int, str]]]
         if kind == "repeat":
             for consensus in _iter_items(input_path, "repeat_consensus"):
-                _get_or_create_consensus(session, consensus, key_index)
+                _get_or_create_repeat_consensus_id(session, consensus, consensus_ids)
 
         if kind == "repeat":
             rows = _iter_repeat_rows(
                 session=session,
                 input_path=input_path,
                 analysis_id=analysis_id,
-                key_index=key_index,
+                consensus_ids=consensus_ids,
                 seq_region_ids=seq_region_ids,
             )
         else:
