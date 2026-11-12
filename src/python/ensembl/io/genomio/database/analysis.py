@@ -28,8 +28,8 @@ __all__ = ["get_analysis_description"]
 
 class AnalysisDescriptionData(TypedDict):
     description: str | None
-    display_label: str | None
-    displayable: int | None
+    display_label: str
+    displayable: int
     web_data: str | None
 
 
