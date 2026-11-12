@@ -296,15 +296,17 @@ def _get_or_create_analysis(session: Session, analysis: Mapping[str, JsonValue],
     if existing is not None:
         return int(existing.analysis_id)
 
-    prod_description = get_analysis_description(str(values["logic_name"]), prod_url)
+    prod_analysis_description, prod_analysis_display_label = get_analysis_description(
+        str(values["logic_name"]), prod_url
+    )
     created = Analysis(**values)
     session.add(created)
     session.flush()
     session.add(
         AnalysisDescription(
             analysis_id=created.analysis_id,
-            description=prod_description.description,
-            display_label=prod_description.display_label,
+            description=prod_analysis_description,
+            display_label=prod_analysis_display_label,
         )
     )
     session.flush()
