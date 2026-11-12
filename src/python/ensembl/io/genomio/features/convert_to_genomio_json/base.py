@@ -49,7 +49,6 @@ import ensembl.io.genomio
 from ensembl.io.genomio.database import get_analysis_description
 
 from ensembl.utils.argparse import ArgumentParser
-from ensembl.utils.database import get_analysis_description
 from ensembl.utils.logging import init_logging_with_args
 
 T = TypeVar("T")
