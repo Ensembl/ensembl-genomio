@@ -14,7 +14,7 @@
 # limitations under the License.
 """Methods for querying the Ensembl core database for analysis data."""
 
-from sqlalchemy import select
+from sqlalchemy import text
 from sqlalchemy.engine import URL
 
 from ensembl.core.models import Analysis, AnalysisDescription
@@ -27,7 +27,7 @@ __all__ = ["get_analysis_description"]
 def get_analysis_description(
     logic_name: str,
     prod_url: URL,
-) -> tuple[str, str]:
+) -> dict[str, str | int | None]:
     """Retrieve analysis description metadata from the production database.
 
     Args:
@@ -35,7 +35,7 @@ def get_analysis_description(
         prod_url: URL for the production database.
 
     Returns:
-        A tuple containing the analysis description and display label.
+        A dictionary containing the analysis description and display label.
 
     Raises:
         ValueError: If the analysis description is not found in the production database.
@@ -44,16 +44,20 @@ def get_analysis_description(
     database = DBConnection(prod_url, reflect=False)
 
     with database.session_scope() as session:
-        result = session.execute(
-            select(
-                AnalysisDescription.description,
-                AnalysisDescription.display_label,
+        result = (
+            session.execute(
+                text("""
+                    SELECT description, display_label, displayable, web_data
+                    FROM analysis_description
+                    WHERE logic_name = :logic_name
+                """),
+                {"logic_name": logic_name},
             )
-            .join(Analysis, Analysis.analysis_id == AnalysisDescription.analysis_id)
-            .where(Analysis.logic_name == logic_name)
-        ).one_or_none()
+            .mappings()
+            .one_or_none()
+        )
 
         if result is None:
             raise ValueError(f"Analysis not found in production database: {logic_name}")
 
-        return result.description, result.display_label
+        return dict(result)
