@@ -19,8 +19,6 @@ from typing import TypedDict
 from sqlalchemy import text
 from sqlalchemy.engine import URL
 
-from ensembl.core.models import Analysis, AnalysisDescription
-
 from ensembl.utils.database import DBConnection
 
 __all__ = ["get_production_analysis_description"]
