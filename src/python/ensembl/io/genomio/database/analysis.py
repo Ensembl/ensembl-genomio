@@ -17,7 +17,7 @@
 from sqlalchemy import select
 from sqlalchemy.engine import URL
 
-from ensembl.core.models import AnalysisDescription
+from ensembl.core.models import Analysis, AnalysisDescription
 
 from ensembl.utils.database import DBConnection
 
@@ -27,7 +27,7 @@ __all__ = ["get_analysis_description"]
 def get_analysis_description(
     logic_name: str,
     prod_url: URL,
-) -> AnalysisDescription:
+) -> tuple[str, str]:
     """Retrieve analysis description metadata from the production database.
 
     Args:
@@ -35,7 +35,7 @@ def get_analysis_description(
         prod_url: URL for the production database.
 
     Returns:
-        The corresponding analysis description from the production database.
+        A tuple containing the analysis description and display label.
 
     Raises:
         ValueError: If the analysis description is not found in the production database.
@@ -44,14 +44,16 @@ def get_analysis_description(
     database = DBConnection(prod_url, reflect=False)
 
     with database.session_scope() as session:
-        description = session.scalar(
-            select(AnalysisDescription).where(AnalysisDescription.logic_name == logic_name)
-        )
+        result = session.execute(
+            select(
+                AnalysisDescription.description,
+                AnalysisDescription.display_label,
+            )
+            .join(Analysis, Analysis.analysis_id == AnalysisDescription.analysis_id)
+            .where(Analysis.logic_name == logic_name)
+        ).one_or_none()
 
-        if description is None:
-            raise ValueError(f"Analysis description not found in production database: {logic_name}")
+        if result is None:
+            raise ValueError(f"Analysis not found in production database: {logic_name}")
 
-        return AnalysisDescription(
-            description=description.description,
-            display_label=description.display_label,
-        )
+        return result.description, result.display_label
