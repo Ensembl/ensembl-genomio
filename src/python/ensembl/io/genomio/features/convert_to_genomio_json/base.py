@@ -206,9 +206,7 @@ class FeatureConverter(ABC):
         prod_db_group.add_argument(
             "--prod_user", metavar="USER", default=argparse.SUPPRESS, help="Production database user name."
         )
-        prod_db_group.add_argument(
-            "--prod_password", metavar="PWD", default=argparse.SUPPRESS, help="Production database password."
-        )
+        prod_db_group.add_argument("--prod_password", metavar="PWD", help="Production database password.")
 
         prod_db_group.add_argument(
             "--prod_database",
@@ -480,10 +478,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
 
     prod_connection_fields = ("prod_host", "prod_port", "prod_user", "prod_database")
-    prod_fields = (*prod_connection_fields, "prod_password")
     analysis_description_fields = ("analysis_description", "analysis_display_label")
 
-    if any(hasattr(args, f) for f in prod_fields):
+    if any(hasattr(args, f) for f in prod_connection_fields) or args.prod_password is not None:
         missing = [f"--{f}" for f in prod_connection_fields if not hasattr(args, f)]
 
         if missing:
