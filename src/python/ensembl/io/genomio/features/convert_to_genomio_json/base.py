@@ -46,6 +46,7 @@ from typing import Any, Callable, TypeVar
 from ensembl.core.models import AnalysisDescription
 
 import ensembl.io.genomio
+from ensembl.io.genomio.database import get_analysis_description
 
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.database import get_analysis_description
