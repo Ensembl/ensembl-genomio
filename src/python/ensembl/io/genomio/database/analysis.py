@@ -14,7 +14,7 @@
 # limitations under the License.
 """Methods for querying the Ensembl core database for analysis data."""
 
-from sqlaclhemy import select
+from sqlalchemy import select
 from sqlalchemy.engine import URL
 
 from ensembl.core.models import AnalysisDescription
