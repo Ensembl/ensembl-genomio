@@ -16,6 +16,7 @@
 
 import argparse
 from collections.abc import Iterator, Mapping
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import logging
 from pathlib import Path
@@ -53,6 +54,16 @@ JsonValue = bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"
 
 MAX_ATTRIB_TYPE_CODE_LENGTH = 20
 MAX_NCRNA_HIT_NAME_LENGTH = 40
+
+
+@dataclass
+class FeatureLoadCaches:
+    """Caches of database IDs used during a feature loading operation."""
+
+    seq_region_ids: dict[str, int] = field(default_factory=dict)
+    consensus_ids: dict[str, int] = field(default_factory=dict)
+    external_db_ids: dict[str, int] = field(default_factory=dict)
+    attrib_type_ids: dict[str, int] = field(default_factory=dict)
 
 
 class DnaAlignFeatureRow(TypedDict):
@@ -122,7 +133,7 @@ def _ncrna_hit_name(feature: Mapping[str, JsonValue], tool: str) -> str:
 
 
 def _get_ncrna_attributes(
-    session: Session, feature: Mapping[str, JsonValue], tool: str, attrib_type_ids: dict[str, int]
+    session: Session, feature: Mapping[str, JsonValue], tool: str, caches: FeatureLoadCaches
 ) -> dict[int, str]:
     """Return the attribute values for one ncRNA feature.
 
@@ -138,36 +149,26 @@ def _get_ncrna_attributes(
     attributes: dict[int, str] = {}
     if tool == "cmscan":
         if feature.get("target_accession") is not None:
-            attributes[_resolve_attrib_type_id(session, "rfam_accession", attrib_type_ids)] = str(
+            attributes[_resolve_attrib_type_id(session, "rfam_accession", caches)] = str(
                 feature["target_accession"]
             )
-        attributes[_resolve_attrib_type_id(session, "rna_gene_biotype", attrib_type_ids)] = str(
-            feature["biotype"]
-        )
+        attributes[_resolve_attrib_type_id(session, "rna_gene_biotype", caches)] = str(feature["biotype"])
         if feature.get("description") is not None:
-            attributes[_resolve_attrib_type_id(session, "description", attrib_type_ids)] = str(
-                feature["description"]
-            )
+            attributes[_resolve_attrib_type_id(session, "description", caches)] = str(feature["description"])
         if feature.get("bias") is not None:
-            attributes[_resolve_attrib_type_id(session, "cmscan_bias", attrib_type_ids)] = str(
-                feature["bias"]
-            )
+            attributes[_resolve_attrib_type_id(session, "cmscan_bias", caches)] = str(feature["bias"])
         if feature.get("gc") is not None:
-            attributes[_resolve_attrib_type_id(session, "cmscan_gc", attrib_type_ids)] = str(feature["gc"])
+            attributes[_resolve_attrib_type_id(session, "cmscan_gc", caches)] = str(feature["gc"])
         if feature.get("truncation") is not None:
-            attributes[_resolve_attrib_type_id(session, "cmscan_truncated", attrib_type_ids)] = str(
+            attributes[_resolve_attrib_type_id(session, "cmscan_truncated", caches)] = str(
                 feature["truncation"]
             )
         significant_value = 1 if feature["is_significant"] else 0
-        attributes[_resolve_attrib_type_id(session, "cmscan_significant", attrib_type_ids)] = str(
-            significant_value
-        )
+        attributes[_resolve_attrib_type_id(session, "cmscan_significant", caches)] = str(significant_value)
     elif tool == "trnascan":
-        attributes[_resolve_attrib_type_id(session, "rna_gene_biotype", attrib_type_ids)] = str(
-            feature["biotype"]
-        )
+        attributes[_resolve_attrib_type_id(session, "rna_gene_biotype", caches)] = str(feature["biotype"])
         description = f"tRNA-{str(feature["isotype"])} for anticodon {str(feature["anticodon"])}"
-        attributes[_resolve_attrib_type_id(session, "description", attrib_type_ids)] = description
+        attributes[_resolve_attrib_type_id(session, "description", caches)] = description
 
     return attributes
 
@@ -180,7 +181,7 @@ def _ncrna_row(
     seq_region_id: int,
     analysis_id: int,
     external_db_id: int | None,
-    attrib_type_ids: dict[str, int],
+    caches: FeatureLoadCaches,
 ) -> tuple[DnaAlignFeatureRow, dict[int, str]]:
     """Map one schema ncRNA object to a row and its feature attributes.
 
@@ -217,7 +218,7 @@ def _ncrna_row(
     else:
         cigar_line = None
 
-    attributes = _get_ncrna_attributes(session, feature, tool, attrib_type_ids)
+    attributes = _get_ncrna_attributes(session, feature, tool, caches)
 
     row: DnaAlignFeatureRow = {
         "seq_region_id": seq_region_id,
@@ -370,14 +371,14 @@ def _consensus_values(consensus: Mapping[str, JsonValue]) -> dict[str, object]:
 def _get_or_create_repeat_consensus_id(
     session: Session,
     consensus: Mapping[str, JsonValue],
-    consensus_ids: dict[str, int],
+    caches: FeatureLoadCaches,
 ) -> int:
     """Create or retrieve a repeat consesus entry and return its ID.
 
     Args:
         session: Active core database session.
         consensus: Repeat consensus object containing its input key.
-        consensus_ids: Per-load consensus key to ID cache.
+        caches: Per-load caches of database IDs.
 
     Returns:
         The existing or newly created repeat consensus ID.
@@ -388,8 +389,8 @@ def _get_or_create_repeat_consensus_id(
     """
     key = str(consensus["repeat_consensus_key"])
 
-    if consensus_ids.get(key) is not None:
-        return consensus_ids[key]
+    if caches.consensus_ids.get(key) is not None:
+        return caches.consensus_ids[key]
 
     values = _consensus_values(consensus)
 
@@ -409,18 +410,18 @@ def _get_or_create_repeat_consensus_id(
         session.flush()
 
     consensus_id = int(existing.repeat_consensus_id)
-    consensus_ids[key] = consensus_id
+    caches.consensus_ids[key] = consensus_id
 
     return consensus_id
 
 
-def _resolve_seq_region_id(session: Session, name: str, seq_region_ids: dict[str, int]) -> int:
+def _resolve_seq_region_id(session: Session, name: str, caches: FeatureLoadCaches) -> int:
     """Resolve and cache one exact sequence-region name to its database ID.
 
     Args:
         session: Active core database session.
         name: Sequence region name.
-        seq_region_ids: Per-load sequence-region name to ID cache.
+        caches: Per-load caches of database IDs.
 
     Returns:
         The unique matching sequence-region ID.
@@ -429,25 +430,25 @@ def _resolve_seq_region_id(session: Session, name: str, seq_region_ids: dict[str
         ValueError: If no unique sequence region matches ``name``.
 
     """
-    if name in seq_region_ids:
-        return seq_region_ids[name]
+    if caches.seq_region_ids.get(name) is not None:
+        return caches.seq_region_ids[name]
     rows = session.scalars(select(SeqRegion).where(SeqRegion.name == name)).all()
     if not rows:
         raise ValueError(f"Sequence region not found: {name}")
     if len(rows) > 1:
         raise ValueError(f"Sequence region name is ambiguous: {name}")
     seq_region_id = int(rows[0].seq_region_id)
-    seq_region_ids[name] = seq_region_id
+    caches.seq_region_ids[name] = seq_region_id
     return seq_region_id
 
 
-def _resolve_external_db_id(session: Session, db_name: str, external_db_ids: dict[str, int]) -> int:
+def _resolve_external_db_id(session: Session, db_name: str, caches: FeatureLoadCaches) -> int:
     """Resolve and cache one exact external database name to its database ID.
 
     Args:
         session: Active core database session.
         name: External database name.
-        external_db_ids: Per-load external database name to ID cache.
+        caches: Per-load caches of database IDs.
 
     Returns:
         The unique matching external database ID.
@@ -456,25 +457,25 @@ def _resolve_external_db_id(session: Session, db_name: str, external_db_ids: dic
         ValueError: If no unique external database matches ``name``.
 
     """
-    if db_name in external_db_ids:
-        return external_db_ids[db_name]
+    if caches.external_db_ids.get(db_name) is not None:
+        return caches.external_db_ids[db_name]
     rows = session.scalars(select(ExternalDb).where(ExternalDb.db_name == db_name)).all()
     if not rows:
         raise ValueError(f"External database not found: {db_name}")
     if len(rows) > 1:
         raise ValueError(f"External database name is ambiguous: {db_name}")
     external_db_id = int(rows[0].external_db_id)
-    external_db_ids[db_name] = external_db_id
+    caches.external_db_ids[db_name] = external_db_id
     return external_db_id
 
 
-def _resolve_attrib_type_id(session: Session, code: str, attrib_type_ids: dict[str, int]) -> int:
+def _resolve_attrib_type_id(session: Session, code: str, caches: FeatureLoadCaches) -> int:
     """Resolve and cache one exact attribute type code to its database ID.
 
     Args:
         session: Active core database session.
         code: Attribute type code.
-        attrib_type_ids: Per-load attribute type code to ID cache.
+        caches: Per-load caches of database IDs.
 
     Returns:
         The unique matching attribute type ID.
@@ -483,15 +484,15 @@ def _resolve_attrib_type_id(session: Session, code: str, attrib_type_ids: dict[s
         ValueError: If no unique attribute type matches ``code``.
 
     """
-    if code in attrib_type_ids:
-        return attrib_type_ids[code]
+    if caches.attrib_type_ids.get(code) is not None:
+        return caches.attrib_type_ids[code]
     rows = session.scalars(select(AttribType).where(AttribType.code == code)).all()
     if not rows:
         raise ValueError(f"Attribute type not found: {code}")
     if len(rows) > 1:
         raise ValueError(f"Attribute type code is ambiguous: {code}")
     attrib_type_id = int(rows[0].attrib_type_id)
-    attrib_type_ids[code] = attrib_type_id
+    caches.attrib_type_ids[code] = attrib_type_id
     return attrib_type_id
 
 
@@ -582,12 +583,12 @@ def _document_kind(input_path: Path) -> str:
     return "repeat" if "repeat_features" in feature_keys else "ncrna"
 
 
-def _get_repeat_consensus_id(consensus_ids: dict[str, int], key: str) -> int:
+def _get_repeat_consensus_id(key: str, caches: FeatureLoadCaches) -> int:
     """Retrieve a repeat consensus ID from the cache.
 
     Args:
-        consensus_ids: Repeat consensus key to ID cache.
         key: Input repeat consensus key.
+        caches: Per-load caches of database IDs.
 
     Returns:
         The corresponding core repeat consensus ID.
@@ -596,9 +597,9 @@ def _get_repeat_consensus_id(consensus_ids: dict[str, int], key: str) -> int:
         ValueError: If ``key`` has not been loaded.
 
     """
-    if consensus_ids.get(key) is None:
+    if caches.consensus_ids.get(key) is None:
         raise ValueError(f"Repeat consensus key not found: {key}")
-    return consensus_ids[key]
+    return caches.consensus_ids[key]
 
 
 def _iter_repeat_rows(
@@ -606,8 +607,7 @@ def _iter_repeat_rows(
     input_path: Path,
     *,
     analysis_id: int,
-    consensus_ids: dict[str, int],
-    seq_region_ids: dict[str, int],
+    caches: FeatureLoadCaches,
 ) -> Iterator[tuple[Mapping[str, object], None]]:
     """Yield mapped repeat rows while resolving their consensus IDs.
 
@@ -624,9 +624,9 @@ def _iter_repeat_rows(
 
     """
     for feature in _iter_items(input_path, "repeat_features"):
-        seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), seq_region_ids)
+        seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), caches)
         consensus_key = feature.get("repeat_consensus")
-        consensus_id = _get_repeat_consensus_id(consensus_ids, str(consensus_key))
+        consensus_id = _get_repeat_consensus_id(str(consensus_key), caches)
         yield _repeat_row(feature, analysis_id, seq_region_id, consensus_id), None
 
 
@@ -635,9 +635,7 @@ def _iter_ncrna_rows(
     input_path: Path,
     tool: str,
     analysis_id: int,
-    seq_region_ids: dict[str, int],
-    attrib_type_ids: dict[str, int],
-    external_db_ids: dict[str, int],
+    caches: FeatureLoadCaches,
 ) -> Iterator[tuple[Mapping[str, object], dict[int, str]]]:
     """Yield mapped ncRNA rows and their attribute values.
 
@@ -653,7 +651,7 @@ def _iter_ncrna_rows(
 
     """
     for feature in _iter_items(input_path, "ncrna_features"):
-        seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), seq_region_ids)
+        seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), caches)
 
         if tool == "cmscan":
             external_db_name = "RFAM"
@@ -665,7 +663,7 @@ def _iter_ncrna_rows(
             external_db_name = None
 
         if external_db_name is not None:
-            external_db_id = _resolve_external_db_id(session, external_db_name, external_db_ids)
+            external_db_id = _resolve_external_db_id(session, external_db_name, caches)
 
         values, attributes = _ncrna_row(
             session,
@@ -674,7 +672,7 @@ def _iter_ncrna_rows(
             seq_region_id=seq_region_id,
             analysis_id=analysis_id,
             external_db_id=external_db_id,
-            attrib_type_ids=attrib_type_ids,
+            caches=caches,
         )
         yield values, attributes
 
@@ -712,21 +710,20 @@ def load_features(
 
     database = DBConnection(core_url, reflect=False)
     with database.session_scope() as session:
-        seq_region_ids: dict[str, int] = {}
-        consensus_ids: dict[str, int] = {}
+        caches = FeatureLoadCaches()
+
         analysis_id = _get_or_create_analysis(session, analysis, prod_url)
         rows: Iterator[tuple[Mapping[str, object], None | dict[int, str]]]
         if kind == "repeat":
             for consensus in _iter_items(input_path, "repeat_consensus"):
-                _get_or_create_repeat_consensus_id(session, consensus, consensus_ids)
+                _get_or_create_repeat_consensus_id(session, consensus, caches)
 
         if kind == "repeat":
             rows = _iter_repeat_rows(
                 session=session,
                 input_path=input_path,
                 analysis_id=analysis_id,
-                consensus_ids=consensus_ids,
-                seq_region_ids=seq_region_ids,
+                caches=caches,
             )
         else:
             external_db_ids: dict[str, int] = {}
@@ -736,9 +733,7 @@ def load_features(
                 input_path=input_path,
                 tool=tool,
                 analysis_id=analysis_id,
-                seq_region_ids=seq_region_ids,
-                attrib_type_ids=attrib_type_ids,
-                external_db_ids=external_db_ids,
+                caches=caches,
             )
 
         feature_count = 0
