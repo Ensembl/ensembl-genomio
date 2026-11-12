@@ -14,6 +14,8 @@
 # limitations under the License.
 """Methods for querying the Ensembl core database for analysis data."""
 
+from typing import TypedDict
+
 from sqlalchemy import text
 from sqlalchemy.engine import URL
 
@@ -24,10 +26,17 @@ from ensembl.utils.database import DBConnection
 __all__ = ["get_analysis_description"]
 
 
+class AnalysisDescriptionData(TypedDict):
+    description: str | None
+    display_label: str | None
+    displayable: int | None
+    web_data: str | None
+
+
 def get_analysis_description(
     logic_name: str,
     prod_url: URL,
-) -> dict[str, str | int | None]:
+) -> AnalysisDescriptionData:
     """Retrieve analysis description metadata from the production database.
 
     Args:
@@ -35,7 +44,7 @@ def get_analysis_description(
         prod_url: URL for the production database.
 
     Returns:
-        A dictionary containing the analysis description and display label.
+        An AnalysisDescriptionData object containing the analysis description and display label.
 
     Raises:
         ValueError: If the analysis description is not found in the production database.
@@ -60,4 +69,4 @@ def get_analysis_description(
         if result is None:
             raise ValueError(f"Analysis not found in production database: {logic_name}")
 
-        return dict(result)
+        return AnalysisDescriptionData(**dict(result))
