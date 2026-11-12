@@ -44,7 +44,7 @@ from pathlib import Path
 from typing import Any, Callable, TypeVar
 
 import ensembl.io.genomio
-from ensembl.io.genomio.database import get_analysis_description
+from ensembl.io.genomio.database import get_production_analysis_description
 
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -573,7 +573,7 @@ def main(argv: list[str] | None = None) -> None:
         converter = converters_by_logic_name[args.analysis_logic_name]
 
         if hasattr(args, "prod_database"):
-            production_analysis_description = get_analysis_description(
+            production_analysis_description = get_production_analysis_description(
                 args.analysis_logic_name, args.prod_url.set(drivername="mysql+mysqlconnector")
             )
             analysis_description = production_analysis_description["description"]
