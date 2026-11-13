@@ -620,7 +620,7 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("arg_list", "expectation"),
+    ("arg_list", "expectation", "expected_error"),
     [
         pytest.param(
             ["--fasta-file", __file__],
@@ -635,6 +635,7 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
                     "log_level": "WARNING",
                 },
             ),
+            None,
             id="Default args",
         ),
         pytest.param(
@@ -676,22 +677,34 @@ def test_split_fasta_rm_existing_files(tmp_path: Path, data_dir: Path) -> None:
                     "log_level": "WARNING",
                 },
             ),
+            None,
             id="New arg values",
         ),
         pytest.param(
             ["--fasta-file", __file__, "--min-chunk-length", "2"],
-            pytest.raises(ValueError, match=r"--min-chunk-length requires --max-seq-length-per-file"),
+            pytest.raises(SystemExit),
+            "--min-chunk-length requires --max-seq-length-per-file",
             id="min_chunk_length without max_seq_length_per_file",
         ),
     ],
 )
-def test_parse_args(arg_list: list[str], expectation: ContextManager) -> None:
+def test_parse_args(
+    arg_list: list[str],
+    expectation: ContextManager,
+    expected_error: str | None,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """Test the `split.parse_args()` function.
 
     Args:
         arg_list: List of command line arguments to parse.
         expectation: Context manager for the expected exception. Use `~contextlib.nullcontext` with
             the expected output if no exception is expected.
+        expected_error: Expected parser error text, or None when parsing succeeds.
+        capsys: Fixture capturing parser output.
+
+    Raises:
+        SystemExit: If the CLI arguments violate parser constraints.
 
     """
     with expectation as exp:
@@ -701,6 +714,8 @@ def test_parse_args(arg_list: list[str], expectation: ContextManager) -> None:
         if hasattr(args, "out_dir"):
             args.out_dir = str(args.out_dir)
         assert not DeepDiff(vars(args), exp)
+    if expected_error is not None:
+        assert expected_error in capsys.readouterr().err
 
 
 @patch("ensembl.io.genomio.fasta.split.split_fasta")

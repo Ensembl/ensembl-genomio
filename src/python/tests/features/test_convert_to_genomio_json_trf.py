@@ -129,6 +129,9 @@ def test_parse_data_row(
         line: Raw TRF data row.
         expectation: Context manager for the expected result or exception.
 
+    Raises:
+        ValueError: If the row is malformed or has invalid coordinates.
+
     """
     with expectation as expected:
         parsed_row = trf.parse_data_row(
@@ -314,6 +317,9 @@ def test_parse_output_collates_all_errors(
         convert_to_genomio_json_data_dir: Test data directory for convert-to-GenomIO JSON fixtures.
         filename: Input filename containing invalid data.
         expected_fragments: Expected substrings in the raised error message.
+
+    Raises:
+        ValueError: If any input rows fail parsing in strict mode.
 
     """
     config = convert_to_genomio_json.GenomioJsonConfig(

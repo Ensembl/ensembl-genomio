@@ -127,6 +127,9 @@ def test_parse_repeat_class_field_errors(repeat_class_field: str) -> None:
     Args:
         repeat_class_field: Raw RepeatMasker repeat class/family field.
 
+    Raises:
+        ValueError: If the class/type pair is malformed.
+
     """
     with pytest.raises(ValueError, match=r"Malformed repeat_class/family"):
         repeatmasker.parse_repeat_class_field(
@@ -504,6 +507,9 @@ def test_parse_output_errors(
         filename: Name of RepeatMasker `.out` file containing invalid data.
         error_pattern: Regex expected in the raised error message.
 
+    Raises:
+        ValueError: If the input row contains an invalid field or coordinate.
+
     """
     config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=convert_to_genomio_json_data_dir / filename,
@@ -552,6 +558,9 @@ def test_parse_output_collates_all_errors(
         convert_to_genomio_json_data_dir: Test data directory for convert-to-GenomIO JSON fixtures.
         filename: Input filename containing invalid data.
         expected_fragments: Expected substrings in the raised error message.
+
+    Raises:
+        ValueError: If one or more rows fail parsing in strict mode.
 
     """
     config = convert_to_genomio_json.GenomioJsonConfig(
@@ -612,15 +621,16 @@ def test_parse_args_repeatmasker_custom_metadata(
             str(tmp_path / "out.json"),
             "--program-version",
             "4.1.5",
+            "--analysis-display-label",
+            "Repeats: Custom library",
+            "--analysis-description",
+            "Custom library repeat test",
         ]
     )
 
     assert args.analysis_logic_name == "repeatmask_customlib"
     assert args.analysis_display_label == "Repeats: Custom library"
-    assert args.analysis_description == (
-        'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
-        "</a>, using a custom library of <em>ab initio</em> repeat profiles for this species."
-    )
+    assert args.analysis_description == "Custom library repeat test"
     assert args.program == "RepeatMasker"
     assert not hasattr(args, "consensus_lib")
 
@@ -649,16 +659,16 @@ def test_parse_args_repeatmasker_repbase_metadata_and_consensus_lib(
             str(tmp_path / "out.json"),
             "--program-version",
             "4.1.7",
+            "--analysis-display-label",
+            "Repeats: Repbase",
+            "--analysis-description",
+            "Repbase repeat test",
         ]
     )
 
     assert args.analysis_logic_name == "repeatmask_repbase"
     assert args.analysis_display_label == "Repeats: Repbase"
-    assert args.analysis_description == (
-        'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
-        '</a>, using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> '
-        "library of repeat profiles."
-    )
+    assert args.analysis_description == "Repbase repeat test"
     assert args.program == "RepeatMasker"
     assert args.consensus_lib == consensus_lib
 
@@ -693,6 +703,10 @@ def test_main_passes_repeatmasker_consensus_lib_option(
             str(output_path),
             "--program-version",
             "4.1.7",
+            "--analysis-display-label",
+            "Repeats: Repbase",
+            "--analysis-description",
+            "Repbase repeat test",
         ]
     )
 
@@ -703,11 +717,7 @@ def test_main_passes_repeatmasker_consensus_lib_option(
             invalid_tool_output_path=output_path.with_suffix(".invalid_tool_output.txt"),
             analysis_logic_name="repeatmask_repbase",
             analysis_display_label="Repeats: Repbase",
-            analysis_description=(
-                'Repeats identified by <a rel="external" href="http://www.repeatmasker.org">RepeatMasker'
-                '</a>, using the <a rel="external" href="http://www.girinst.org/repbase/">Repbase</a> '
-                "library of repeat profiles."
-            ),
+            analysis_description="Repbase repeat test",
             program="RepeatMasker",
             program_version="4.1.7",
             source_provider="Ensembl",

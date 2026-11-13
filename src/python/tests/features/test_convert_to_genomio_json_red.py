@@ -58,20 +58,23 @@ def test_parse_row_errors(line: str, error_pattern: str) -> None:
         line: Raw Red data row.
         error_pattern: Regex expected in the raised error message.
 
+    Raises:
+        ValueError: If a row has invalid fields or coordinates.
+
     """
     with pytest.raises(ValueError, match=error_pattern):
         red.parse_row(Path("input.rpt"), line)
 
 
-def test_parse_output_success(tmp_path: Path) -> None:
+def test_parse_output_success(tmp_path: Path, convert_to_genomio_json_data_dir: Path) -> None:
     """Test successful parsing of Red `.rpt` output.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
+        convert_to_genomio_json_data_dir: Converter input fixture directory.
 
     """
-    rpt_path = tmp_path / "success.rpt"
-    rpt_path.write_text("\nchr1 10 20\n\nchr2 30 31\n", encoding="utf-8")
+    rpt_path = convert_to_genomio_json_data_dir / "red" / "success.rpt"
     expected_consensus = red.RED_RPT_CONSENSUS
     expected_consensus_key = expected_consensus.sha256_key()
 
@@ -116,15 +119,18 @@ def test_parse_output_success(tmp_path: Path) -> None:
     assert consensuses_by_key == {expected_consensus_key: expected_consensus}
 
 
-def test_parse_output_collates_all_errors(tmp_path: Path) -> None:
+def test_parse_output_collates_all_errors(tmp_path: Path, convert_to_genomio_json_data_dir: Path) -> None:
     """Test that malformed Red parser rows are collated before raising.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
+        convert_to_genomio_json_data_dir: Converter input fixture directory.
+
+    Raises:
+        ValueError: If one or more rows fail parsing in strict mode.
 
     """
-    rpt_path = tmp_path / "errors.rpt"
-    rpt_path.write_text("chr1 start 20\nchr2 30 20\nchr3 40\n", encoding="utf-8")
+    rpt_path = convert_to_genomio_json_data_dir / "red" / "errors.rpt"
     config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=rpt_path,
         output_path=tmp_path / "out.json",
