@@ -53,6 +53,7 @@ def session() -> Generator[Session, None, None]:
 
     Yields:
         An open session backed by an in-memory SQLite database.
+
     """
     engine = create_engine("sqlite:///:memory:")
     with engine.begin() as connection:
@@ -137,6 +138,7 @@ class RecordingDatabase:
 
         Args:
             db_session: Recording session to yield.
+
         """
         self.db_session = db_session
 
@@ -146,6 +148,7 @@ class RecordingDatabase:
 
         Yields:
             The session used by one loader invocation.
+
         """
         try:
             yield self.db_session
@@ -164,6 +167,7 @@ def test_normalise_strand(strand: str, expected: int) -> None:
     Args:
         strand: Input strand symbol.
         expected: Expected integer strand.
+
     """
     assert core_load._normalise_strand(strand) == expected
 
@@ -182,6 +186,7 @@ def test_parse_run_date_normalises_to_utc(value: str, expected: datetime) -> Non
     Args:
         value: Input ISO date or datetime.
         expected: Expected naive UTC datetime.
+
     """
     assert core_load._parse_run_date(value) == expected
 
@@ -225,6 +230,8 @@ def test_ncrna_row_maps_tool_specific_alignment_fields(
     """Map ncRNA coordinates, names, scores, and tool-specific fields.
 
     Args:
+        session: SQLite session used by the ncRNA row mapper.
+        monkeypatch: Fixture used to stub attribute lookup.
         tool: Producer name.
         feature: Tool-specific input fields.
         name: Expected alignment hit name.
@@ -232,6 +239,7 @@ def test_ncrna_row_maps_tool_specific_alignment_fields(
         hit_end: Expected hit end coordinate.
         hit_strand: Expected hit strand.
         cigar: Expected CIGAR string.
+
     """
     monkeypatch.setattr(core_load, "_get_ncrna_attributes", lambda *_: {})
     common: dict[str, core_load.JsonValue] = {
@@ -290,11 +298,14 @@ def test_ncrna_row_rejects_overlong_hit_names(
     """Reject hit names longer than the core column allows.
 
     Args:
+        session: SQLite session used by the ncRNA row mapper.
+        monkeypatch: Fixture used to stub attribute lookup.
         feature: Tool-specific input fields.
         tool: Producer name.
 
     Raises:
         ValueError: If the selected hit name exceeds 40 characters.
+
     """
     base: dict[str, core_load.JsonValue] = {
         "seq_region_start": 1,
@@ -366,6 +377,7 @@ def test_get_ncrna_attributes_resolves_only_applicable_fields(
         tool: Producer name.
         feature: Input feature fields.
         codes_values: Expected attribute code and value pairs.
+
     """
     for index, (code, _) in enumerate(codes_values, 1):
         session.add(AttribType(attrib_type_id=index, code=code, name=code))
@@ -435,6 +447,7 @@ def test_get_or_create_analysis_creates_and_reuses_rows(
     Args:
         session: SQLite session containing analysis tables.
         monkeypatch: Fixture used to stub production metadata lookup.
+
     """
     monkeypatch.setattr(
         core_load,
@@ -465,6 +478,7 @@ def test_get_or_create_repeat_consensus_creates_and_caches_row(session: Session)
 
     Args:
         session: SQLite session containing repeat consensus table.
+
     """
     caches = core_load.FeatureLoadCaches()
     consensus = {
@@ -486,6 +500,7 @@ def test_get_or_create_repeat_consensus_reuses_matching_database_row(session: Se
 
     Args:
         session: SQLite session containing repeat consensus table.
+
     """
     existing = RepeatConsensus(
         repeat_name="Alu", repeat_class="SINE", repeat_type="Alu", repeat_consensus="ACGT"
@@ -512,6 +527,7 @@ def test_get_repeat_consensus_id_rejects_unknown_key() -> None:
 
     Raises:
         ValueError: If the input key is absent from the cache.
+
     """
     with pytest.raises(ValueError, match="key not found"):
         core_load._get_repeat_consensus_id("missing", core_load.FeatureLoadCaches())
@@ -558,6 +574,7 @@ def test_lookup_resolvers_cache_unique_database_ids(
         cache_field: Cache dictionary field for the resolved ID.
         name: Lookup name.
         id_field: Primary key field.
+
     """
     extra: dict[str, object] = {"coord_system_id": 1, "length": 10} if model is SeqRegion else {}
     if model is ExternalDb:
@@ -618,6 +635,7 @@ def test_lookup_resolvers_reject_missing_and_ambiguous_names(
 
     Raises:
         ValueError: If the lookup has zero or multiple matches.
+
     """
     resolver = getattr(core_load, resolver_name)
     caches = core_load.FeatureLoadCaches()
@@ -634,6 +652,7 @@ def test_insert_functions_persist_rows_and_attributes(session: Session) -> None:
 
     Args:
         session: SQLite session containing feature tables.
+
     """
     core_load._insert_repeat_feature(
         session,
@@ -690,6 +709,7 @@ def test_streaming_readers_read_existing_fixture(filename: str) -> None:
 
     Args:
         filename: Fixture filename for one supported document kind or tool.
+
     """
     path = FIXTURES / filename
     kind = core_load._document_kind(path)
@@ -717,6 +737,7 @@ def test_iter_ncrna_rows_resolves_tool_database_and_maps_feature(
         session: SQLite session containing sequence regions and external databases.
         filename: Existing ncRNA fixture containing the input feature.
         monkeypatch: Fixture used to record exact resolver arguments.
+
     """
     input_path = FIXTURES / filename
     tool = str(core_load._read_value(input_path, "ncrna_tool"))
@@ -799,6 +820,7 @@ def test_parse_args_requires_connection_parameters(missing: str) -> None:
 
     Raises:
         SystemExit: If a required connection option is missing.
+
     """
     argv = ["--input_file", str(FIXTURES / "load_features_repeat.json")]
     for prefix, values in (
@@ -823,6 +845,7 @@ def test_load_features_rejects_nonpositive_batch_size(
 
     Raises:
         ValueError: If ``batch_size`` is below one.
+
     """
     monkeypatch.setattr(core_load, "schema_validator", lambda *_: pytest.fail("unexpected validation"))
     with pytest.raises(ValueError, match="batch_size must be positive"):
@@ -844,6 +867,7 @@ def test_load_features_streams_batches_and_validates(
         monkeypatch: Fixture used to isolate database effects.
         filename: Repeat or ncRNA fixture to load.
         batch_size: Number of features committed per batch.
+
     """
     input_path = FIXTURES / filename
     transaction = RecordingSession()
@@ -856,8 +880,9 @@ def test_load_features_streams_batches_and_validates(
     monkeypatch.setattr(
         core_load,
         "_get_or_create_repeat_consensus_id",
-        lambda _s, consensus, cache: cache.consensus_ids.update({str(consensus["repeat_consensus_key"]): 11})
-        or 11,
+        lambda _s, consensus, cache: (
+            cache.consensus_ids.update({str(consensus["repeat_consensus_key"]): 11}) or 11
+        ),
     )
     monkeypatch.setattr(core_load, "_resolve_seq_region_id", lambda *_: 3)
     monkeypatch.setattr(core_load, "_resolve_external_db_id", lambda *_: 5)
@@ -877,30 +902,37 @@ def test_load_features_streams_batches_and_validates(
     assert transaction.rollbacks == 0
 
 
-def test_iter_ncrna_rows_rejects_unrecognised_tool_through_missing_database_id(
+def test_iter_ncrna_rows_allows_tool_without_external_database(
     session: Session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The current loader cannot construct an alignment for an unknown tool.
+    """Map features for a tool that does not use an external database.
 
     Args:
+        session: SQLite session used by the ncRNA row mapper.
         monkeypatch: Fixture used to provide a minimal input feature.
 
-    Raises:
-        UnboundLocalError: The current implementation references an unset external database ID.
     """
-    monkeypatch.setattr(core_load, "_iter_items", lambda *_: iter([{"seq_region": "chr1"}]))
+    feature: dict[str, core_load.JsonValue] = {
+        "seq_region": "chr1",
+        "seq_region_start": 1,
+        "seq_region_end": 2,
+        "seq_region_strand": "+",
+        "isotype": "X",
+    }
+    monkeypatch.setattr(core_load, "_iter_items", lambda *_: iter([feature]))
     monkeypatch.setattr(core_load, "_resolve_seq_region_id", lambda *_: 1)
-    with pytest.raises(UnboundLocalError):
-        list(
-            core_load._iter_ncrna_rows(
-                session,
-                FIXTURES / "load_features_cmscan.json",
-                "other",
-                1,
-                core_load.FeatureLoadCaches(),
-            )
+    rows = list(
+        core_load._iter_ncrna_rows(
+            session,
+            FIXTURES / "load_features_cmscan.json",
+            "other",
+            1,
+            core_load.FeatureLoadCaches(),
         )
+    )
+    assert len(rows) == 1
+    assert rows[0][0]["external_db_id"] is None
 
 
 def test_load_features_skips_validation_and_commits_empty_document(
@@ -910,6 +942,7 @@ def test_load_features_skips_validation_and_commits_empty_document(
 
     Args:
         monkeypatch: Fixture used to isolate database effects.
+
     """
     transaction = RecordingSession()
     monkeypatch.setattr(core_load, "schema_validator", lambda *_: pytest.fail("unexpected validation"))
@@ -932,6 +965,7 @@ def test_load_features_rolls_back_on_insert_error(monkeypatch: pytest.MonkeyPatc
 
     Raises:
         RuntimeError: If insertion of a repeat feature fails.
+
     """
     transaction = RecordingSession()
     monkeypatch.setattr(core_load, "schema_validator", lambda *_: None)
@@ -940,8 +974,9 @@ def test_load_features_rolls_back_on_insert_error(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(
         core_load,
         "_get_or_create_repeat_consensus_id",
-        lambda _s, consensus, cache: cache.consensus_ids.update({str(consensus["repeat_consensus_key"]): 11})
-        or 11,
+        lambda _s, consensus, cache: (
+            cache.consensus_ids.update({str(consensus["repeat_consensus_key"]): 11}) or 11
+        ),
     )
     monkeypatch.setattr(core_load, "_resolve_seq_region_id", lambda *_: 3)
     monkeypatch.setattr(
@@ -961,6 +996,7 @@ def test_main_uses_driver_urls_and_logs_without_password(
     Args:
         monkeypatch: Fixture used to stub CLI and database operations.
         caplog: Fixture capturing log output.
+
     """
     args = SimpleNamespace(
         input_file=FIXTURES / "load_features_repeat.json",
@@ -997,6 +1033,7 @@ def test_main_logs_and_reraises_loader_error(
 
     Raises:
         RuntimeError: Propagated from the loader.
+
     """
     monkeypatch.setattr(
         core_load,

@@ -216,7 +216,7 @@ def test_rfam_converter_parse_features_delegates_to_parser(
         is_strict_mode=True,
     )
     expected: convert_to_genomio_json.ParseFeaturesResult = ([{"seq_region": "chr1"}], {})
-    monkeypatch.setattr(rfam, "parse_output", lambda actual_config: expected)
+    monkeypatch.setattr(rfam, "parse_output", lambda _actual_config: expected)
 
     assert rfam.RfamConverter.parse_features(config) == expected
 

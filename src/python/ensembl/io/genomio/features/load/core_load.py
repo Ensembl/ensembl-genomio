@@ -17,7 +17,7 @@
 import argparse
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 import logging
 from pathlib import Path
 from typing import TypedDict, cast
@@ -138,9 +138,10 @@ def _get_ncrna_attributes(
     """Return the attribute values for one ncRNA feature.
 
     Args:
+        session: Active core database session.
         feature: One validated ncRNA feature object.
         tool: Producing tool that determines the source field.
-        attrib_type_ids: Mapping of attribute codes to core IDs.
+        caches: Per-load caches of database IDs.
 
     Returns:
         A mapping of core attribute type IDs to their text values.
@@ -167,7 +168,7 @@ def _get_ncrna_attributes(
         attributes[_resolve_attrib_type_id(session, "cmscan_significant", caches)] = str(significant_value)
     elif tool == "trnascan":
         attributes[_resolve_attrib_type_id(session, "rna_gene_biotype", caches)] = str(feature["biotype"])
-        description = f"tRNA-{str(feature["isotype"])} for anticodon {str(feature["anticodon"])}"
+        description = f"tRNA-{feature['isotype']!s} for anticodon {feature['anticodon']!s}"
         attributes[_resolve_attrib_type_id(session, "description", caches)] = description
 
     return attributes
@@ -186,11 +187,13 @@ def _ncrna_row(
     """Map one schema ncRNA object to a row and its feature attributes.
 
     Args:
+        session: Active core database session.
         feature: One validated ncRNA feature object.
         tool: Producing tool, used to select hit-name and coordinate rules.
         seq_region_id: Database identifier resolved from ``feature["seq_region"]``.
         analysis_id: Database identifier for the owning analysis.
         external_db_id: Database identifier for the external database, or None if not applicable.
+        caches: Per-load caches of database IDs.
 
     Returns:
         The ``dna_align_feature`` values and serialized attribute values.
@@ -213,10 +216,7 @@ def _ncrna_row(
         else:
             hit_strand = -1 if hit_start > hit_end else 1
 
-    if tool == "trnascan":
-        cigar_line = f"{genomic_length}M"
-    else:
-        cigar_line = None
+    cigar_line = f"{genomic_length}M" if tool == "trnascan" else None
 
     attributes = _get_ncrna_attributes(session, feature, tool, caches)
 
@@ -254,10 +254,10 @@ def _parse_run_date(value: str) -> datetime:
         ValueError: If ``value`` is not a valid ISO-8601 datetime.
 
     """
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
         return parsed
-    return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed.astimezone(UTC).replace(tzinfo=None)
 
 
 def _repeat_row(
@@ -447,7 +447,7 @@ def _resolve_external_db_id(session: Session, db_name: str, caches: FeatureLoadC
 
     Args:
         session: Active core database session.
-        name: External database name.
+        db_name: External database name.
         caches: Per-load caches of database IDs.
 
     Returns:
@@ -615,9 +615,7 @@ def _iter_repeat_rows(
         session: Active core database session.
         input_path: Input JSON path.
         analysis_id: Database identifier for the owning analysis.
-        logic_name: Analysis logic name used for synthetic consensus rows.
-        key_index: Temporary consensus-key SQLite connection.
-        seq_region_ids: Per-load sequence-region name to ID cache.
+        caches: Per-load caches of database IDs.
 
     Yields:
         Repeat feature values paired with ``None`` attribute values.
@@ -644,7 +642,7 @@ def _iter_ncrna_rows(
         input_path: Input JSON path.
         tool: Producing ncRNA tool.
         analysis_id: Database identifier for the owning analysis.
-        seq_region_ids: Per-load sequence-region name to ID cache.
+        caches: Per-load caches of database IDs.
 
     Yields:
         Alignment values paired with their attribute code/value pairs.
@@ -652,6 +650,7 @@ def _iter_ncrna_rows(
     """
     for feature in _iter_items(input_path, "ncrna_features"):
         seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), caches)
+        external_db_id: int | None = None
 
         if tool == "cmscan":
             external_db_name = "RFAM"
@@ -689,7 +688,8 @@ def load_features(
 
     Args:
         input_path: JSON document conforming to ``load_features.json``.
-        database_url: SQLAlchemy URL for the target MySQL core database.
+        core_url: SQLAlchemy URL for the target MySQL core database.
+        prod_url: SQLAlchemy URL for the production database.
         skip_validation: Whether to skip validation of a document already validated by the caller.
         batch_size: Number of input features between explicit commits.
 
@@ -726,8 +726,6 @@ def load_features(
                 caches=caches,
             )
         else:
-            external_db_ids: dict[str, int] = {}
-            attrib_type_ids: dict[str, int] = {}
             rows = _iter_ncrna_rows(
                 session=session,
                 input_path=input_path,
@@ -754,7 +752,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse CLI arguments using required command-line database values.
 
     Args:
-        arg_list: Optional argument list; defaults to the process command line.
+        argv: Optional argument list; defaults to the process command line.
 
     Returns:
         Parsed command-line options, including the constructed database URL.
