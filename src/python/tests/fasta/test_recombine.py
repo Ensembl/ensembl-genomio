@@ -282,6 +282,7 @@ def test_recombine_rejects_records_without_sequences(mode: str) -> None:
 
     Raises:
         ValueError: If the selected record has no sequence.
+
     """
     record_id = "chunk" if mode == "chunk header record" else "base"
     record = SeqRecord(None, id=record_id, description="record description")

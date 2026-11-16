@@ -683,6 +683,7 @@ def test_parse_args_rejects_incomplete_metadata_configuration(
 
     Raises:
         SystemExit: If analysis metadata options are incomplete or conflict.
+
     """
     connection_args, expected_error = metadata_case
     monkeypatch.setattr(base, "top_level_converters", [convert_to_genomio_json.RfamConverter])
@@ -712,6 +713,7 @@ def test_parse_args_accepts_complete_production_connection(
         monkeypatch: Pytest monkeypatch fixture.
         convert_to_genomio_json_data_dir: Converter input fixture directory.
         tmp_path: Pytest temporary directory fixture.
+
     """
     monkeypatch.setattr(base, "top_level_converters", [convert_to_genomio_json.RfamConverter])
     args = parse_args(
@@ -810,6 +812,7 @@ def test_main_reads_analysis_metadata_from_production(
         monkeypatch: Pytest monkeypatch fixture.
         convert_to_genomio_json_data_dir: Converter input fixture directory.
         tmp_path: Pytest temporary directory fixture.
+
     """
     input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
