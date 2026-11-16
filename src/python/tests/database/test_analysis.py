@@ -29,7 +29,7 @@ def test_get_production_analysis_description_returns_analysis_data(mock_dbconnec
         "description": "Repeat finding",
         "display_label": "Repeats",
         "displayable": 1,
-        "web_data": "{\"url\": \"https://example.org\"}",
+        "web_data": '{"url": "https://example.org"}',
     }
     session = Mock()
     session.execute.return_value.mappings.return_value.one_or_none.return_value = result
