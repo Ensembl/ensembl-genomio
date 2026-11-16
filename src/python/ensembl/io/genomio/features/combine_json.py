@@ -146,7 +146,7 @@ class _TopLevelAccumulator:
             earliest_run_date = min(
                 cast("str", stored_analysis["run_date"]),
                 cast("str", candidate_analysis["run_date"]),
-                key=lambda run_date: datetime.fromisoformat(run_date.replace("Z", "+00:00")),
+                key=datetime.fromisoformat,
             )
             self._original_values[key] = {**stored_analysis, "run_date": earliest_run_date}
 

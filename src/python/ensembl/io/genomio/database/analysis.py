@@ -25,6 +25,8 @@ __all__ = ["get_production_analysis_description"]
 
 
 class AnalysisDescriptionData(TypedDict):
+    """Production database fields describing an analysis."""
+
     description: str | None
     display_label: str
     displayable: int

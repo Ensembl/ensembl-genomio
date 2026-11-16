@@ -35,22 +35,19 @@ __all__ = [
 from abc import ABC, abstractmethod
 import argparse
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 import hashlib
 from inspect import isabstract
 import json
 import logging
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable
 
 import ensembl.io.genomio
 from ensembl.io.genomio.database import get_production_analysis_description
 
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
-
-T = TypeVar("T")
-TopLevelConverterT = TypeVar("TopLevelConverterT", bound=type[Any])
 
 # Shared data types
 
@@ -230,7 +227,7 @@ class FeatureConverter(ABC):
         raise NotImplementedError
 
 
-def parse_token(parser: Callable[[str], T], token: str, field_name: str, raw_line: str, path: Path) -> T:
+def parse_token[T](parser: Callable[[str], T], token: str, field_name: str, raw_line: str, path: Path) -> T:
     """Parse a field from tool output into the specified class type.
 
     Args:
@@ -289,7 +286,7 @@ def file_last_modified_time(file_path: Path) -> str:
     return (
         datetime.fromtimestamp(
             file_path.stat().st_mtime,
-            tz=timezone.utc,
+            tz=UTC,
         )
         .isoformat()
         .replace("+00:00", "Z")
@@ -431,7 +428,9 @@ def register_converter(converter: type[FeatureConverter]) -> type[FeatureConvert
     return converter
 
 
-def register_top_level_converter(converter: TopLevelConverterT) -> TopLevelConverterT:
+def register_top_level_converter[TopLevelConverterT: type[Any]](
+    converter: TopLevelConverterT,
+) -> TopLevelConverterT:
     """Register a converter that should appear as a top-level CLI command."""
     converter_command = getattr(converter, "command", None)
     if not converter_command:

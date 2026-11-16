@@ -19,7 +19,7 @@
 
 import argparse
 from contextlib import nullcontext as does_not_raise
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 import json
 import os
 from pathlib import Path
@@ -110,7 +110,7 @@ def test_file_last_modified_time_returns_utc_isoformat(tmp_path: Path) -> None:
     """
     input_path = tmp_path / "input.out"
     input_path.write_text("content", encoding="utf-8")
-    last_modified_time = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc).timestamp()
+    last_modified_time = datetime(2024, 1, 2, 3, 4, 5, tzinfo=UTC).timestamp()
 
     os.utime(input_path, (last_modified_time, last_modified_time))
 
@@ -256,7 +256,7 @@ class _DummyConverter(convert_to_genomio_json.FeatureConverter):
     def parse_features(
         cls,
         config: convert_to_genomio_json.GenomioJsonConfig,
-        options: convert_to_genomio_json.ConverterOptions | None = None,
+        _options: convert_to_genomio_json.ConverterOptions | None = None,
     ) -> convert_to_genomio_json.ParseFeaturesResult:
         """Return fixed parser output for document assembly tests."""
         return (
@@ -495,7 +495,7 @@ def test_duplicate_top_level_converter_commands_rejected(monkeypatch: pytest.Mon
         def parse_features(
             cls,
             config: convert_to_genomio_json.GenomioJsonConfig,
-            options: convert_to_genomio_json.ConverterOptions | None = None,
+            _options: convert_to_genomio_json.ConverterOptions | None = None,
         ) -> convert_to_genomio_json.ParseFeaturesResult:
             """Return fixed parser output for document assembly tests."""
             return (

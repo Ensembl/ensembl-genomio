@@ -21,7 +21,7 @@ __all__ = [
 
 import logging
 from pathlib import Path
-from typing import Any, Mapping, TypeAlias
+from typing import Any, Mapping
 
 from Bio import SeqIO
 import requests
@@ -32,7 +32,7 @@ from ensembl.io.genomio.seq_region.mappings import SYNONYM_MAP, MOLECULE_LOCATIO
 from ensembl.io.genomio.seq_region.report import ReportRecord
 from ensembl.utils.archive import open_gz_file
 
-SeqRegionDict: TypeAlias = dict[str, Any]
+type SeqRegionDict = dict[str, Any]
 
 
 class SeqCollection:
