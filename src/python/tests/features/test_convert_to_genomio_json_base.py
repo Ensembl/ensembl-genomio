@@ -815,6 +815,11 @@ def test_main_reads_analysis_metadata_from_production(
     output_path = tmp_path / "out.json"
     production_url = URL.create("mysql", "reader", "secret", "prod.example", 3307, "production")
     metadata_calls: list[tuple[str, URL]] = []
+
+    def get_metadata(logic_name: str, db_url: URL) -> dict[str, str]:
+        metadata_calls.append((logic_name, db_url))
+        return {"description": f"{logic_name} description", "display_label": "Production label"}
+
     monkeypatch.setattr(base, "top_level_converters", [convert_to_genomio_json.RfamConverter])
     monkeypatch.setitem(
         base.converters_by_logic_name,
@@ -824,8 +829,7 @@ def test_main_reads_analysis_metadata_from_production(
     monkeypatch.setattr(
         base,
         "get_production_analysis_description",
-        lambda logic_name, db_url: metadata_calls.append((logic_name, db_url))
-        or {"description": f"{logic_name} description", "display_label": "Production label"},
+        get_metadata,
     )
 
     main(
