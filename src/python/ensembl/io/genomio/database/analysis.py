@@ -68,4 +68,9 @@ def get_production_analysis_description(
         if result is None:
             raise ValueError(f"Analysis not found in production database: {logic_name}")
 
-        return AnalysisDescriptionData(**dict(result))
+        return AnalysisDescriptionData(
+            description=result["description"],
+            display_label=result["display_label"],
+            displayable=result["displayable"],
+            web_data=result["web_data"],
+        )

@@ -17,10 +17,11 @@
 # Loader behavior is intentionally tested through its private mapping helpers.
 # pylint: disable=protected-access,redefined-outer-name,too-many-lines,too-many-positional-arguments
 
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 from types import SimpleNamespace
 
 import pytest
@@ -211,6 +212,7 @@ def test_parse_run_date_normalises_to_utc(value: str, expected: datetime) -> Non
     ],
 )
 def test_ncrna_row_maps_tool_specific_alignment_fields(
+    session: Session,
     monkeypatch: pytest.MonkeyPatch,
     tool: str,
     feature: dict[str, core_load.JsonValue],
@@ -243,7 +245,7 @@ def test_ncrna_row_maps_tool_specific_alignment_fields(
     }
     common.update(feature)
     row, _ = core_load._ncrna_row(
-        None,
+        session,
         common,
         tool,
         seq_region_id=4,
@@ -280,7 +282,10 @@ def test_ncrna_row_maps_tool_specific_alignment_fields(
     ],
 )
 def test_ncrna_row_rejects_overlong_hit_names(
-    monkeypatch: pytest.MonkeyPatch, feature: dict[str, core_load.JsonValue], tool: str
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    feature: dict[str, core_load.JsonValue],
+    tool: str,
 ) -> None:
     """Reject hit names longer than the core column allows.
 
@@ -301,7 +306,7 @@ def test_ncrna_row_rejects_overlong_hit_names(
     base.update(feature)
     with pytest.raises(ValueError, match="at most 40"):
         core_load._ncrna_row(
-            None,
+            session,
             base,
             tool,
             seq_region_id=1,
@@ -445,13 +450,14 @@ def test_get_or_create_analysis_creates_and_reuses_rows(
     first = core_load._get_or_create_analysis(session, analysis, PROD_URL)
     second = core_load._get_or_create_analysis(session, analysis, PROD_URL)
     assert first == second
-    assert session.scalar(select(Analysis).where(Analysis.analysis_id == first)).logic_name == "tool"
-    assert (
-        session.scalar(
-            select(AnalysisDescription).where(AnalysisDescription.analysis_id == first)
-        ).description
-        == "Description"
+    analysis_row = session.scalar(select(Analysis).where(Analysis.analysis_id == first))
+    assert analysis_row is not None
+    assert analysis_row.logic_name == "tool"
+    description_row = session.scalar(
+        select(AnalysisDescription).where(AnalysisDescription.analysis_id == first)
     )
+    assert description_row is not None
+    assert description_row.description == "Description"
 
 
 def test_get_or_create_repeat_consensus_creates_and_caches_row(session: Session) -> None:
@@ -553,7 +559,7 @@ def test_lookup_resolvers_cache_unique_database_ids(
         name: Lookup name.
         id_field: Primary key field.
     """
-    extra = {"coord_system_id": 1, "length": 10} if model is SeqRegion else {}
+    extra: dict[str, object] = {"coord_system_id": 1, "length": 10} if model is SeqRegion else {}
     if model is ExternalDb:
         extra = {"status": "KNOWN", "priority": 1, "db_type": "ENSEMBL"}
     if model is AttribType:
@@ -562,8 +568,9 @@ def test_lookup_resolvers_cache_unique_database_ids(
     session.add(row)
     session.flush()
     caches = core_load.FeatureLoadCaches()
-    assert resolver(session, name, caches) == 1
-    assert resolver(session, name, caches) == 1
+    lookup = cast(Callable[..., int], resolver)
+    assert lookup(session, name, caches) == 1
+    assert lookup(session, name, caches) == 1
     assert getattr(caches, cache_field) == {name: 1}
 
 
@@ -716,11 +723,14 @@ def test_iter_ncrna_rows_resolves_tool_database_and_maps_feature(
     feature = next(core_load._iter_items(input_path, "ncrna_features"))
     db_names: list[str] = []
     expected_db = {"cmscan": "RFAM", "trnascan": "TRNASCAN_SE", "mirbase": "miRBase"}[tool]
+
+    def resolve_external_db(_session: Session, name: str, _caches: core_load.FeatureLoadCaches) -> int:
+        db_names.append(name)
+        return 5
+
     monkeypatch.setattr(core_load, "_iter_items", lambda *_: iter([feature]))
     monkeypatch.setattr(core_load, "_resolve_seq_region_id", lambda *_: 3)
-    monkeypatch.setattr(
-        core_load, "_resolve_external_db_id", lambda _session, name, _caches: db_names.append(name) or 5
-    )
+    monkeypatch.setattr(core_load, "_resolve_external_db_id", resolve_external_db)
     monkeypatch.setattr(
         core_load,
         "_ncrna_row",
@@ -868,6 +878,7 @@ def test_load_features_streams_batches_and_validates(
 
 
 def test_iter_ncrna_rows_rejects_unrecognised_tool_through_missing_database_id(
+    session: Session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The current loader cannot construct an alignment for an unknown tool.
@@ -883,7 +894,7 @@ def test_iter_ncrna_rows_rejects_unrecognised_tool_through_missing_database_id(
     with pytest.raises(UnboundLocalError):
         list(
             core_load._iter_ncrna_rows(
-                None,
+                session,
                 FIXTURES / "load_features_cmscan.json",
                 "other",
                 1,
