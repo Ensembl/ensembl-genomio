@@ -19,7 +19,7 @@ inputs:
   python-version:
     description: "Python version"
     required: true
-    default: "3.10"
+    default: "3.12"
   sqlalchemy-version:
     description: SQLAlchemy version to run the CI checks on
     required: true
