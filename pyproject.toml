@@ -120,9 +120,9 @@ fasta_recombine = "ensembl.io.genomio.fasta.recombine:main"
 fasta_split = "ensembl.io.genomio.fasta.split:main"
 fasta_stats = "ensembl.io.genomio.fasta.stats:main"
 # Features
-features_load = "ensembl.io.genomio.features.load.core_load:main"
 features_combine_json = "ensembl.io.genomio.features.combine_json:main"
 features_convert_to_genomio_json = "ensembl.io.genomio.features.convert_to_genomio_json.base:main"
+features_core_load = "ensembl.io.genomio.features.load.core_load:main"
 # GenBank
 genbank_download = "ensembl.io.genomio.genbank.download:main"
 genbank_extract_data = "ensembl.io.genomio.genbank.extract_data:main"
