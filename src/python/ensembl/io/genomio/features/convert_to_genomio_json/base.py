@@ -189,22 +189,22 @@ class FeatureConverter(ABC):
             description="Production database connection for retrieving analysis metadata.",
         )
         prod_db_group.add_argument(
-            "--prod_host", metavar="HOST", default=argparse.SUPPRESS, help="Production database host name."
+            "--prod-host", metavar="HOST", default=argparse.SUPPRESS, help="Production database host name."
         )
         prod_db_group.add_argument(
-            "--prod_port",
+            "--prod-port",
             type=int,
             metavar="PORT",
             default=argparse.SUPPRESS,
             help="Production database port number.",
         )
         prod_db_group.add_argument(
-            "--prod_user", metavar="USER", default=argparse.SUPPRESS, help="Production database user name."
+            "--prod-user", metavar="USER", default=argparse.SUPPRESS, help="Production database user name."
         )
-        prod_db_group.add_argument("--prod_password", metavar="PWD", help="Production database password.")
+        prod_db_group.add_argument("--prod-password", metavar="PWD", help="Production database password.")
 
         prod_db_group.add_argument(
-            "--prod_database",
+            "--prod-database",
             metavar="NAME",
             default=argparse.SUPPRESS,
             help="Production database name.",
