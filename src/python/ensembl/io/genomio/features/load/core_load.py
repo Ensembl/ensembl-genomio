@@ -54,6 +54,11 @@ JsonValue = bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"
 
 MAX_ATTRIB_TYPE_CODE_LENGTH = 20
 MAX_NCRNA_HIT_NAME_LENGTH = 40
+TOOL_EXTERNAL_DB_MAP = {
+    "cmscan": "RFAM",
+    "mirbase": "miRBase",
+    "trnascan": "TRNASCAN_SE",
+}
 
 
 @dataclass
@@ -652,14 +657,7 @@ def _iter_ncrna_rows(
         seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), caches)
         external_db_id: int | None = None
 
-        if tool == "cmscan":
-            external_db_name = "RFAM"
-        elif tool == "trnascan":
-            external_db_name = "TRNASCAN_SE"
-        elif tool == "mirbase":
-            external_db_name = "miRBase"
-        else:
-            external_db_name = None
+        external_db_name = TOOL_EXTERNAL_DB_MAP.get(tool)
 
         if external_db_name is not None:
             external_db_id = _resolve_external_db_id(session, external_db_name, caches)
