@@ -54,6 +54,11 @@ JsonValue = bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"
 
 MAX_ATTRIB_TYPE_CODE_LENGTH = 20
 MAX_NCRNA_HIT_NAME_LENGTH = 40
+TOOL_EXTERNAL_DB_MAP = {
+    "cmscan": "RFAM",
+    "mirbase": "miRBase",
+    "trnascan": "TRNASCAN_SE",
+}
 
 
 @dataclass
@@ -202,7 +207,9 @@ def _ncrna_row(
         ValueError: If the selected hit name exceeds the core column length.
 
     """
-    genomic_length = cast("int", feature["seq_region_end"]) - cast("int", feature["seq_region_start"]) + 1
+    seq_region_start = cast("int", feature["seq_region_start"])
+    seq_region_end = cast("int", feature["seq_region_end"])
+    genomic_length = (seq_region_end - seq_region_start) + 1
     hit_start = 1
     hit_end = genomic_length
     hit_strand = 1
@@ -222,8 +229,8 @@ def _ncrna_row(
 
     row: DnaAlignFeatureRow = {
         "seq_region_id": seq_region_id,
-        "seq_region_start": cast("int", feature["seq_region_start"]),
-        "seq_region_end": cast("int", feature["seq_region_end"]),
+        "seq_region_start": seq_region_start,
+        "seq_region_end": seq_region_end,
         "seq_region_strand": _normalise_strand(str(feature["seq_region_strand"])),
         "hit_start": hit_start,
         "hit_end": hit_end,
@@ -652,14 +659,7 @@ def _iter_ncrna_rows(
         seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), caches)
         external_db_id: int | None = None
 
-        if tool == "cmscan":
-            external_db_name = "RFAM"
-        elif tool == "trnascan":
-            external_db_name = "TRNASCAN_SE"
-        elif tool == "mirbase":
-            external_db_name = "miRBase"
-        else:
-            external_db_name = None
+        external_db_name = TOOL_EXTERNAL_DB_MAP.get(tool)
 
         if external_db_name is not None:
             external_db_id = _resolve_external_db_id(session, external_db_name, caches)
