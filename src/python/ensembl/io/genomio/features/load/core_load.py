@@ -207,7 +207,9 @@ def _ncrna_row(
         ValueError: If the selected hit name exceeds the core column length.
 
     """
-    genomic_length = cast("int", feature["seq_region_end"]) - cast("int", feature["seq_region_start"]) + 1
+    seq_region_start = cast("int", feature["seq_region_start"])
+    seq_region_end = cast("int", feature["seq_region_end"])
+    genomic_length = (seq_region_end - seq_region_start) + 1
     hit_start = 1
     hit_end = genomic_length
     hit_strand = 1
@@ -227,8 +229,8 @@ def _ncrna_row(
 
     row: DnaAlignFeatureRow = {
         "seq_region_id": seq_region_id,
-        "seq_region_start": cast("int", feature["seq_region_start"]),
-        "seq_region_end": cast("int", feature["seq_region_end"]),
+        "seq_region_start": seq_region_start,
+        "seq_region_end": seq_region_end,
         "seq_region_strand": _normalise_strand(str(feature["seq_region_strand"])),
         "hit_start": hit_start,
         "hit_end": hit_end,
