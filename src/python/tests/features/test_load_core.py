@@ -766,27 +766,27 @@ def test_parse_args_accepts_core_and_production_connection_values() -> None:
     """Parse required core and production URLs and loader options."""
     args = core_load.parse_args(
         [
-            "--input_file",
+            "--input-file",
             str(FIXTURES / "load_features_repeat.json"),
-            "--core_host",
+            "--core-host",
             "core",
-            "--core_port",
+            "--core-port",
             "3307",
-            "--core_user",
+            "--core-user",
             "loader",
-            "--core_password",
+            "--core-password",
             "secret",
-            "--core_database",
+            "--core-database",
             "core_db",
-            "--prod_host",
+            "--prod-host",
             "prod",
-            "--prod_port",
+            "--prod-port",
             "3308",
-            "--prod_user",
+            "--prod-user",
             "reader",
-            "--prod_password",
+            "--prod-password",
             "secret2",
-            "--prod_database",
+            "--prod-database",
             "prod_db",
             "--batch-size",
             "25",
@@ -802,14 +802,14 @@ def test_parse_args_accepts_core_and_production_connection_values() -> None:
 @pytest.mark.parametrize(
     "missing",
     [
-        "--core_host",
-        "--core_port",
-        "--core_user",
-        "--core_database",
-        "--prod_host",
-        "--prod_port",
-        "--prod_user",
-        "--prod_database",
+        "--core-host",
+        "--core-port",
+        "--core-user",
+        "--core-database",
+        "--prod-host",
+        "--prod-port",
+        "--prod-user",
+        "--prod-database",
     ],
 )
 def test_parse_args_requires_connection_parameters(missing: str) -> None:
@@ -822,7 +822,7 @@ def test_parse_args_requires_connection_parameters(missing: str) -> None:
         SystemExit: If a required connection option is missing.
 
     """
-    argv = ["--input_file", str(FIXTURES / "load_features_repeat.json")]
+    argv = ["--input-file", str(FIXTURES / "load_features_repeat.json")]
     for prefix, values in (
         ("core", ("host", "port", "user", "password", "database")),
         ("prod", ("host", "port", "user", "password", "database")),

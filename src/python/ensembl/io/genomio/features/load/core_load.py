@@ -759,7 +759,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     """
     parser = ArgumentParser(description="Load GenomIO features into an Ensembl core database.")
-    parser.add_argument_src_path("--input_file", required=True, help="load_features JSON document.")
+    parser.add_argument_src_path("--input-file", required=True, help="load_features JSON document.")
     parser.add_argument("--skip-validation", action="store_true", help="skip JSON schema validation.")
     parser.add_numeric_argument(
         "--batch-size",
@@ -769,12 +769,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="number of features to commit per batch",
     )
     parser.add_server_arguments(
-        prefix="core_",
+        prefix="core-",
         include_database=True,
         help="Core database connection for loading features.",
     )
     parser.add_server_arguments(
-        prefix="prod_",
+        prefix="prod-",
         include_database=True,
         help="Production database connection for retrieving analysis metadata.",
     )
