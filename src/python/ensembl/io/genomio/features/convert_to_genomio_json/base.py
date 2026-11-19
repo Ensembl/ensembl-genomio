@@ -40,6 +40,7 @@ import hashlib
 from inspect import isabstract
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Callable
 
@@ -472,7 +473,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     for converter in top_level_converters:
         converter.add_parser(subparsers)
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(
+        argv,
+        namespace=argparse.Namespace(prod_password=os.getenv("PROD_DB_PASSWORD")),
+    )
 
     prod_connection_fields = ("prod_host", "prod_port", "prod_user", "prod_database")
     analysis_description_fields = ("analysis_description", "analysis_display_label")
