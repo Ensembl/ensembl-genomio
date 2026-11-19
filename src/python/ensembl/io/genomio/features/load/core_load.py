@@ -53,15 +53,7 @@ __all__ = ["load_features", "main", "parse_args"]
 JsonValue = bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"] | None
 
 MAX_ATTRIB_TYPE_CODE_LENGTH = 20
-
 MAX_NCRNA_HIT_NAME_LENGTH = 40
-
-# JSON for analyses with these logic names contains consensus sequences but we only load 'N' into core DBs
-REPEAT_CONSENSUS_N_ANALYSES = {
-    "repeatmask_customlib",
-    "repeatmask_repbase",
-}
-
 TOOL_EXTERNAL_DB_MAP = {
     "cmscan": "RFAM",
     "mirbase": "miRBase",
@@ -375,7 +367,6 @@ def _consensus_values(consensus: Mapping[str, JsonValue]) -> dict[str, object]:
         Core ``repeat_consensus`` column values.
 
     """
-
     return {
         "repeat_name": consensus["repeat_name"],
         "repeat_class": consensus["repeat_class"],
@@ -388,8 +379,6 @@ def _get_or_create_repeat_consensus_id(
     session: Session,
     consensus: Mapping[str, JsonValue],
     caches: FeatureLoadCaches,
-    *,
-    use_n_consensus: bool = False,
 ) -> int:
     """Create or retrieve a repeat consesus entry and return its ID.
 
@@ -397,7 +386,6 @@ def _get_or_create_repeat_consensus_id(
         session: Active core database session.
         consensus: Repeat consensus object containing its input key.
         caches: Per-load caches of database IDs.
-        use_n_consensus: Boolean indicating whether to replace all consensus sequences with 'N'.
 
     Returns:
         The existing or newly created repeat consensus ID.
@@ -412,8 +400,6 @@ def _get_or_create_repeat_consensus_id(
         return caches.consensus_ids[key]
 
     values = _consensus_values(consensus)
-    if use_n_consensus:
-        values["repeat_consensus"] = "N"
 
     filters = [
         (
@@ -729,14 +715,8 @@ def load_features(
         analysis_id = _get_or_create_analysis(session, analysis, prod_url)
         rows: Iterator[tuple[Mapping[str, object], None | dict[int, str]]]
         if kind == "repeat":
-            use_n_consensus = str(analysis["logic_name"]) in REPEAT_CONSENSUS_N_ANALYSES
             for consensus in _iter_items(input_path, "repeat_consensus"):
-                _get_or_create_repeat_consensus_id(
-                    session=session,
-                    consensus=consensus,
-                    caches=caches,
-                    use_n_consensus=use_n_consensus,
-                )
+                _get_or_create_repeat_consensus_id(session, consensus, caches)
 
         if kind == "repeat":
             rows = _iter_repeat_rows(
