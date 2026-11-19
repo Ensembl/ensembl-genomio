@@ -473,11 +473,19 @@ def test_get_or_create_analysis_creates_and_reuses_rows(
     assert description_row.description == "Description"
 
 
-def test_get_or_create_repeat_consensus_creates_and_caches_row(session: Session) -> None:
-    """Reuse matching consensus records and map each input key to its ID.
+@pytest.mark.parametrize(
+    ("use_n_consensus", "expected_sequence"),
+    [(False, "ACGT"), (True, "N")],
+)
+def test_get_or_create_repeat_consensus_creates_and_caches_row(
+    session: Session, use_n_consensus: bool, expected_sequence: str
+) -> None:
+    """Create the appropriate consensus sequence and map each input key to its ID.
 
     Args:
         session: SQLite session containing repeat consensus table.
+        use_n_consensus: Whether the input sequence should be replaced with ``N``.
+        expected_sequence: Sequence expected in the core repeat consensus row.
 
     """
     caches = core_load.FeatureLoadCaches()
@@ -488,11 +496,14 @@ def test_get_or_create_repeat_consensus_creates_and_caches_row(session: Session)
         "repeat_type": "Alu",
         "repeat_consensus": "ACGT",
     }
-    first = core_load._get_or_create_repeat_consensus_id(session, consensus, caches)
+    first = core_load._get_or_create_repeat_consensus_id(
+        session, consensus, caches, use_n_consensus=use_n_consensus
+    )
     second = core_load._get_or_create_repeat_consensus_id(session, consensus, caches)
     assert first == second
     assert core_load._get_repeat_consensus_id("key", caches) == first
     assert session.query(RepeatConsensus).count() == 1
+    assert session.get(RepeatConsensus, first).repeat_consensus == expected_sequence
 
 
 def test_get_or_create_repeat_consensus_reuses_matching_database_row(session: Session) -> None:
@@ -880,8 +891,8 @@ def test_load_features_streams_batches_and_validates(
     monkeypatch.setattr(
         core_load,
         "_get_or_create_repeat_consensus_id",
-        lambda _s, consensus, cache: (
-            cache.consensus_ids.update({str(consensus["repeat_consensus_key"]): 11}) or 11
+        lambda session, consensus, caches, *, use_n_consensus=False: (
+            caches.consensus_ids.update({str(consensus["repeat_consensus_key"]): 11}) or 11
         ),
     )
     monkeypatch.setattr(core_load, "_resolve_seq_region_id", lambda *_: 3)
@@ -900,6 +911,62 @@ def test_load_features_streams_batches_and_validates(
     assert len(inserted_repeat) + len(inserted_ncrna) == 1
     assert transaction.commits == 1
     assert transaction.rollbacks == 0
+
+
+@pytest.mark.parametrize(
+    ("logic_name", "expected_use_n_consensus"),
+    [
+        ("repeatmask_customlib", True),
+        ("repeatmask_repbase", True),
+        ("repeat_test", False),
+    ],
+)
+def test_load_features_selects_consensus_replacement_by_analysis(
+    monkeypatch: pytest.MonkeyPatch, logic_name: str, expected_use_n_consensus: bool
+) -> None:
+    """Pass the N-only setting only for configured RepeatMasker analyses.
+
+    Args:
+        monkeypatch: Fixture used to isolate database effects and capture the setting.
+        logic_name: Analysis logic name stored in the input document.
+        expected_use_n_consensus: Whether consensus sequences should be replaced by ``N``.
+
+    """
+    input_path = FIXTURES / "load_features_repeat.json"
+    transaction = RecordingSession()
+    captured: list[bool] = []
+    read_value = core_load._read_value
+
+    def read_analysis(path: Path, key: str) -> core_load.JsonValue:
+        value = read_value(path, key)
+        if key == "analysis":
+            analysis = dict(cast("dict[str, core_load.JsonValue]", value))
+            analysis["logic_name"] = logic_name
+            return analysis
+        return value
+
+    def capture_consensus(
+        session: Session,
+        consensus: object,
+        caches: core_load.FeatureLoadCaches,
+        *,
+        use_n_consensus: bool = False,
+    ) -> int:
+        captured.append(use_n_consensus)
+        caches.consensus_ids[str(cast("dict[str, core_load.JsonValue]", consensus)["repeat_consensus_key"])] = 11
+        return 11
+
+    monkeypatch.setattr(core_load, "_read_value", read_analysis)
+    monkeypatch.setattr(core_load, "schema_validator", lambda *_: None)
+    monkeypatch.setattr(core_load, "DBConnection", lambda *_args, **_kwargs: RecordingDatabase(transaction))
+    monkeypatch.setattr(core_load, "_get_or_create_analysis", lambda *_: 7)
+    monkeypatch.setattr(core_load, "_get_or_create_repeat_consensus_id", capture_consensus)
+    monkeypatch.setattr(core_load, "_resolve_seq_region_id", lambda *_: 3)
+    monkeypatch.setattr(core_load, "_insert_repeat_feature", lambda *_: None)
+
+    core_load.load_features(input_path, core_url=CORE_URL, prod_url=PROD_URL)
+
+    assert captured == [expected_use_n_consensus]
 
 
 def test_iter_ncrna_rows_allows_tool_without_external_database(
@@ -974,8 +1041,8 @@ def test_load_features_rolls_back_on_insert_error(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(
         core_load,
         "_get_or_create_repeat_consensus_id",
-        lambda _s, consensus, cache: (
-            cache.consensus_ids.update({str(consensus["repeat_consensus_key"]): 11}) or 11
+        lambda session, consensus, caches, *, use_n_consensus=False: (
+            caches.consensus_ids.update({str(consensus["repeat_consensus_key"]): 11}) or 11
         ),
     )
     monkeypatch.setattr(core_load, "_resolve_seq_region_id", lambda *_: 3)
