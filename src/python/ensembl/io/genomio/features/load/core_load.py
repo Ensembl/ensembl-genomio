@@ -19,6 +19,7 @@ from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
 import logging
+import os
 from pathlib import Path
 from typing import TypedDict, cast
 
@@ -781,7 +782,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(
+        argv,
+        namespace=argparse.Namespace(
+            core_password=os.getenv("CORE_DB_PASSWORD"),
+            prod_password=os.getenv("PROD_DB_PASSWORD"),
+        ),
+    )
     init_logging_with_args(args)
     return args
 
