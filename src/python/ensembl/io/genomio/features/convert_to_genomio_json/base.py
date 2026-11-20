@@ -202,7 +202,15 @@ class FeatureConverter(ABC):
         prod_db_group.add_argument(
             "--prod-user", metavar="USER", default=argparse.SUPPRESS, help="Production database user name."
         )
-        prod_db_group.add_argument("--prod-password", metavar="PWD", help="Production database password.")
+        prod_db_group.add_argument(
+            "--prod-password",
+            metavar="PWD",
+            help=(
+                "Production database password.  Passing passwords via the command line is unsafe and "
+                "should be avoided. The value for --prod-password will default to the environmental "
+                "variable PROD_DB_PASSWORD, or None if this is not set."
+            ),
+        )
 
         prod_db_group.add_argument(
             "--prod-database",
