@@ -749,6 +749,21 @@ def load_features(
             session.commit()
 
 
+def password_warning(parameter: str, env_var: str) -> str:
+    """Generate help string warning about passing passwords via the command line.
+
+    Args:
+        parameter: Name of the optional command line parameter for supplying password.
+        env_var: Name of the environmental variable used as the default value.
+
+    """
+    return (
+        "Passing passwords via the command line is unsafe and should be avoided. The value for "
+        f"--{parameter} will default to the environmental variable {env_var}, or None if "
+        "this is not set."
+    )
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse CLI arguments using required command-line database values.
 
@@ -772,12 +787,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_server_arguments(
         prefix="core-",
         include_database=True,
-        help="Core database connection for loading features.",
+        help=(
+            "Core database connection for loading features. "
+            f"{password_warning("core-password", "CORE_DB_PASSWORD")}"
+        ),
     )
     parser.add_server_arguments(
         prefix="prod-",
         include_database=True,
-        help="Production database connection for retrieving analysis metadata.",
+        help=(
+            "Production database connection for retrieving analysis metadata. "
+            f"{password_warning("prod-password", "PROD_DB_PASSWORD")}"
+        ),
     )
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
     parser.add_log_arguments()
