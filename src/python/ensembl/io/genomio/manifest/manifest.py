@@ -20,9 +20,9 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any, ClassVar, TypeAlias
+from typing import Any, ClassVar
 
-ManifestDict: TypeAlias = dict[str, dict[str, Any]]
+type ManifestDict = dict[str, dict[str, Any]]
 
 
 MAXIMUM_SAME_BASENAME_FILES = 10

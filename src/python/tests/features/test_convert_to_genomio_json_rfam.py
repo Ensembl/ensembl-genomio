@@ -174,10 +174,10 @@ def test_parse_output_success(
         input_path=input_file,
         output_path=tmp_path / "out.json",
         invalid_tool_output_path=tmp_path / "invalid.out",
-        analysis_logic_name="red",
-        analysis_display_label="RED",
-        analysis_description="Red repeat finder",
-        program="red",
+        analysis_logic_name="rfam",
+        analysis_display_label="Rfam",
+        analysis_description="Rfam repeat finder",
+        program="cmsearch",
         program_version="1.0",
         source_provider="Ensembl",
         is_primary=False,
@@ -216,7 +216,7 @@ def test_rfam_converter_parse_features_delegates_to_parser(
         is_strict_mode=True,
     )
     expected: convert_to_genomio_json.ParseFeaturesResult = ([{"seq_region": "chr1"}], {})
-    monkeypatch.setattr(rfam, "parse_output", lambda actual_config: expected)
+    monkeypatch.setattr(rfam, "parse_output", lambda _actual_config: expected)
 
     assert rfam.RfamConverter.parse_features(config) == expected
 

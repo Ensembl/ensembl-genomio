@@ -1,0 +1,78 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Methods for querying the Ensembl core database for analysis data."""
+
+from typing import TypedDict
+
+from sqlalchemy import text
+from sqlalchemy.engine import URL
+
+from ensembl.utils.database import DBConnection
+
+__all__ = ["get_production_analysis_description"]
+
+
+class AnalysisDescriptionData(TypedDict):
+    """Production database fields describing an analysis."""
+
+    description: str | None
+    display_label: str
+    displayable: int
+    web_data: str | None
+
+
+def get_production_analysis_description(
+    logic_name: str,
+    prod_url: URL,
+) -> AnalysisDescriptionData:
+    """Retrieve analysis description metadata from the production database.
+
+    Args:
+        logic_name: Analysis logic name to look up.
+        prod_url: URL for the production database.
+
+    Returns:
+        An AnalysisDescriptionData object containing the analysis description and display label.
+
+    Raises:
+        ValueError: If the analysis description is not found in the production database.
+
+    """
+    database = DBConnection(prod_url, reflect=False)
+
+    with database.session_scope() as session:
+        result = (
+            session.execute(
+                text("""
+                    SELECT ad.description, ad.display_label, ad.displayable, wd.data as web_data
+                    FROM analysis_description ad
+                    LEFT JOIN web_data wd ON ad.web_data_id = wd.web_data_id
+                    WHERE logic_name = :logic_name
+                """),
+                {"logic_name": logic_name},
+            )
+            .mappings()
+            .one_or_none()
+        )
+
+        if result is None:
+            raise ValueError(f"Analysis not found in production database: {logic_name}")
+
+        return AnalysisDescriptionData(
+            description=result["description"],
+            display_label=result["display_label"],
+            displayable=result["displayable"],
+            web_data=result["web_data"],
+        )

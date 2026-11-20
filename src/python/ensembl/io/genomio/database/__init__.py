@@ -18,3 +18,4 @@ from .factory import *
 from .dbconnection_lite import *
 from .core_server import *
 from .meta_getter import *
+from .analysis import *
