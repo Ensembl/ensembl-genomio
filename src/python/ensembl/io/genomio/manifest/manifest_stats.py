@@ -21,7 +21,7 @@ import json
 from math import floor
 from os import PathLike
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any
 
 from BCBio import GFF
 from Bio import SeqIO
@@ -33,7 +33,7 @@ from ensembl.utils.archive import open_gz_file
 from ensembl.utils import StrPath
 
 # Record the lengths of the sequence for features/regions
-StatsLengths: TypeAlias = dict[str, int]
+type StatsLengths = dict[str, int]
 
 
 class InvalidIntegrityError(Exception):

@@ -141,7 +141,8 @@
         "seq_region_end",
         "seq_region_strand",
         "repeat_start",
-        "repeat_end"
+        "repeat_end",
+        "repeat_consensus"
       ],
       "properties": {
         "seq_region": {
@@ -176,10 +177,10 @@
     },
 
     "repeat_load": {
-      "description": "Repeat-load document (load_repeat): a single analysis+source with repeat_features and optional repeat_consensus.",
+      "description": "Repeat-load document (load_repeat): a single analysis+source with repeat_features and repeat_consensuses.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["analysis", "source", "repeat_features"],
+      "required": ["analysis", "source", "repeat_consensus", "repeat_features"],
       "properties": {
         "analysis": {
           "$ref": "#/definitions/analysis",
@@ -192,7 +193,7 @@
         "repeat_consensus": {
           "type": "array",
           "items": { "$ref": "#/definitions/repeat_consensus" },
-          "description": "Optional consensus entries. Each entry has an SHA-256 key."
+          "description": "Repeat consensus entries. Each entry has an SHA-256 key."
         },
         "repeat_features": {
           "type": "array",

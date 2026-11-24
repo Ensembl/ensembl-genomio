@@ -1,0 +1,837 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Load GenomIO repeat and ncRNA feature JSON into an Ensembl core database."""
+
+import argparse
+from collections.abc import Iterator, Mapping
+from dataclasses import dataclass, field
+from datetime import datetime, UTC
+import logging
+import os
+from pathlib import Path
+from typing import TypedDict, cast
+
+
+import ijson
+from sqlalchemy import select
+from sqlalchemy.engine import URL
+from sqlalchemy.orm import Session
+
+from ensembl.core.models import (
+    Analysis,
+    AnalysisDescription,
+    AttribType,
+    DNAAlignFeatureAttrib,
+    DnaAlignFeature,
+    ExternalDb,
+    RepeatConsensus,
+    RepeatFeature,
+    SeqRegion,
+)
+
+import ensembl.io.genomio
+from ensembl.io.genomio.database import get_production_analysis_description
+from ensembl.io.genomio.schemas.json.validate import schema_validator
+
+from ensembl.utils.argparse import ArgumentParser
+from ensembl.utils.database import DBConnection
+from ensembl.utils.logging import init_logging_with_args
+
+__all__ = ["load_features", "main", "parse_args"]
+
+JsonValue = bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"] | None
+
+MAX_ATTRIB_TYPE_CODE_LENGTH = 20
+MAX_NCRNA_HIT_NAME_LENGTH = 40
+TOOL_EXTERNAL_DB_MAP = {
+    "cmscan": "RFAM",
+    "mirbase": "miRBase",
+    "trnascan": "TRNASCAN_SE",
+}
+
+
+@dataclass
+class FeatureLoadCaches:
+    """Caches of database IDs used during a feature loading operation."""
+
+    seq_region_ids: dict[str, int] = field(default_factory=dict)
+    consensus_ids: dict[str, int] = field(default_factory=dict)
+    external_db_ids: dict[str, int] = field(default_factory=dict)
+    attrib_type_ids: dict[str, int] = field(default_factory=dict)
+
+
+class DnaAlignFeatureRow(TypedDict):
+    """Values stored in a dna_align_feature row."""
+
+    seq_region_id: int
+    seq_region_start: int
+    seq_region_end: int
+    seq_region_strand: int
+    hit_start: int
+    hit_end: int
+    hit_strand: int
+    hit_name: str
+    analysis_id: int
+    score: float | None
+    evalue: float | None
+    perc_ident: float | None
+    cigar_line: str | None
+    external_db_id: int | None
+    hcoverage: float | None
+    align_type: str
+
+
+class RepeatFeatureRow(TypedDict):
+    """Values stored in a repeat_feature row."""
+
+    seq_region_id: int
+    seq_region_start: int
+    seq_region_end: int
+    seq_region_strand: int
+    repeat_start: int
+    repeat_end: int
+    repeat_consensus_id: int
+    analysis_id: int
+    score: float | None
+
+
+def _normalise_strand(strand: str) -> int:
+    """Convert a GenomIO strand into the Ensembl integer representation."""
+    return {"+": 1, "-": -1, ".": 0}[strand]
+
+
+def _ncrna_hit_name(feature: Mapping[str, JsonValue], tool: str) -> str:
+    """Select and validate the Ensembl hit name for an ncRNA feature.
+
+    Args:
+        feature: One validated ncRNA feature object.
+        tool: Producing tool that determines the source field.
+
+    Returns:
+        A hit name no longer than the core column limit.
+
+    Raises:
+        ValueError: If the selected name exceeds the core column length.
+
+    """
+    if tool == "cmscan":
+        name = feature["target_name"]
+    elif tool == "mirbase":
+        name = feature["mirna_name"]
+    else:
+        name = feature.get("display_label") or feature["isotype"]
+    name = cast("str", name)
+    if len(name) > MAX_NCRNA_HIT_NAME_LENGTH:
+        raise ValueError(f"ncRNA hit_name must be at most {MAX_NCRNA_HIT_NAME_LENGTH} characters: {name!r}")
+    return name
+
+
+def _get_ncrna_attributes(
+    session: Session, feature: Mapping[str, JsonValue], tool: str, caches: FeatureLoadCaches
+) -> dict[int, str]:
+    """Return the attribute values for one ncRNA feature.
+
+    Args:
+        session: Active core database session.
+        feature: One validated ncRNA feature object.
+        tool: Producing tool that determines the source field.
+        caches: Per-load caches of database IDs.
+
+    Returns:
+        A mapping of core attribute type IDs to their text values.
+
+    """
+    attributes: dict[int, str] = {}
+    if tool == "cmscan":
+        if feature.get("target_accession") is not None:
+            attributes[_resolve_attrib_type_id(session, "rfam_accession", caches)] = str(
+                feature["target_accession"]
+            )
+        attributes[_resolve_attrib_type_id(session, "rna_gene_biotype", caches)] = str(feature["biotype"])
+        if feature.get("description") is not None:
+            attributes[_resolve_attrib_type_id(session, "description", caches)] = str(feature["description"])
+        if feature.get("bias") is not None:
+            attributes[_resolve_attrib_type_id(session, "cmscan_bias", caches)] = str(feature["bias"])
+        if feature.get("gc") is not None:
+            attributes[_resolve_attrib_type_id(session, "cmscan_gc", caches)] = str(feature["gc"])
+        if feature.get("truncation") is not None:
+            attributes[_resolve_attrib_type_id(session, "cmscan_truncated", caches)] = str(
+                feature["truncation"]
+            )
+        significant_value = 1 if feature["is_significant"] else 0
+        attributes[_resolve_attrib_type_id(session, "cmscan_significant", caches)] = str(significant_value)
+    elif tool == "trnascan":
+        attributes[_resolve_attrib_type_id(session, "rna_gene_biotype", caches)] = str(feature["biotype"])
+        description = f"tRNA-{feature['isotype']!s} for anticodon {feature['anticodon']!s}"
+        attributes[_resolve_attrib_type_id(session, "description", caches)] = description
+
+    return attributes
+
+
+def _ncrna_row(
+    session: Session,
+    feature: Mapping[str, JsonValue],
+    tool: str,
+    *,
+    seq_region_id: int,
+    analysis_id: int,
+    external_db_id: int | None,
+    caches: FeatureLoadCaches,
+) -> tuple[DnaAlignFeatureRow, dict[int, str]]:
+    """Map one schema ncRNA object to a row and its feature attributes.
+
+    Args:
+        session: Active core database session.
+        feature: One validated ncRNA feature object.
+        tool: Producing tool, used to select hit-name and coordinate rules.
+        seq_region_id: Database identifier resolved from ``feature["seq_region"]``.
+        analysis_id: Database identifier for the owning analysis.
+        external_db_id: Database identifier for the external database, or None if not applicable.
+        caches: Per-load caches of database IDs.
+
+    Returns:
+        The ``dna_align_feature`` values and serialized attribute values.
+
+    Raises:
+        ValueError: If the selected hit name exceeds the core column length.
+
+    """
+    seq_region_start = cast("int", feature["seq_region_start"])
+    seq_region_end = cast("int", feature["seq_region_end"])
+    genomic_length = (seq_region_end - seq_region_start) + 1
+    hit_start = 1
+    hit_end = genomic_length
+    hit_strand = 1
+    if tool == "cmscan":
+        if feature.get("model_start") is not None:
+            hit_start = cast("int", feature.get("model_start"))
+            hit_end = cast("int", feature.get("model_end"))
+
+        if feature.get("model_strand") is not None:
+            hit_strand = _normalise_strand(str(feature["model_strand"]))
+        else:
+            hit_strand = -1 if hit_start > hit_end else 1
+
+    cigar_line = f"{genomic_length}M" if tool == "trnascan" else None
+
+    attributes = _get_ncrna_attributes(session, feature, tool, caches)
+
+    row: DnaAlignFeatureRow = {
+        "seq_region_id": seq_region_id,
+        "seq_region_start": seq_region_start,
+        "seq_region_end": seq_region_end,
+        "seq_region_strand": _normalise_strand(str(feature["seq_region_strand"])),
+        "hit_start": hit_start,
+        "hit_end": hit_end,
+        "hit_strand": hit_strand,
+        "hit_name": _ncrna_hit_name(feature, tool),
+        "analysis_id": analysis_id,
+        "score": float(cast("int | float", feature["score"])) if "score" in feature else None,
+        "evalue": float(cast("int | float", feature["evalue"])) if "evalue" in feature else None,
+        "perc_ident": None,
+        "cigar_line": cigar_line,
+        "external_db_id": external_db_id,
+        "hcoverage": None,
+        "align_type": "ensembl",
+    }
+    return row, attributes
+
+
+def _parse_run_date(value: str) -> datetime:
+    """Parse an ISO run date and normalize it to UTC-naive form.
+
+    Args:
+        value: ISO-8601 date or datetime string.
+
+    Returns:
+        A naive UTC ``datetime`` suitable for the core ``analysis.created`` column.
+
+    Raises:
+        ValueError: If ``value`` is not a valid ISO-8601 datetime.
+
+    """
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        return parsed
+    return parsed.astimezone(UTC).replace(tzinfo=None)
+
+
+def _repeat_row(
+    feature: Mapping[str, JsonValue],
+    analysis_id: int,
+    seq_region_id: int,
+    consensus_id: int,
+) -> RepeatFeatureRow:
+    """Map one schema repeat object to a ``repeat_feature`` row.
+
+    Args:
+        feature: One validated repeat feature object.
+        analysis_id: Database identifier for the owning analysis.
+        seq_region_id: Database identifier for the feature's sequence region.
+        consensus_id: Database identifier for the repeat consensus.
+
+    Returns:
+        Values for one ``repeat_feature`` insert.
+
+    """
+    row: RepeatFeatureRow = {
+        "seq_region_id": seq_region_id,
+        "seq_region_start": cast("int", feature["seq_region_start"]),
+        "seq_region_end": cast("int", feature["seq_region_end"]),
+        "seq_region_strand": _normalise_strand(str(feature["seq_region_strand"])),
+        "repeat_start": cast("int", feature["repeat_start"]),
+        "repeat_end": cast("int", feature["repeat_end"]),
+        "repeat_consensus_id": consensus_id,
+        "analysis_id": analysis_id,
+        "score": float(cast("int | float", feature["score"])) if "score" in feature else None,
+    }
+
+    return row
+
+
+def _analysis_values(analysis: Mapping[str, JsonValue]) -> dict[str, object]:
+    """Return the values persisted in the ``analysis`` table.
+
+    Args:
+        analysis: Validated analysis metadata from the input document.
+
+    Returns:
+        Core ``analysis`` column values.
+
+    """
+    return {
+        "created": _parse_run_date(str(analysis["run_date"])),
+        "logic_name": str(analysis["logic_name"]),
+        "db": analysis.get("db"),
+        "db_version": analysis.get("db_version"),
+        "program": analysis.get("program"),
+        "program_version": analysis.get("program_version"),
+        "parameters": analysis.get("program_parameters"),
+    }
+
+
+def _get_or_create_analysis(session: Session, analysis: Mapping[str, JsonValue], prod_url: URL) -> int:
+    """Create or verify the analysis and its description.
+
+    Args:
+        session: Active core database session.
+        analysis: Validated analysis metadata from the input document.
+        prod_url: URL for the production database.
+
+    Returns:
+        The existing or newly created analysis ID.
+
+    """
+    values = _analysis_values(analysis)
+    existing = session.scalar(select(Analysis).where(Analysis.logic_name == values["logic_name"]))
+    if existing is not None:
+        return int(existing.analysis_id)
+
+    prod_analysis_description_values = get_production_analysis_description(
+        str(values["logic_name"]), prod_url
+    )
+    created = Analysis(**values)
+    session.add(created)
+    session.flush()
+    session.add(
+        AnalysisDescription(
+            analysis_id=created.analysis_id,
+            description=prod_analysis_description_values["description"],
+            display_label=prod_analysis_description_values["display_label"],
+            displayable=prod_analysis_description_values["displayable"],
+            web_data=prod_analysis_description_values["web_data"],
+        )
+    )
+    session.flush()
+    return int(created.analysis_id)
+
+
+def _consensus_values(consensus: Mapping[str, JsonValue]) -> dict[str, object]:
+    """Return values persisted in ``repeat_consensus``.
+
+    Args:
+        consensus: Validated repeat consensus object.
+
+    Returns:
+        Core ``repeat_consensus`` column values.
+
+    """
+    return {
+        "repeat_name": consensus["repeat_name"],
+        "repeat_class": consensus["repeat_class"],
+        "repeat_type": consensus["repeat_type"],
+        "repeat_consensus": consensus.get("repeat_consensus"),
+    }
+
+
+def _get_or_create_repeat_consensus_id(
+    session: Session,
+    consensus: Mapping[str, JsonValue],
+    caches: FeatureLoadCaches,
+) -> int:
+    """Create or retrieve a repeat consesus entry and return its ID.
+
+    Args:
+        session: Active core database session.
+        consensus: Repeat consensus object containing its input key.
+        caches: Per-load caches of database IDs.
+
+    Returns:
+        The existing or newly created repeat consensus ID.
+
+    Raises:
+        ValueError: If one input key is associated with conflicting data.
+
+    """
+    key = str(consensus["repeat_consensus_key"])
+
+    if caches.consensus_ids.get(key) is not None:
+        return caches.consensus_ids[key]
+
+    values = _consensus_values(consensus)
+
+    filters = [
+        (
+            getattr(RepeatConsensus, field).is_(value)
+            if value is None
+            else getattr(RepeatConsensus, field) == value
+        )
+        for field, value in values.items()
+    ]
+    existing = session.scalar(select(RepeatConsensus).where(*filters))
+
+    if existing is None:
+        existing = RepeatConsensus(**values)
+        session.add(existing)
+        session.flush()
+
+    consensus_id = int(existing.repeat_consensus_id)
+    caches.consensus_ids[key] = consensus_id
+
+    return consensus_id
+
+
+def _resolve_seq_region_id(session: Session, name: str, caches: FeatureLoadCaches) -> int:
+    """Resolve and cache one exact sequence-region name to its database ID.
+
+    Args:
+        session: Active core database session.
+        name: Sequence region name.
+        caches: Per-load caches of database IDs.
+
+    Returns:
+        The unique matching sequence-region ID.
+
+    Raises:
+        ValueError: If no unique sequence region matches ``name``.
+
+    """
+    if caches.seq_region_ids.get(name) is not None:
+        return caches.seq_region_ids[name]
+    rows = session.scalars(select(SeqRegion).where(SeqRegion.name == name)).all()
+    if not rows:
+        raise ValueError(f"Sequence region not found: {name}")
+    if len(rows) > 1:
+        raise ValueError(f"Sequence region name is ambiguous: {name}")
+    seq_region_id = int(rows[0].seq_region_id)
+    caches.seq_region_ids[name] = seq_region_id
+    return seq_region_id
+
+
+def _resolve_external_db_id(session: Session, db_name: str, caches: FeatureLoadCaches) -> int:
+    """Resolve and cache one exact external database name to its database ID.
+
+    Args:
+        session: Active core database session.
+        db_name: External database name.
+        caches: Per-load caches of database IDs.
+
+    Returns:
+        The unique matching external database ID.
+
+    Raises:
+        ValueError: If no unique external database matches ``name``.
+
+    """
+    if caches.external_db_ids.get(db_name) is not None:
+        return caches.external_db_ids[db_name]
+    rows = session.scalars(select(ExternalDb).where(ExternalDb.db_name == db_name)).all()
+    if not rows:
+        raise ValueError(f"External database not found: {db_name}")
+    if len(rows) > 1:
+        raise ValueError(f"External database name is ambiguous: {db_name}")
+    external_db_id = int(rows[0].external_db_id)
+    caches.external_db_ids[db_name] = external_db_id
+    return external_db_id
+
+
+def _resolve_attrib_type_id(session: Session, code: str, caches: FeatureLoadCaches) -> int:
+    """Resolve and cache one exact attribute type code to its database ID.
+
+    Args:
+        session: Active core database session.
+        code: Attribute type code.
+        caches: Per-load caches of database IDs.
+
+    Returns:
+        The unique matching attribute type ID.
+
+    Raises:
+        ValueError: If no unique attribute type matches ``code``.
+
+    """
+    if caches.attrib_type_ids.get(code) is not None:
+        return caches.attrib_type_ids[code]
+    rows = session.scalars(select(AttribType).where(AttribType.code == code)).all()
+    if not rows:
+        raise ValueError(f"Attribute type not found: {code}")
+    if len(rows) > 1:
+        raise ValueError(f"Attribute type code is ambiguous: {code}")
+    attrib_type_id = int(rows[0].attrib_type_id)
+    caches.attrib_type_ids[code] = attrib_type_id
+    return attrib_type_id
+
+
+def _insert_repeat_feature(session: Session, values: Mapping[str, object]) -> None:
+    """Insert one repeat feature from the source document.
+
+    Args:
+        session: Active core database session.
+        values: ``repeat_feature`` column values.
+
+    """
+    session.add(RepeatFeature(**values))
+    session.flush()
+
+
+def _insert_ncrna_feature(
+    session: Session,
+    values: Mapping[str, object],
+    attributes: Mapping[int, str],
+) -> None:
+    """Insert one ncRNA alignment and its source attributes.
+
+    Args:
+        session: Active core database session.
+        values: ``dna_align_feature`` column values.
+        attributes: Attribute type ID/value pairs to store with the feature.
+
+    """
+    feature = DnaAlignFeature(**values)
+    session.add(feature)
+    session.flush()
+    for attrib_type_id, value in attributes.items():
+        session.add(
+            DNAAlignFeatureAttrib(
+                dna_align_feature_id=feature.dna_align_feature_id,
+                attrib_type_id=attrib_type_id,
+                value=value,
+            )
+        )
+    session.flush()
+
+
+def _iter_items(input_path: Path, prefix: str) -> Iterator[dict[str, JsonValue]]:
+    """Yield objects from one top-level JSON array without retaining the array.
+
+    Args:
+        input_path: Input JSON path.
+        prefix: Top-level array name to stream.
+
+    Yields:
+        One decoded array item at a time.
+
+    """
+    with Path(input_path).open("rb") as input_handle:
+        yield from ijson.items(input_handle, f"{prefix}.item", use_float=True)
+
+
+def _read_value(input_path: Path, prefix: str) -> object:
+    """Read one small top-level JSON value from a streaming parser.
+
+    Args:
+        input_path: Input JSON path.
+        prefix: Top-level value name to read.
+
+    Returns:
+        The decoded value.
+
+    """
+    with Path(input_path).open("rb") as input_handle:
+        return next(ijson.items(input_handle, prefix, use_float=True))
+
+
+def _document_kind(input_path: Path) -> str:
+    """Return whether a document contains repeat or ncRNA features.
+
+    Args:
+        input_path: Input JSON path.
+
+    Returns:
+        ``"repeat"`` or ``"ncrna"``.
+
+    """
+    feature_keys: set[str] = set()
+    with Path(input_path).open("rb") as input_handle:
+        for prefix, event, value in ijson.parse(input_handle, use_float=True):
+            if prefix == "" and event == "map_key" and value in {"repeat_features", "ncrna_features"}:
+                feature_keys.add(str(value))
+    return "repeat" if "repeat_features" in feature_keys else "ncrna"
+
+
+def _get_repeat_consensus_id(key: str, caches: FeatureLoadCaches) -> int:
+    """Retrieve a repeat consensus ID from the cache.
+
+    Args:
+        key: Input repeat consensus key.
+        caches: Per-load caches of database IDs.
+
+    Returns:
+        The corresponding core repeat consensus ID.
+
+    Raises:
+        ValueError: If ``key`` has not been loaded.
+
+    """
+    if caches.consensus_ids.get(key) is None:
+        raise ValueError(f"Repeat consensus key not found: {key}")
+    return caches.consensus_ids[key]
+
+
+def _iter_repeat_rows(
+    session: Session,
+    input_path: Path,
+    *,
+    analysis_id: int,
+    caches: FeatureLoadCaches,
+) -> Iterator[tuple[Mapping[str, object], None]]:
+    """Yield mapped repeat rows while resolving their consensus IDs.
+
+    Args:
+        session: Active core database session.
+        input_path: Input JSON path.
+        analysis_id: Database identifier for the owning analysis.
+        caches: Per-load caches of database IDs.
+
+    Yields:
+        Repeat feature values paired with ``None`` attribute values.
+
+    """
+    for feature in _iter_items(input_path, "repeat_features"):
+        seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), caches)
+        consensus_key = feature.get("repeat_consensus")
+        consensus_id = _get_repeat_consensus_id(str(consensus_key), caches)
+        yield _repeat_row(feature, analysis_id, seq_region_id, consensus_id), None
+
+
+def _iter_ncrna_rows(
+    session: Session,
+    input_path: Path,
+    tool: str,
+    analysis_id: int,
+    caches: FeatureLoadCaches,
+) -> Iterator[tuple[Mapping[str, object], dict[int, str]]]:
+    """Yield mapped ncRNA rows and their attribute values.
+
+    Args:
+        session: Active core database session.
+        input_path: Input JSON path.
+        tool: Producing ncRNA tool.
+        analysis_id: Database identifier for the owning analysis.
+        caches: Per-load caches of database IDs.
+
+    Yields:
+        Alignment values paired with their attribute code/value pairs.
+
+    """
+    for feature in _iter_items(input_path, "ncrna_features"):
+        seq_region_id = _resolve_seq_region_id(session, str(feature["seq_region"]), caches)
+        external_db_id: int | None = None
+
+        external_db_name = TOOL_EXTERNAL_DB_MAP.get(tool)
+
+        if external_db_name is not None:
+            external_db_id = _resolve_external_db_id(session, external_db_name, caches)
+
+        values, attributes = _ncrna_row(
+            session,
+            feature,
+            tool,
+            seq_region_id=seq_region_id,
+            analysis_id=analysis_id,
+            external_db_id=external_db_id,
+            caches=caches,
+        )
+        yield values, attributes
+
+
+def load_features(
+    input_path: Path,
+    *,
+    core_url: URL,
+    prod_url: URL,
+    skip_validation: bool = False,
+    batch_size: int = 1000,
+) -> None:
+    """Stream source-of-truth feature rows into an Ensembl core database.
+
+    Args:
+        input_path: JSON document conforming to ``load_features.json``.
+        core_url: SQLAlchemy URL for the target MySQL core database.
+        prod_url: SQLAlchemy URL for the production database.
+        skip_validation: Whether to skip validation of a document already validated by the caller.
+        batch_size: Number of input features between explicit commits.
+
+    Raises:
+        ValueError: If the batch size is not positive.
+
+    """
+    if batch_size < 1:
+        raise ValueError("batch_size must be positive")
+    if not skip_validation:
+        schema_validator(input_path, "load_features")
+
+    kind = _document_kind(input_path)
+    analysis = cast("Mapping[str, JsonValue]", _read_value(input_path, "analysis"))
+    tool = ""
+    if kind == "ncrna":
+        tool = cast("str", _read_value(input_path, "ncrna_tool"))
+
+    database = DBConnection(core_url, reflect=False)
+    with database.session_scope() as session:
+        caches = FeatureLoadCaches()
+
+        analysis_id = _get_or_create_analysis(session, analysis, prod_url)
+        rows: Iterator[tuple[Mapping[str, object], None | dict[int, str]]]
+        if kind == "repeat":
+            for consensus in _iter_items(input_path, "repeat_consensus"):
+                _get_or_create_repeat_consensus_id(session, consensus, caches)
+
+        if kind == "repeat":
+            rows = _iter_repeat_rows(
+                session=session,
+                input_path=input_path,
+                analysis_id=analysis_id,
+                caches=caches,
+            )
+        else:
+            rows = _iter_ncrna_rows(
+                session=session,
+                input_path=input_path,
+                tool=tool,
+                analysis_id=analysis_id,
+                caches=caches,
+            )
+
+        feature_count = 0
+        for values, attributes in rows:
+            if attributes is None:
+                _insert_repeat_feature(session, values)
+            else:
+                _insert_ncrna_feature(session, values, attributes)
+            feature_count += 1
+            if feature_count % batch_size == 0:
+                session.commit()
+
+        if feature_count % batch_size or feature_count == 0:
+            session.commit()
+
+
+def password_warning(parameter: str, env_var: str) -> str:
+    """Generate help string warning about passing passwords via the command line.
+
+    Args:
+        parameter: Name of the optional command line parameter for supplying password.
+        env_var: Name of the environmental variable used as the default value.
+
+    """
+    return (
+        "Passing passwords via the command line is unsafe and should be avoided. The value for "
+        f"--{parameter} will default to the environmental variable {env_var}, or None if "
+        "this is not set."
+    )
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse CLI arguments using required command-line database values.
+
+    Args:
+        argv: Optional argument list; defaults to the process command line.
+
+    Returns:
+        Parsed command-line options, including the constructed database URL.
+
+    """
+    parser = ArgumentParser(description="Load GenomIO features into an Ensembl core database.")
+    parser.add_argument_src_path("--input-file", required=True, help="load_features JSON document.")
+    parser.add_argument("--skip-validation", action="store_true", help="skip JSON schema validation.")
+    parser.add_numeric_argument(
+        "--batch-size",
+        type=int,
+        min_value=1,
+        default=1000,
+        help="number of features to commit per batch",
+    )
+    parser.add_server_arguments(
+        prefix="core-",
+        include_database=True,
+        help=(
+            "Core database connection for loading features. "
+            f"{password_warning("core-password", "CORE_DB_PASSWORD")}"
+        ),
+    )
+    parser.add_server_arguments(
+        prefix="prod-",
+        include_database=True,
+        help=(
+            "Production database connection for retrieving analysis metadata. "
+            f"{password_warning("prod-password", "PROD_DB_PASSWORD")}"
+        ),
+    )
+    parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)
+    parser.add_log_arguments()
+
+    args = parser.parse_args(
+        argv,
+        namespace=argparse.Namespace(
+            core_password=os.getenv("CORE_DB_PASSWORD"),
+            prod_password=os.getenv("PROD_DB_PASSWORD"),
+        ),
+    )
+    init_logging_with_args(args)
+    return args
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Run the features loader CLI.
+
+    Args:
+        argv: Optional list of command-line arguments; defaults to the process command line.
+
+    """
+    args = parse_args(argv)
+    logging.info("Loading features into %s", args.core_url.render_as_string(hide_password=True))
+
+    try:
+        load_features(
+            args.input_file,
+            core_url=args.core_url.set(drivername="mysql+mysqlconnector"),
+            prod_url=args.prod_url.set(drivername="mysql+mysqlconnector"),
+            skip_validation=args.skip_validation,
+            batch_size=args.batch_size,
+        )
+    except Exception:
+        logging.exception(f"Error occurred while loading features from {args.input_file}")
+        raise
