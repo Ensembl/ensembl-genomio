@@ -862,7 +862,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         include_database=True,
         help=(
             "Core database connection for loading features. "
-            f"{password_warning("core-password", "CORE_DB_PASSWORD")}"
+            f"{password_warning('core-password', 'CORE_DB_PASSWORD')}"
         ),
     )
     parser.add_server_arguments(
@@ -870,7 +870,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         include_database=True,
         help=(
             "Production database connection for retrieving analysis metadata. "
-            f"{password_warning("prod-password", "PROD_DB_PASSWORD")}"
+            f"{password_warning('prod-password', 'PROD_DB_PASSWORD')}"
         ),
     )
     parser.add_argument("--version", action="version", version=ensembl.io.genomio.__version__)

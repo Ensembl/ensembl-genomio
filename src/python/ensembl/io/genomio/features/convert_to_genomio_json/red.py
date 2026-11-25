@@ -68,11 +68,6 @@ class RedConverter(FeatureConverter):
         cls.add_common_arguments(red_parser)
         red_parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label="Repeats: Red",
-            analysis_description=(
-                'Repeats detected using <a href="https://bmcbioinformatics.biomedcentral.com/articles'
-                '/10.1186/s12859-015-0654-5">Red (REPeatDetector)</a>'
-            ),
             program="Red",
             repeatmasker_consensus_lib_path=None,
         )

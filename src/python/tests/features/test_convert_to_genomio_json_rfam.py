@@ -115,6 +115,9 @@ def test_parse_row(
         expectation: Expected success or exception context.
         expected_feature: Expected parsed feature, when parsing succeeds.
 
+    Raises:
+        ValueError: If an input row is malformed.
+
     """
     with expectation:
         parsed_row = rfam.parse_row(Path("input.tsv"), line)
@@ -123,53 +126,18 @@ def test_parse_row(
         assert parsed_row.feature == expected_feature
 
 
-@pytest.mark.parametrize(
-    ("expected_features", "expected_consensuses"),
-    [
-        pytest.param(
-            [
-                {
-                    "seq_region": "NC_003076.8",
-                    "seq_region_start": 4479446,
-                    "seq_region_end": 4479542,
-                    "model_start": 1,
-                    "model_end": 97,
-                    "seq_region_strand": "-",
-                    "score": 113.6,
-                    "evalue": 9.7e-27,
-                    "gc": 0.39,
-                    "bias": 0.0,
-                    "truncation": "no",
-                    "biotype": "pre_miRN",
-                    "target_name": "MIR848",
-                    "target_accession": "RF03308",
-                    "description": "MIR848 description",
-                }
-            ],
-            {},
-            id="valid feature",
-        )
-    ],
-)
 def test_parse_output_success(
     tmp_path: Path,
-    expected_features: list[dict[str, object]],
-    expected_consensuses: dict[str, object],
+    convert_to_genomio_json_data_dir: Path,
 ) -> None:
     """Test that ``parse_output`` parses the header and one valid Rfam row.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
-        expected_features: Expected parsed feature records.
-        expected_consensuses: Expected consensus records.
+        convert_to_genomio_json_data_dir: Converter input fixture directory.
 
     """
-    input_file = tmp_path / "rfam_hits.tsv"
-    input_file.write_text(
-        "seqname\tstart\tend\tstrand\ttrunc\tgc\tbias\tmdl_from\tmdl_to\tscore\tevalue\tmodel_name"
-        f"\taccession\tbiotype\ttarget_description\n{VALID_ROW}\n",
-        encoding="utf-8",
-    )
+    input_file = convert_to_genomio_json_data_dir / "rfam" / "success.tsv"
     config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=input_file,
         output_path=tmp_path / "out.json",
@@ -187,8 +155,26 @@ def test_parse_output_success(
     )
     features, consensuses_by_key = rfam.parse_output(config)
 
-    assert features == expected_features
-    assert consensuses_by_key == expected_consensuses
+    assert features == [
+        {
+            "seq_region": "NC_003076.8",
+            "seq_region_start": 4479446,
+            "seq_region_end": 4479542,
+            "model_start": 1,
+            "model_end": 97,
+            "seq_region_strand": "-",
+            "score": 113.6,
+            "evalue": 9.7e-27,
+            "gc": 0.39,
+            "bias": 0.0,
+            "truncation": "no",
+            "biotype": "pre_miRN",
+            "target_name": "MIR848",
+            "target_accession": "RF03308",
+            "description": "MIR848 description",
+        }
+    ]
+    assert not consensuses_by_key
 
 
 def test_rfam_converter_parse_features_delegates_to_parser(
@@ -240,18 +226,15 @@ def test_parse_row_omits_placeholder_target_accession() -> None:
 
 
 @pytest.mark.parametrize(
-    ("invalid_rows", "error_pattern"),
+    ("filename", "error_pattern"),
     [
         pytest.param(
-            [VALID_ROW.replace(" - ", " ? ", 1)],
+            "errors_one.tsv",
             r"Found 1 errors while parsing Rfam hits TSV in .*:\n- Unexpected strand token.*",
             id="one parsing error",
         ),
         pytest.param(
-            [
-                VALID_ROW.replace(" - ", " ? ", 1),
-                VALID_ROW.replace("4479446", "start", 1),
-            ],
+            "errors_multiple.tsv",
             (
                 r"Found 2 errors while parsing Rfam hits TSV in .*:\n"
                 r"- Unexpected strand token.*\n"
@@ -261,17 +244,25 @@ def test_parse_row_omits_placeholder_target_accession() -> None:
         ),
     ],
 )
-def test_parse_output_errors(tmp_path: Path, invalid_rows: list[str], error_pattern: str) -> None:
+def test_parse_output_errors(
+    tmp_path: Path,
+    convert_to_genomio_json_data_dir: Path,
+    filename: str,
+    error_pattern: str,
+) -> None:
     """Test that ``parse_output`` aggregates row errors with ``format_parse_errors``.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
-        invalid_rows: Rfam rows containing parsing errors.
+        convert_to_genomio_json_data_dir: Converter input fixture directory.
+        filename: Rfam fixture file containing malformed rows.
         error_pattern: Expected aggregated error message pattern.
 
+    Raises:
+        ValueError: If one or more rows fail parsing in strict mode.
+
     """
-    input_file = tmp_path / "rfam_errors.tsv"
-    input_file.write_text("\n".join(invalid_rows) + "\n", encoding="utf-8")
+    input_file = convert_to_genomio_json_data_dir / "rfam" / filename
 
     config = convert_to_genomio_json.GenomioJsonConfig(
         input_path=input_file,

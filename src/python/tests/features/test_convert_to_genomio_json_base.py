@@ -14,6 +14,9 @@
 # limitations under the License.
 """Unit testing of shared ``convert_to_genomio_json`` helpers."""
 
+# The shared helper fixtures and converter registry coverage are kept together.
+# pylint: disable=too-many-lines
+
 import argparse
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, UTC
@@ -24,6 +27,7 @@ from typing import Callable, ClassVar, ContextManager
 from unittest.mock import Mock, patch
 
 import pytest
+from sqlalchemy.engine import URL
 
 from ensembl.io.genomio.features import convert_to_genomio_json
 from ensembl.io.genomio.features.convert_to_genomio_json import base
@@ -82,6 +86,9 @@ def test_parse_token(
         field_name: Field name used in error messages.
         raw_line: Original line used in error messages.
         expectation: Context manager for the expected result or exception.
+
+    Raises:
+        ValueError: If the selected parser rejects the token.
 
     """
     with expectation as expected:
@@ -202,6 +209,9 @@ def test_validate_parsed_coordinates(
         feature_end: Optional feature end coordinate.
         expectation: Context manager for the expected result or exception.
 
+    Raises:
+        ValueError: If any supplied coordinate is invalid.
+
     """
     feature_coordinates = {}
     if feature_start is not None:
@@ -249,8 +259,12 @@ class _DummyConverter(convert_to_genomio_json.FeatureConverter):
         _options: convert_to_genomio_json.ConverterOptions | None = None,
     ) -> convert_to_genomio_json.ParseFeaturesResult:
         """Return fixed parser output for document assembly tests."""
+        features = [{"seq_region": config.input_path.name}]
+        if cls.consensuses_by_key:
+            features[0]["repeat_consensus"] = next(iter(cls.consensuses_by_key))
+            features.append({"seq_region": config.input_path.name})
         return (
-            [{"seq_region": config.input_path.name}],
+            features,
             cls.consensuses_by_key,
         )
 
@@ -260,6 +274,9 @@ def test_converter_registration(monkeypatch: pytest.MonkeyPatch) -> None:
 
     Args:
         monkeypatch: Pytest monkeypatch fixture.
+
+    Raises:
+        ValueError: If another converter registered the same logic name differently.
 
     """
     monkeypatch.setattr(base, "converters_by_logic_name", {})
@@ -387,6 +404,9 @@ def test_duplicate_converter_logic_names_rejected(monkeypatch: pytest.MonkeyPatc
     Args:
         monkeypatch: Pytest monkeypatch fixture.
 
+    Raises:
+        ValueError: If a different converter registered the same logic name.
+
     """
     monkeypatch.setattr(base, "converters_by_logic_name", {})
 
@@ -443,6 +463,9 @@ def test_invalid_converters_rejected(
         converter_name: Name assigned to the invalid converter class.
         error_message: Expected registration error message.
 
+    Raises:
+        ValueError: If the converter is abstract or lacks a logic name.
+
     """
     monkeypatch.setattr(base, "converters_by_logic_name", {})
     converter = type(converter_name, (converter_base,), {"analysis_logic_name": analysis_logic_name})
@@ -456,6 +479,9 @@ def test_duplicate_top_level_converter_commands_rejected(monkeypatch: pytest.Mon
 
     Args:
         monkeypatch: Pytest monkeypatch fixture.
+
+    Raises:
+        ValueError: If a different converter already owns the command.
 
     """
     monkeypatch.setattr(base, "top_level_converters", [])
@@ -506,6 +532,9 @@ def test_top_level_converters_without_commands_rejected(
         command: Command value used by the converter.
         converter_name: Name assigned to the converter class.
 
+    Raises:
+        ValueError: If the converter command is missing or blank.
+
     """
     monkeypatch.setattr(base, "top_level_converters", [])
     converter = type(
@@ -526,6 +555,9 @@ def test_abstract_top_level_converter_rejected(monkeypatch: pytest.MonkeyPatch) 
 
     Args:
         monkeypatch: Pytest monkeypatch fixture.
+
+    Raises:
+        ValueError: If the converter is abstract.
 
     """
     monkeypatch.setattr(base, "top_level_converters", [])
@@ -606,6 +638,112 @@ def test_parse_args_common_arguments(
         assert not hasattr(args, "program_parameters")
 
 
+@pytest.mark.parametrize(
+    "metadata_case",
+    [
+        pytest.param(
+            ([], "Both --analysis-description and --analysis-display-label are required"),
+            id="missing manual metadata",
+        ),
+        pytest.param(
+            (["--prod-host", "prod"], "Invalid production database configuration. Missing"),
+            id="partial production URL",
+        ),
+        pytest.param(
+            (
+                [
+                    "--prod-host",
+                    "prod",
+                    "--prod-port",
+                    "3306",
+                    "--prod-user",
+                    "reader",
+                    "--prod-database",
+                    "production",
+                    "--analysis-description",
+                    "description",
+                ],
+                "cannot be used with production database arguments",
+            ),
+            id="conflicting metadata sources",
+        ),
+    ],
+)
+def test_parse_args_rejects_incomplete_metadata_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+    convert_to_genomio_json_data_dir: Path,
+    tmp_path: Path,
+    metadata_case: tuple[list[str], str],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject missing, partial, or conflicting analysis metadata settings.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        convert_to_genomio_json_data_dir: Converter input fixture directory.
+        tmp_path: Pytest temporary directory fixture.
+        metadata_case: Extra command-line options and expected argparse error text.
+        capsys: Fixture capturing argparse error output.
+
+    Raises:
+        SystemExit: If analysis metadata options are incomplete or conflict.
+
+    """
+    connection_args, expected_error = metadata_case
+    monkeypatch.setattr(base, "top_level_converters", [convert_to_genomio_json.RfamConverter])
+    argv = [
+        "rfam",
+        "--input",
+        str(convert_to_genomio_json_data_dir / "create_json" / "basic.out"),
+        "--output",
+        str(tmp_path / "out.json"),
+        "--program-version",
+        "1.0",
+        *connection_args,
+    ]
+    with pytest.raises(SystemExit):
+        parse_args(argv)
+    assert expected_error in capsys.readouterr().err
+
+
+def test_parse_args_accepts_complete_production_connection(
+    monkeypatch: pytest.MonkeyPatch,
+    convert_to_genomio_json_data_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Build a production database URL when all required fields are provided.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        convert_to_genomio_json_data_dir: Converter input fixture directory.
+        tmp_path: Pytest temporary directory fixture.
+
+    """
+    monkeypatch.setattr(base, "top_level_converters", [convert_to_genomio_json.RfamConverter])
+    args = parse_args(
+        [
+            "rfam",
+            "--input",
+            str(convert_to_genomio_json_data_dir / "create_json" / "basic.out"),
+            "--output",
+            str(tmp_path / "out.json"),
+            "--program-version",
+            "1.0",
+            "--prod-host",
+            "prod.example",
+            "--prod-port",
+            "3307",
+            "--prod-user",
+            "reader",
+            "--prod-password",
+            "secret",
+            "--prod-database",
+            "production",
+        ]
+    )
+    assert args.prod_url == URL.create("mysql", "reader", "secret", "prod.example", 3307, "production")
+
+
 @patch("ensembl.io.genomio.features.convert_to_genomio_json.base.create_genomio_json")
 def test_main_passes_common_config_fields(
     mock_create_genomio_json: Mock,
@@ -665,6 +803,72 @@ def test_main_passes_common_config_fields(
 
 
 @patch("ensembl.io.genomio.features.convert_to_genomio_json.base.create_genomio_json")
+def test_main_reads_analysis_metadata_from_production(
+    mock_create_genomio_json: Mock,
+    monkeypatch: pytest.MonkeyPatch,
+    convert_to_genomio_json_data_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Load analysis description and display label from the production database.
+
+    Args:
+        mock_create_genomio_json: Mocked JSON document creation function.
+        monkeypatch: Pytest monkeypatch fixture.
+        convert_to_genomio_json_data_dir: Converter input fixture directory.
+        tmp_path: Pytest temporary directory fixture.
+
+    """
+    input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
+    output_path = tmp_path / "out.json"
+    production_url = URL.create("mysql", "reader", "secret", "prod.example", 3307, "production")
+    metadata_calls: list[tuple[str, URL]] = []
+
+    def get_metadata(logic_name: str, db_url: URL) -> dict[str, str]:
+        metadata_calls.append((logic_name, db_url))
+        return {"description": f"{logic_name} description", "display_label": "Production label"}
+
+    monkeypatch.setattr(base, "top_level_converters", [convert_to_genomio_json.RfamConverter])
+    monkeypatch.setitem(
+        base.converters_by_logic_name,
+        "cmscan_rfam_14.5",
+        convert_to_genomio_json.RfamConverter,
+    )
+    monkeypatch.setattr(
+        base,
+        "get_production_analysis_description",
+        get_metadata,
+    )
+
+    main(
+        [
+            "rfam",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--program-version",
+            "1.0",
+            "--prod-host",
+            "prod.example",
+            "--prod-port",
+            "3307",
+            "--prod-user",
+            "reader",
+            "--prod-password",
+            "secret",
+            "--prod-database",
+            "production",
+        ]
+    )
+
+    config = mock_create_genomio_json.call_args.kwargs["config"]
+    assert config.analysis_description == "cmscan_rfam_14.5 description"
+    assert config.analysis_display_label == "Production label"
+    assert config.input_path == input_path
+    assert metadata_calls == [("cmscan_rfam_14.5", production_url.set(drivername="mysql+mysqlconnector"))]
+
+
+@patch("ensembl.io.genomio.features.convert_to_genomio_json.base.create_genomio_json")
 def test_main_reraises_exceptions(
     mock_create_genomio_json: Mock,
     convert_to_genomio_json_data_dir: Path,
@@ -678,6 +882,9 @@ def test_main_reraises_exceptions(
         convert_to_genomio_json_data_dir: Test data directory.
         monkeypatch: Pytest monkeypatch fixture.
         tmp_path: Pytest temporary directory fixture.
+
+    Raises:
+        RuntimeError: If JSON creation raises an error.
 
     """
     input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
@@ -715,7 +922,13 @@ def test_main_reraises_exceptions(
                     repeat_class="SINE",
                     repeat_type="Alu",
                     seq="ACGT",
-                )
+                ),
+                "unused-consensus-key": convert_to_genomio_json.Consensus(
+                    name="Unused",
+                    repeat_class="SINE",
+                    repeat_type="Unused",
+                    seq="TGCA",
+                ),
             },
             [
                 {
@@ -732,6 +945,7 @@ def test_main_reraises_exceptions(
 def test_create_genomio_json_assembles_generic_document(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    convert_to_genomio_json_data_dir: Path,
     consensuses_by_key: dict[str, convert_to_genomio_json.Consensus],
     expected_repeat_consensus: list[dict[str, str]] | None,
 ) -> None:
@@ -740,17 +954,17 @@ def test_create_genomio_json_assembles_generic_document(
     Args:
         monkeypatch: Pytest monkeypatch fixture.
         tmp_path: Pytest temporary directory fixture.
+        convert_to_genomio_json_data_dir: Converter input fixture directory.
         consensuses_by_key: Consensus records returned by the parser.
         expected_repeat_consensus: Expected serialized consensus records.
 
     """
-    input_path = tmp_path / "input.out"
-    input_path.write_text("parser input", encoding="utf-8")
+    input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
     invalid_tool_output_path = tmp_path / "invalid.out"
     monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
 
-    _DummyConverter.consensuses_by_key = consensuses_by_key
+    monkeypatch.setattr(_DummyConverter, "consensuses_by_key", consensuses_by_key)
     convert_to_genomio_json.create_genomio_json(
         convert_to_genomio_json.GenomioJsonConfig(
             input_path=input_path,
@@ -772,7 +986,11 @@ def test_create_genomio_json_assembles_generic_document(
     assert doc["analysis"]["logic_name"] == "dummy"
     assert doc["analysis"]["program_parameters"] == "-x"
     assert doc["source"] == {"source_provider": "Ensembl", "is_primary": False}
-    assert doc["repeat_features"] == [{"seq_region": "input.out"}]
+    expected_repeat_features = [{"seq_region": "basic.out"}]
+    if consensuses_by_key:
+        expected_repeat_features[0]["repeat_consensus"] = "consensus-key"
+        expected_repeat_features.append({"seq_region": "basic.out"})
+    assert doc["repeat_features"] == expected_repeat_features
     if expected_repeat_consensus is None:
         assert "repeat_consensus" not in doc
     else:
@@ -782,16 +1000,17 @@ def test_create_genomio_json_assembles_generic_document(
 def test_create_genomio_json_assembles_ncrna_document(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    convert_to_genomio_json_data_dir: Path,
 ) -> None:
     """Test JSON creation stores ncrRNA features under the ncrRNA document fields.
 
     Args:
         monkeypatch: Pytest monkeypatch fixture.
         tmp_path: Pytest temporary directory fixture.
+        convert_to_genomio_json_data_dir: Converter input fixture directory.
 
     """
-    input_path = tmp_path / "input.out"
-    input_path.write_text("parser input", encoding="utf-8")
+    input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
     monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
     monkeypatch.setattr(_DummyConverter, "ncrna_tool", "dummy-ncrna")
@@ -814,7 +1033,7 @@ def test_create_genomio_json_assembles_ncrna_document(
 
     doc = json.loads(output_path.read_text(encoding="utf-8"))
     assert doc["ncrna_tool"] == "dummy-ncrna"
-    assert doc["ncrna_features"] == [{"seq_region": "input.out"}]
+    assert doc["ncrna_features"] == [{"seq_region": "basic.out"}]
 
 
 def test_create_genomio_json_rejects_unsupported_logic_name(
@@ -825,6 +1044,9 @@ def test_create_genomio_json_rejects_unsupported_logic_name(
     Args:
         convert_to_genomio_json_data_dir: Test data directory.
         tmp_path: Pytest temporary directory fixture.
+
+    Raises:
+        ValueError: If the configured analysis logic name has no converter.
 
     """
     with pytest.raises(ValueError, match=r"Unsupported analysis logic name"):
@@ -848,16 +1070,17 @@ def test_create_genomio_json_rejects_unsupported_logic_name(
 def test_create_genomio_json_omits_program_parameters_when_none(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    convert_to_genomio_json_data_dir: Path,
 ) -> None:
     """Test that program parameters are omitted when no value is provided.
 
     Args:
         monkeypatch: Pytest monkeypatch fixture.
         tmp_path: Pytest temporary directory fixture.
+        convert_to_genomio_json_data_dir: Converter input fixture directory.
 
     """
-    input_path = tmp_path / "input.out"
-    input_path.write_text("parser input", encoding="utf-8")
+    input_path = convert_to_genomio_json_data_dir / "create_json" / "basic.out"
     output_path = tmp_path / "out.json"
     monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
 

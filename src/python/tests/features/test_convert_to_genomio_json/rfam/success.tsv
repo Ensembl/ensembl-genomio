@@ -1,0 +1,2 @@
+seqname start end strand trunc gc bias mdl_from mdl_to score evalue model_name accession biotype target_description
+NC_003076.8 4479446 4479542 - no 0.39 0.0 1 97 113.6 9.7e-27 MIR848 RF03308 pre_miRN MIR848 description

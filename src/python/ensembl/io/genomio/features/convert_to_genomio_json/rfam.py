@@ -42,11 +42,6 @@ class RfamConverter(FeatureConverter):
     """Converter for the Rfam hits TSV."""
 
     analysis_logic_name = "cmscan_rfam_14.5"
-    analysis_display_label = "Rfam Models"
-    analysis_description = (
-        "Covariance models from <a href='https://rfam.xfam.org'>Rfam</a>, aligned to the genome with "
-        "'cmscan' from the <a href='http://eddylab.org/infernal'>Infernal</a> suite of programs."
-    )
     command = "rfam"
     program = "Infernal"
     ncrna_tool = "cmscan"
@@ -61,8 +56,6 @@ class RfamConverter(FeatureConverter):
         cls.add_common_arguments(rfam_parser)
         rfam_parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label=cls.analysis_display_label,
-            analysis_description=cls.analysis_description,
             program=cls.program,
             source_provider="Rfam",
         )
