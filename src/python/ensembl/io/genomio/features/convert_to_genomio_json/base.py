@@ -40,10 +40,12 @@ import hashlib
 from inspect import isabstract
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Callable
 
 import ensembl.io.genomio
+from ensembl.io.genomio.database import get_production_analysis_description
 
 from ensembl.utils.argparse import ArgumentParser
 from ensembl.utils.logging import init_logging_with_args
@@ -118,8 +120,6 @@ class FeatureConverter(ABC):
     """
 
     analysis_logic_name: str | None = None
-    analysis_display_label: str | None = None
-    analysis_description: str | None = None
     command: str | None = None
     program: str | None = None
     ncrna_tool: str | None = None
@@ -168,6 +168,55 @@ class FeatureConverter(ABC):
             "--strict",
             action="store_true",
             help="Whether to use strict mode for feature parsing.",
+        )
+        subparser.add_argument(
+            "--analysis-description",
+            default=argparse.SUPPRESS,
+            help=(
+                "Description of the analysis.  Required if production database connection details "
+                "are not provided.",
+            ),
+        )
+        subparser.add_argument(
+            "--analysis-display-label",
+            default=argparse.SUPPRESS,
+            help=(
+                "Display label for the analysis.  Required if production database connection "
+                "details are not provided.",
+            ),
+        )
+        prod_db_group = subparser.add_argument_group(
+            "Production server connection arguments",
+            description="Production database connection for retrieving analysis metadata.",
+        )
+        prod_db_group.add_argument(
+            "--prod-host", metavar="HOST", default=argparse.SUPPRESS, help="Production database host name."
+        )
+        prod_db_group.add_argument(
+            "--prod-port",
+            type=int,
+            metavar="PORT",
+            default=argparse.SUPPRESS,
+            help="Production database port number.",
+        )
+        prod_db_group.add_argument(
+            "--prod-user", metavar="USER", default=argparse.SUPPRESS, help="Production database user name."
+        )
+        prod_db_group.add_argument(
+            "--prod-password",
+            metavar="PWD",
+            help=(
+                "Production database password.  Passing passwords via the command line is unsafe and "
+                "should be avoided. The value for --prod-password will default to the environmental "
+                "variable PROD_DB_PASSWORD, or None if this is not set."
+            ),
+        )
+
+        prod_db_group.add_argument(
+            "--prod-database",
+            metavar="NAME",
+            default=argparse.SUPPRESS,
+            help="Production database name.",
         )
         subparser.add_log_arguments()
 
@@ -359,8 +408,6 @@ def _converter_signature(converter: type[Any]) -> tuple[object, ...]:
 
     return (
         getattr(converter, "analysis_logic_name", None),
-        getattr(converter, "analysis_display_label", None),
-        getattr(converter, "analysis_description", None),
         getattr(converter, "command", None),
         getattr(converter, "program", None),
         implementation("add_parser"),
@@ -434,7 +481,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     for converter in top_level_converters:
         converter.add_parser(subparsers)
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(
+        argv,
+        namespace=argparse.Namespace(prod_password=os.getenv("PROD_DB_PASSWORD")),
+    )
+
+    prod_connection_fields = ("prod_host", "prod_port", "prod_user", "prod_database")
+    analysis_description_fields = ("analysis_description", "analysis_display_label")
+
+    if any(hasattr(args, f) for f in prod_connection_fields) or args.prod_password is not None:
+        missing = [f"--{f}" for f in prod_connection_fields if not hasattr(args, f)]
+
+        if missing:
+            parser.error(f"Invalid production database configuration. Missing: {', '.join(missing)}")
+
+        if any(hasattr(args, f) for f in analysis_description_fields):
+            parser.error(
+                "--analysis-description and --analysis-display-label cannot be used with "
+                "production database arguments."
+            )
+    elif not all(hasattr(args, f) for f in analysis_description_fields):
+        parser.error("Both --analysis-description and --analysis-display-label are required.")
+
     init_logging_with_args(args)
     return args
 
@@ -514,14 +582,25 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     try:
         converter = converters_by_logic_name[args.analysis_logic_name]
+
+        if hasattr(args, "prod_database"):
+            production_analysis_description = get_production_analysis_description(
+                args.analysis_logic_name, args.prod_url.set(drivername="mysql+mysqlconnector")
+            )
+            analysis_description = production_analysis_description["description"]
+            analysis_display_label = production_analysis_description["display_label"]
+        else:
+            analysis_description = args.analysis_description
+            analysis_display_label = args.analysis_display_label
+
         create_genomio_json(
             config=GenomioJsonConfig(
                 input_path=args.input,
                 output_path=args.output,
                 invalid_tool_output_path=get_invalid_tool_output(args),
                 analysis_logic_name=args.analysis_logic_name,
-                analysis_display_label=args.analysis_display_label,
-                analysis_description=args.analysis_description,
+                analysis_display_label=analysis_display_label,
+                analysis_description=analysis_description or analysis_display_label,
                 program=args.program,
                 program_version=args.program_version,
                 source_provider=args.source_provider,

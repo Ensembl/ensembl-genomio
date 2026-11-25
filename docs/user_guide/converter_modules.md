@@ -6,7 +6,7 @@ Feature converters transform a tool-specific feature file into a GenomIO JSON do
 
 Create a module named for the tool, for example `my_tool.py`. Define one `FeatureConverter` subclass for each analysis that can produce a document. A concrete converter must provide:
 
-- `analysis_logic_name`, `analysis_display_label`, `analysis_description`, `command`, and `program` class attributes;
+- `analysis_logic_name`, `command`, and `program` class attributes;
 - `add_parser()`, which creates the command parser and sets the analysis metadata defaults;
 - `parse_features()`, which reads the tool output and returns a `ParseFeaturesResult`;
 - `options_from_args()` only when the tool has options beyond the shared arguments.
@@ -32,8 +32,6 @@ class MyToolConverter(FeatureConverter):
     """Convert MyTool output to GenomIO JSON."""
 
     analysis_logic_name = "my_tool"
-    analysis_display_label = "MyTool features"
-    analysis_description = "Features reported by MyTool."
     command = "my-tool"
     program = "my-tool"
 
@@ -44,8 +42,6 @@ class MyToolConverter(FeatureConverter):
         cls.add_common_arguments(parser)
         parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label=cls.analysis_display_label,
-            analysis_description=cls.analysis_description,
             program=cls.program,
         )
 

@@ -424,7 +424,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--allow-revcomp",
         action="store_true",
-        help="Allow reverse-complementing components if AGP orientation is '-'",
+        help="Allow reverse-complementing components if AGP orientation is '-'.",
     )
     parser.add_argument(
         "--chunk-id-regex",

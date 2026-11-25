@@ -267,6 +267,41 @@ def test_agp_component_seq(orientation: str, allow_revcomp: bool, expectation: C
 
 
 @pytest.mark.parametrize(
+    "mode",
+    [
+        pytest.param("agp component", id="AGP component without sequence"),
+        pytest.param("unchunked header record", id="Unchunked header record without sequence"),
+        pytest.param("chunk header record", id="Chunk header record without sequence"),
+    ],
+)
+def test_recombine_rejects_records_without_sequences(mode: str) -> None:
+    """Reject an undefined sequence in AGP, unchunked, and chunked reconstruction.
+
+    Args:
+        mode: Reconstruction path being exercised.
+
+    Raises:
+        ValueError: If the selected record has no sequence.
+
+    """
+    record_id = "chunk" if mode == "chunk header record" else "base"
+    record = SeqRecord(None, id=record_id, description="record description")
+    if mode == "agp component":
+        with pytest.raises(ValueError, match="has no sequence"):
+            recombine._agp_component_seq(record, 1, 1, "+", allow_revcomp=False)
+        return
+
+    location = recombine.RecordLocation(Path("input.fa"), "record description")
+    locations = {record_id: location}
+    first_seen = {"base": 0}
+    chunks = {"base": [(0, record_id)]} if mode == "chunk header record" else {}
+    cache = Mock(spec=recombine.FastaRecordCache)
+    cache.get_record.return_value = record
+    with pytest.raises(ValueError, match="has no sequence"):
+        list(recombine._records_from_headers(locations, first_seen, chunks, cache))
+
+
+@pytest.mark.parametrize(
     ("agp_filename", "expectation"),
     [
         pytest.param(

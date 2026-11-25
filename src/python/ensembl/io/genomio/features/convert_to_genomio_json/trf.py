@@ -51,11 +51,6 @@ class TRFConverter(FeatureConverter):
     """Converter for TRF output."""
 
     analysis_logic_name = "trf"
-    analysis_display_label = "Tandem repeats (TRF)"
-    analysis_description = (
-        '<a rel="external" href="https://tandem.bu.edu/trf/trf.html">Tandem Repeats Finder</a> '
-        "locates adjacent copies of a pattern of nucleotides."
-    )
     command = "trf"
     program = "trf"
 
@@ -66,8 +61,6 @@ class TRFConverter(FeatureConverter):
         cls.add_common_arguments(trf_parser)
         trf_parser.set_defaults(
             analysis_logic_name=cls.analysis_logic_name,
-            analysis_display_label=cls.analysis_display_label,
-            analysis_description=cls.analysis_description,
             program=cls.program,
         )
 
