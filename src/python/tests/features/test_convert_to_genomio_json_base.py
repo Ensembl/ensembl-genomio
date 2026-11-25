@@ -259,8 +259,12 @@ class _DummyConverter(convert_to_genomio_json.FeatureConverter):
         _options: convert_to_genomio_json.ConverterOptions | None = None,
     ) -> convert_to_genomio_json.ParseFeaturesResult:
         """Return fixed parser output for document assembly tests."""
+        features = [{"seq_region": config.input_path.name}]
+        if cls.consensuses_by_key:
+            features[0]["repeat_consensus"] = next(iter(cls.consensuses_by_key))
+            features.append({"seq_region": config.input_path.name})
         return (
-            [{"seq_region": config.input_path.name}],
+            features,
             cls.consensuses_by_key,
         )
 
@@ -918,7 +922,13 @@ def test_main_reraises_exceptions(
                     repeat_class="SINE",
                     repeat_type="Alu",
                     seq="ACGT",
-                )
+                ),
+                "unused-consensus-key": convert_to_genomio_json.Consensus(
+                    name="Unused",
+                    repeat_class="SINE",
+                    repeat_type="Unused",
+                    seq="TGCA",
+                ),
             },
             [
                 {
@@ -954,7 +964,7 @@ def test_create_genomio_json_assembles_generic_document(
     invalid_tool_output_path = tmp_path / "invalid.out"
     monkeypatch.setitem(base.converters_by_logic_name, "dummy", _DummyConverter)
 
-    _DummyConverter.consensuses_by_key = consensuses_by_key
+    monkeypatch.setattr(_DummyConverter, "consensuses_by_key", consensuses_by_key)
     convert_to_genomio_json.create_genomio_json(
         convert_to_genomio_json.GenomioJsonConfig(
             input_path=input_path,
@@ -976,7 +986,11 @@ def test_create_genomio_json_assembles_generic_document(
     assert doc["analysis"]["logic_name"] == "dummy"
     assert doc["analysis"]["program_parameters"] == "-x"
     assert doc["source"] == {"source_provider": "Ensembl", "is_primary": False}
-    assert doc["repeat_features"] == [{"seq_region": "basic.out"}]
+    expected_repeat_features = [{"seq_region": "basic.out"}]
+    if consensuses_by_key:
+        expected_repeat_features[0]["repeat_consensus"] = "consensus-key"
+        expected_repeat_features.append({"seq_region": "basic.out"})
+    assert doc["repeat_features"] == expected_repeat_features
     if expected_repeat_consensus is None:
         assert "repeat_consensus" not in doc
     else:
