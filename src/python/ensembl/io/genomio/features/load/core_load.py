@@ -332,6 +332,12 @@ def _delete_repeat_features(session: Session, analysis_id: int) -> None:
     """
     session.execute(delete(RepeatFeature).where(RepeatFeature.analysis_id == analysis_id))
 
+    session.execute(
+        delete(RepeatConsensus).where(
+            RepeatConsensus.repeat_consensus_id.not_in(select(RepeatFeature.repeat_consensus_id))
+        )
+    )
+
 
 def _delete_ncrna_features(session: Session, analysis_id: int) -> None:
     """Delete ncRNA features linked to an analysis.
@@ -351,8 +357,6 @@ def _delete_ncrna_features(session: Session, analysis_id: int) -> None:
 
     session.execute(delete(DnaAlignFeature).where(DnaAlignFeature.analysis_id == analysis_id))
 
-    session.commit()
-
 
 def _delete_analysis_and_features(session: Session, analysis_id: int, kind: str) -> None:
     """Delete an analysis and its features from the core database.
@@ -371,6 +375,8 @@ def _delete_analysis_and_features(session: Session, analysis_id: int, kind: str)
     session.execute(delete(AnalysisDescription).where(AnalysisDescription.analysis_id == analysis_id))
 
     session.execute(delete(Analysis).where(Analysis.analysis_id == analysis_id))
+
+    session.commit()
 
 
 def _get_or_create_analysis(
