@@ -25,7 +25,7 @@ from typing import TypedDict, cast
 
 
 import ijson
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
@@ -322,12 +322,74 @@ def _analysis_values(analysis: Mapping[str, JsonValue]) -> dict[str, object]:
     }
 
 
-def _get_or_create_analysis(session: Session, analysis: Mapping[str, JsonValue], prod_url: URL) -> int:
+def _delete_repeat_features(session: Session, analysis_id: int) -> None:
+    """Delete repeat features linked to an analysis.
+
+    Args:
+        session: Active core database session.
+        analysis_id:  Row ID in core database for the analysis.
+
+    """
+    session.execute(delete(RepeatFeature).where(RepeatFeature.analysis_id == analysis_id))
+
+    session.execute(
+        delete(RepeatConsensus).where(
+            RepeatConsensus.repeat_consensus_id.not_in(select(RepeatFeature.repeat_consensus_id))
+        )
+    )
+
+
+def _delete_ncrna_features(session: Session, analysis_id: int) -> None:
+    """Delete ncRNA features linked to an analysis.
+
+    Args:
+        session: Active core database session.
+        analysis_id:  Row ID in core database for the analysis.
+
+    """
+    feature_ids = select(DnaAlignFeature.dna_align_feature_id).where(
+        DnaAlignFeature.analysis_id == analysis_id
+    )
+
+    session.execute(
+        delete(DNAAlignFeatureAttrib).where(DNAAlignFeatureAttrib.dna_align_feature_id.in_(feature_ids))
+    )
+
+    session.execute(delete(DnaAlignFeature).where(DnaAlignFeature.analysis_id == analysis_id))
+
+
+def _delete_analysis_and_features(session: Session, analysis_id: int, kind: str) -> None:
+    """Delete an analysis and its features from the core database.
+
+    Args:
+        session: Active core database session.
+        kind: Type of features contained in JSON document, either ``"repeat"`` or ``"ncrna"``.
+
+    """
+
+    if kind == "repeat":
+        _delete_repeat_features(session, analysis_id)
+    else:
+        _delete_ncrna_features(session, analysis_id)
+
+    session.execute(delete(AnalysisDescription).where(AnalysisDescription.analysis_id == analysis_id))
+
+    session.execute(delete(Analysis).where(Analysis.analysis_id == analysis_id))
+
+    session.commit()
+
+
+def _get_or_create_analysis(
+    session: Session, analysis: Mapping[str, JsonValue], kind: str, delete_existing: bool, prod_url: URL
+) -> int:
     """Create or verify the analysis and its description.
 
     Args:
         session: Active core database session.
         analysis: Validated analysis metadata from the input document.
+        kind: Type of features contained in JSON document, either ``"repeat"`` or ``"ncrna"``.
+        delete_existing: Whether to delete an existing matching analysis and its associated features
+            from the core database before loading.
         prod_url: URL for the production database.
 
     Returns:
@@ -337,7 +399,11 @@ def _get_or_create_analysis(session: Session, analysis: Mapping[str, JsonValue],
     values = _analysis_values(analysis)
     existing = session.scalar(select(Analysis).where(Analysis.logic_name == values["logic_name"]))
     if existing is not None:
-        return int(existing.analysis_id)
+        existing_id = int(existing.analysis_id)
+        if delete_existing:
+            _delete_analysis_and_features(session, existing_id, kind)
+        else:
+            return existing_id
 
     prod_analysis_description_values = get_production_analysis_description(
         str(values["logic_name"]), prod_url
@@ -682,6 +748,7 @@ def load_features(
     *,
     core_url: URL,
     prod_url: URL,
+    delete_existing: bool = False,
     skip_validation: bool = False,
     batch_size: int = 1000,
 ) -> None:
@@ -691,6 +758,8 @@ def load_features(
         input_path: JSON document conforming to ``load_features.json``.
         core_url: SQLAlchemy URL for the target MySQL core database.
         prod_url: SQLAlchemy URL for the production database.
+        delete_existing: Whether to delete an existing matching analysis and its associated features
+            from the core database before loading.
         skip_validation: Whether to skip validation of a document already validated by the caller.
         batch_size: Number of input features between explicit commits.
 
@@ -713,13 +782,12 @@ def load_features(
     with database.session_scope() as session:
         caches = FeatureLoadCaches()
 
-        analysis_id = _get_or_create_analysis(session, analysis, prod_url)
+        analysis_id = _get_or_create_analysis(session, analysis, kind, delete_existing, prod_url)
         rows: Iterator[tuple[Mapping[str, object], None | dict[int, str]]]
         if kind == "repeat":
             for consensus in _iter_items(input_path, "repeat_consensus"):
                 _get_or_create_repeat_consensus_id(session, consensus, caches)
 
-        if kind == "repeat":
             rows = _iter_repeat_rows(
                 session=session,
                 input_path=input_path,
@@ -776,13 +844,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """
     parser = ArgumentParser(description="Load GenomIO features into an Ensembl core database.")
     parser.add_argument_src_path("--input-file", required=True, help="load_features JSON document.")
-    parser.add_argument("--skip-validation", action="store_true", help="skip JSON schema validation.")
+    parser.add_argument("--skip-validation", action="store_true", help="Skip JSON schema validation.")
+    parser.add_argument(
+        "--delete-existing",
+        action="store_true",
+        help="Delete all existing entries in the core database for the submitted analysis.",
+    )
     parser.add_numeric_argument(
         "--batch-size",
         type=int,
         min_value=1,
         default=1000,
-        help="number of features to commit per batch",
+        help="Number of features to commit per batch.",
     )
     parser.add_server_arguments(
         prefix="core-",
@@ -830,6 +903,7 @@ def main(argv: list[str] | None = None) -> None:
             core_url=args.core_url.set(drivername="mysql+mysqlconnector"),
             prod_url=args.prod_url.set(drivername="mysql+mysqlconnector"),
             skip_validation=args.skip_validation,
+            delete_existing=args.delete_existing,
             batch_size=args.batch_size,
         )
     except Exception:

@@ -439,14 +439,19 @@ def test_analysis_and_consensus_values_map_input_fields() -> None:
     }
 
 
-def test_get_or_create_analysis_creates_and_reuses_rows(
-    session: Session, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("delete_existing", [False, True])
+def test_get_or_create_analysis_creates_or_replaces_rows(
+    session: Session, monkeypatch: pytest.MonkeyPatch, delete_existing: bool
 ) -> None:
-    """Create analysis metadata once and reuse it on subsequent loads.
+    """Create analysis metadata or reuse/replace it according to the deletion option.
 
     Args:
         session: SQLite session containing analysis tables.
         monkeypatch: Fixture used to stub production metadata lookup.
+        delete_existing: Whether a matching analysis is replaced.
+
+    Returns:
+        None.
 
     """
     monkeypatch.setattr(
@@ -460,17 +465,109 @@ def test_get_or_create_analysis_creates_and_reuses_rows(
         },
     )
     analysis = {"run_date": "2026-02-18", "logic_name": "tool", "program": "tool"}
-    first = core_load._get_or_create_analysis(session, analysis, PROD_URL)
-    second = core_load._get_or_create_analysis(session, analysis, PROD_URL)
-    assert first == second
-    analysis_row = session.scalar(select(Analysis).where(Analysis.analysis_id == first))
+    first = core_load._get_or_create_analysis(session, analysis, "repeat", False, PROD_URL)
+    second = core_load._get_or_create_analysis(session, analysis, "repeat", delete_existing, PROD_URL)
+    if delete_existing:
+        assert session.query(Analysis).count() == 1
+    else:
+        assert first == second
+    analysis_row = session.scalar(select(Analysis).where(Analysis.analysis_id == second))
     assert analysis_row is not None
     assert analysis_row.logic_name == "tool"
     description_row = session.scalar(
-        select(AnalysisDescription).where(AnalysisDescription.analysis_id == first)
+        select(AnalysisDescription).where(AnalysisDescription.analysis_id == second)
     )
     assert description_row is not None
     assert description_row.description == "Description"
+
+
+@pytest.mark.parametrize("kind", ["repeat", "ncrna"])
+def test_get_or_create_analysis_deletes_existing_features(
+    session: Session, monkeypatch: pytest.MonkeyPatch, kind: str
+) -> None:
+    """Remove matching feature rows and metadata when replacing an analysis.
+
+    Args:
+        session: SQLite session containing core feature tables.
+        monkeypatch: Fixture used to stub production metadata lookup.
+        kind: Feature type associated with the analysis.
+
+    Returns:
+        None.
+    """
+    monkeypatch.setattr(
+        core_load,
+        "get_production_analysis_description",
+        lambda *_: {
+            "description": "Description",
+            "display_label": "Label",
+            "displayable": True,
+            "web_data": None,
+        },
+    )
+    analysis = Analysis(logic_name="tool", program="old", created=datetime(2026, 2, 18))
+    session.add(analysis)
+    session.flush()
+    analysis_id = int(analysis.analysis_id)
+    session.add(
+        AnalysisDescription(analysis_id=analysis_id, description="Old", display_label="Old", displayable=True)
+    )
+    if kind == "repeat":
+        session.add(
+            RepeatFeature(
+                seq_region_id=1,
+                seq_region_start=1,
+                seq_region_end=2,
+                seq_region_strand=1,
+                repeat_start=1,
+                repeat_end=2,
+                repeat_consensus_id=1,
+                analysis_id=analysis_id,
+            )
+        )
+    else:
+        feature = DnaAlignFeature(
+            seq_region_id=1,
+            seq_region_start=1,
+            seq_region_end=2,
+            seq_region_strand=1,
+            hit_start=1,
+            hit_end=2,
+            hit_strand=1,
+            hit_name="hit",
+            analysis_id=analysis_id,
+        )
+        session.add(feature)
+        session.flush()
+        session.add(
+            DNAAlignFeatureAttrib(
+                dna_align_feature_id=feature.dna_align_feature_id, attrib_type_id=1, value="type"
+            )
+        )
+    session.flush()
+
+    replacement_id = core_load._get_or_create_analysis(
+        session,
+        {
+            "logic_name": "tool",
+            "description": "tool description",
+            "display_label": "tool",
+            "program": "tool",
+            "run_date": "2026-02-18",
+        },
+        kind,
+        True,
+        PROD_URL,
+    )
+
+    assert session.query(Analysis).count() == 1
+    assert session.get(Analysis, replacement_id).program == "tool"
+    assert session.query(AnalysisDescription).filter_by(analysis_id=replacement_id).count() == 1
+    if kind == "repeat":
+        assert session.query(RepeatFeature).filter_by(analysis_id=analysis_id).count() == 0
+    else:
+        assert session.query(DnaAlignFeature).filter_by(analysis_id=analysis_id).count() == 0
+        assert session.query(DNAAlignFeatureAttrib).count() == 0
 
 
 def test_get_or_create_repeat_consensus_creates_and_caches_row(session: Session) -> None:
@@ -762,41 +859,52 @@ def test_iter_ncrna_rows_resolves_tool_database_and_maps_feature(
     assert rows == [({"external_db_id": 5}, {})]
 
 
-def test_parse_args_accepts_core_and_production_connection_values() -> None:
-    """Parse required core and production URLs and loader options."""
-    args = core_load.parse_args(
-        [
-            "--input-file",
-            str(FIXTURES / "load_features_repeat.json"),
-            "--core-host",
-            "core",
-            "--core-port",
-            "3307",
-            "--core-user",
-            "loader",
-            "--core-password",
-            "secret",
-            "--core-database",
-            "core_db",
-            "--prod-host",
-            "prod",
-            "--prod-port",
-            "3308",
-            "--prod-user",
-            "reader",
-            "--prod-password",
-            "secret2",
-            "--prod-database",
-            "prod_db",
-            "--batch-size",
-            "25",
-            "--skip-validation",
-        ]
-    )
+@pytest.mark.parametrize("delete_existing", [False, True])
+def test_parse_args_accepts_core_and_production_connection_values(delete_existing: bool) -> None:
+    """Parse required core and production URLs and loader options.
+
+    Args:
+        delete_existing: Whether the delete-existing switch is included.
+
+    Returns:
+        None.
+
+    """
+    argv = [
+        "--input-file",
+        str(FIXTURES / "load_features_repeat.json"),
+        "--core-host",
+        "core",
+        "--core-port",
+        "3307",
+        "--core-user",
+        "loader",
+        "--core-password",
+        "secret",
+        "--core-database",
+        "core_db",
+        "--prod-host",
+        "prod",
+        "--prod-port",
+        "3308",
+        "--prod-user",
+        "reader",
+        "--prod-password",
+        "secret2",
+        "--prod-database",
+        "prod_db",
+        "--batch-size",
+        "25",
+        "--skip-validation",
+    ]
+    if delete_existing:
+        argv.append("--delete-existing")
+    args = core_load.parse_args(argv)
     assert args.core_url == URL.create("mysql", "loader", "secret", "core", 3307, "core_db")
     assert args.prod_url == URL.create("mysql", "reader", "secret2", "prod", 3308, "prod_db")
     assert args.batch_size == 25
     assert args.skip_validation is True
+    assert args.delete_existing is delete_existing
 
 
 @pytest.mark.parametrize(
@@ -1003,6 +1111,7 @@ def test_main_uses_driver_urls_and_logs_without_password(
         core_url=CORE_URL,
         prod_url=PROD_URL,
         skip_validation=True,
+        delete_existing=True,
         batch_size=25,
     )
     received: list[tuple[object, ...]] = []
@@ -1017,6 +1126,7 @@ def test_main_uses_driver_urls_and_logs_without_password(
         "core_url": CORE_URL.set(drivername="mysql+mysqlconnector"),
         "prod_url": PROD_URL.set(drivername="mysql+mysqlconnector"),
         "skip_validation": True,
+        "delete_existing": True,
         "batch_size": 25,
     }
 
@@ -1043,6 +1153,7 @@ def test_main_logs_and_reraises_loader_error(
             core_url=CORE_URL,
             prod_url=PROD_URL,
             skip_validation=False,
+            delete_existing=False,
             batch_size=1000,
         ),
     )
