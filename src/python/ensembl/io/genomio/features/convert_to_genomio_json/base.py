@@ -552,8 +552,15 @@ def create_genomio_json(config: GenomioJsonConfig) -> None:
         json_doc["repeat_features"] = features
 
     if consensuses_by_key:
+        used_consensus_keys = {
+            consensus_key
+            for feature in features
+            if isinstance((consensus_key := feature.get("repeat_consensus")), str)
+        }
         repeat_consensuses: list[dict[str, str]] = []
         for consensus_key, consensus in consensuses_by_key.items():
+            if consensus_key not in used_consensus_keys:
+                continue
             repeat_consensuses.append(
                 {
                     "repeat_consensus_key": consensus_key,
